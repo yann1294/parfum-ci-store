@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Parfum CI Store
 
-## Getting Started
+Perfume e-commerce and operations platform for customers in Côte d'Ivoire.
 
-First, run the development server:
+The MVP is French-first, uses XOF pricing, supports guest checkout, and accepts manual Mobile Money verification plus cash on delivery. Admin authentication is required for back-office features.
+
+## Stack
+
+- Next.js App Router with TypeScript
+- pnpm only
+- Tailwind CSS and shadcn/ui
+- Supabase PostgreSQL, Auth, Storage, RLS, and SSR cookie-based clients
+- Resend transactional email
+- Vitest unit tests
+- Playwright browser tests
+- Vercel deployment
+
+## Local Development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm dev
+pnpm build
+pnpm start
+pnpm lint
+pnpm lint:fix
+pnpm typecheck
+pnpm test
+pnpm test:watch
+pnpm test:e2e
+pnpm test:e2e:ui
+pnpm format
+pnpm format:check
+```
 
-## Learn More
+## Documentation
 
-To learn more about Next.js, take a look at the following resources:
+- Product requirements: `docs/product-requirements.md`
+- Architecture: `docs/architecture.md`
+- Database schema: `docs/database-schema.md`
+- Business rules: `docs/business-rules.md`
+- Design system: `docs/design-system.md`
+- Security: `docs/security.md`
+- Testing: `docs/testing.md`
+- Deployment: `docs/deployment.md`
+- Manual acceptance test: `docs/manual-acceptance-test.md`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Read the relevant document before changing behavior. Read the matching Next.js guide in `node_modules/next/dist/docs/` before changing framework behavior.
