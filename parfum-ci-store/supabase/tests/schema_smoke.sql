@@ -73,7 +73,11 @@ begin
     where pg_namespace.nspname = 'app_private'
       and pg_proc.proname = 'has_staff_role'
       and pg_proc.prosecdef is true
-      and pg_proc.proconfig @> array['search_path=']
+      and exists (
+        select 1
+        from unnest(pg_proc.proconfig) as config(setting)
+        where config.setting like 'search_path=%'
+      )
   ) then
     raise exception 'Expected app_private.has_staff_role to be SECURITY DEFINER with empty search_path';
   end if;

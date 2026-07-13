@@ -14,7 +14,12 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "supabase:version": "pnpm exec supabase --version",
+    "supabase:status": "pnpm exec supabase status",
+    "db:push": "pnpm exec supabase db push",
+    "db:types": "pnpm exec supabase gen types typescript --local > src/types/database.types.ts",
+    "db:migrations": "pnpm exec supabase migration list"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -47,6 +52,7 @@
     "eslint-config-next": "16.2.10",
     "jsdom": "^29.1.1",
     "prettier": "^3.9.5",
+    "supabase": "^2.109.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.10"
