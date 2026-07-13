@@ -175,26 +175,29 @@ The first migration adds indexes for:
 - Notification status and scheduled timestamp.
 - Audit resource and created timestamp.
 
-## Reset, Seed, and Verification
+## Local Reset, Seed, and Verification
 
-Install or use the Supabase CLI, then run:
+For local development only, run:
 
 ```bash
-supabase start
-supabase db reset
-supabase db push
+pnpm exec supabase start
+pnpm exec supabase db reset
 psql "$DATABASE_URL" -f supabase/tests/schema_smoke.sql
 ```
 
-`supabase db reset` applies migrations and `supabase/seed.sql`. The seed creates placeholder store settings plus a few brands and categories. It intentionally does not create a fake owner UUID.
+`supabase db reset` is destructive to the local Supabase database only. Do not run it against the linked remote project. The seed creates placeholder store settings plus a few brands and categories. It intentionally does not create a fake owner UUID.
+
+For the linked existing Supabase project, review migrations first, then apply forward-only changes with:
+
+```bash
+pnpm exec supabase migration list
+pnpm exec supabase db push
+```
 
 ## Type Generation
 
-No Supabase project credentials are present in this workspace, so generated types could not be produced against a live database here. After starting local Supabase or linking a project, run one of:
+`src/types/database.types.ts` is generated from the linked Supabase project and currently includes the Phase 2 public tables and enums. Regenerate it after every schema change:
 
 ```bash
-supabase gen types typescript --local > src/types/database.types.ts
-supabase gen types typescript --project-id "$SUPABASE_PROJECT_ID" > src/types/database.types.ts
+pnpm exec supabase gen types typescript --linked > src/types/database.types.ts
 ```
-
-The current `src/types/database.types.ts` is a minimal checked-in placeholder for typed clients until this command can be run.

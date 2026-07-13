@@ -20,7 +20,7 @@ Use Vitest for business rules and pure logic:
 - Inventory ledger calculations
 - Redaction helpers
 
-Vitest is configured with jsdom and `passWithNoTests` while the project has no feature tests.
+Vitest is configured with jsdom. Current unit coverage includes foundational component/config tests; domain tests should be added with each business rule.
 
 ## Browser Tests
 

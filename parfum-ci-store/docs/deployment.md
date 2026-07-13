@@ -43,7 +43,8 @@ pnpm build
 - Destructive migrations require an explicit stop and explanation.
 - RLS policies must ship with every exposed table.
 - Seed data must not contain real customer information.
-- Run `supabase db reset` locally before production review when migrations change.
+- Run `pnpm exec supabase db reset` only against a local Supabase instance when migrations change.
+- Never reset the linked remote database as part of deployment verification.
 - Run `psql "$DATABASE_URL" -f supabase/tests/schema_smoke.sql` after applying migrations.
 
 ## Post-Deploy Checks
