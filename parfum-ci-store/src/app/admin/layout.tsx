@@ -1,8 +1,9 @@
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { AdminTopBar } from "@/components/layout/admin-top-bar";
-import { getAdminNavigation } from "@/lib/auth/navigation";
+import { canAccessAdminPath, getAdminNavigation } from "@/lib/auth/navigation";
 import { requireActiveStaff } from "@/lib/auth/server";
 
 export default async function AdminLayout({
@@ -12,6 +13,12 @@ export default async function AdminLayout({
 }>) {
   const currentPath = (await headers()).get("x-current-path") ?? "/admin";
   const staff = await requireActiveStaff({ mode: "redirect", returnPath: currentPath });
+  const pathname = currentPath.split("?")[0] ?? "/admin";
+
+  if (!canAccessAdminPath(staff, pathname)) {
+    redirect("/acces-refuse");
+  }
+
   const navigation = getAdminNavigation(staff);
 
   return (

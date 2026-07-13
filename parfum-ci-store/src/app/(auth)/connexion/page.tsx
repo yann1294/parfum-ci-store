@@ -6,10 +6,14 @@ import { getSafeReturnPath } from "@/lib/auth/redirects";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ retour?: string }>;
+  searchParams?: Promise<{ retour?: string; erreur?: string }>;
 }) {
   const params = await searchParams;
   const returnPath = getSafeReturnPath(params?.retour);
+  const errorMessage =
+    params?.erreur === "oauth"
+      ? "La connexion Google a échoué. Réessayez ou utilisez votre mot de passe."
+      : null;
 
   return (
     <main id="contenu" className="min-h-screen bg-background py-12">
@@ -22,6 +26,11 @@ export default async function LoginPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {errorMessage ? (
+              <p className="mb-5 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {errorMessage}
+              </p>
+            ) : null}
             <LoginForm returnPath={returnPath} />
           </CardContent>
         </Card>

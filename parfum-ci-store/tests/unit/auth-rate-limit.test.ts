@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { InMemoryLoginRateLimiter } from "@/lib/auth/rate-limit";
+import { InMemoryLoginRateLimiter, normalizeLoginRateLimitKey } from "@/lib/auth/rate-limit";
 
 describe("login rate limiter", () => {
   it("blocks after repeated failures in the same window", async () => {
@@ -41,5 +41,11 @@ describe("login rate limiter", () => {
     expect(await limiter.check("ip:admin@example.com")).toEqual({ allowed: true });
 
     vi.useRealTimers();
+  });
+
+  it("normalizes login identifiers", () => {
+    expect(normalizeLoginRateLimitKey(" 127.0.0.1:Admin@Example.COM ")).toBe(
+      "127.0.0.1:admin@example.com",
+    );
   });
 });

@@ -1,8 +1,9 @@
 import { test as setup } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 
-const adminEmail = process.env.PLAYWRIGHT_ADMIN_EMAIL;
-const adminPassword = process.env.PLAYWRIGHT_ADMIN_PASSWORD;
+const adminEmail = process.env.PLAYWRIGHT_OWNER_EMAIL ?? process.env.PLAYWRIGHT_ADMIN_EMAIL;
+const adminPassword =
+  process.env.PLAYWRIGHT_OWNER_PASSWORD ?? process.env.PLAYWRIGHT_ADMIN_PASSWORD;
 
 setup("authenticate admin", async ({ page }) => {
   setup.skip(!adminEmail || !adminPassword, "Admin test credentials are not configured.");

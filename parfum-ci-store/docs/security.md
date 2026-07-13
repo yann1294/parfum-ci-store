@@ -9,6 +9,8 @@
 - `src/proxy.ts` refreshes auth cookies using Supabase SSR and `auth.getClaims()`.
 - Server code must not trust `auth.getSession()` for authorization decisions.
 - `/connexion` authenticates staff with email/password and redirects only to validated local return paths. External, protocol-relative, malformed, `/connexion`, and `/acces-refuse` return paths fall back to `/admin`.
+- `/connexion` also starts Google OAuth with `signInWithOAuth({ provider: "google" })` and an application callback at `/auth/callback`.
+- `/auth/callback` exchanges OAuth codes with `exchangeCodeForSession`, validates the return path, verifies identity with `auth.getClaims()`, loads `public.profiles`, requires an active staff profile, signs out denied users, and redirects denied users to `/acces-refuse`.
 - Logout is implemented as a server action that signs out through Supabase and records an audit event.
 - Customer accounts are out of scope for the MVP.
 
@@ -22,6 +24,7 @@
 - `SUPABASE_SECRET_KEY` is server-only and must never be imported into Client Components.
 - The privileged Supabase client is isolated in `src/lib/supabase/admin.ts` and imports `server-only`.
 - Proxy may preserve a safe current path and refresh cookies, but it is only an optimistic filter. Authorization must happen in Server Components, Server Actions, Route Handlers, or data-access code close to the protected data or mutation.
+- The admin layout also checks the current admin path against the role-aware route policy, so direct URL entry to unauthorized modules is denied server-side.
 
 ## Admin Roles
 
@@ -41,6 +44,7 @@
 - Never log full customer addresses, secrets, payment credentials, auth tokens, or raw webhook signatures.
 - Redact audit and analytics metadata by default.
 - Login audit events store actor IDs where available and email hashes only; passwords, tokens, and raw email values are not stored.
+- Google OAuth callback audit events never store OAuth codes, provider tokens, Supabase access tokens, refresh tokens, cookies, authorization headers, or Google client secrets.
 - Login rate limiting uses a development-safe in-memory adapter behind an interface. The adapter normalizes by caller/email at the action boundary, expires entries, and caps stored keys, but it is process-local and not distributed across serverless instances.
 - Supabase Auth also applies provider-level authentication rate limits. Configure those limits in the Supabase dashboard for production alongside application-level controls.
 - Production can upgrade the adapter to a durable store such as Supabase, Redis, Upstash free-tier/low-cost Redis, Vercel KV, Cloudflare Turnstile plus WAF rules, or another inexpensive edge rate-limit provider without changing login action call sites.
@@ -85,3 +89,14 @@ Recommended Phase 3 dashboard checks:
 - Confirm production Supabase Auth rate limits are configured.
 - Confirm every test admin has a matching `profiles` row with the intended `role` and `active` state.
 - Confirm RLS remains enabled after any future migration.
+
+## Google OAuth Configuration
+
+Google OAuth is configured in two places:
+
+- Google Cloud Console OAuth client authorized redirect URI: `https://PROJECT_REF.supabase.co/auth/v1/callback`.
+- Supabase Auth URL allow list for the application callback: `http://localhost:3000/auth/callback` and the production equivalent, for example `https://www.example.com/auth/callback`.
+
+Do not configure the application to trust Google email domains, Google metadata, or Supabase Auth metadata for staff authorization. The only authorization source is the current `public.profiles` row after server-side identity verification.
+
+For local Supabase CLI provider testing, `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` can be set outside source control. Production Google client ID and client secret belong in the Supabase Dashboard provider settings, not in browser-exposed variables.

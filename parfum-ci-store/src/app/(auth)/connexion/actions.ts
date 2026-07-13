@@ -6,7 +6,7 @@ import { z } from "zod";
 
 import { auditAdminAuthEvent } from "@/lib/audit/admin-auth";
 import { AuthenticationError, InactiveStaffError } from "@/lib/auth/errors";
-import { loginRateLimiter } from "@/lib/auth/rate-limit";
+import { loginRateLimiter, normalizeLoginRateLimitKey } from "@/lib/auth/rate-limit";
 import { getSafeReturnPath } from "@/lib/auth/redirects";
 import { requireActiveStaff } from "@/lib/auth/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -29,6 +29,18 @@ function getClientIp(headersList: Headers) {
   );
 }
 
+function getRequestOrigin(headersList: Headers) {
+  const forwardedProto = headersList.get("x-forwarded-proto");
+  const forwardedHost = headersList.get("x-forwarded-host");
+
+  if (forwardedHost) {
+    return `${forwardedProto ?? "https"}://${forwardedHost}`;
+  }
+
+  const host = headersList.get("host");
+  return host ? `http://${host}` : "http://localhost:3000";
+}
+
 export async function loginAction(
   _previousState: LoginActionState,
   formData: FormData,
@@ -46,7 +58,7 @@ export async function loginAction(
   const { email, password } = parsed.data;
   const returnPath = getSafeReturnPath(parsed.data.returnPath);
   const headersList = await headers();
-  const rateLimitKey = `${getClientIp(headersList)}:${email.toLowerCase()}`;
+  const rateLimitKey = normalizeLoginRateLimitKey(`${getClientIp(headersList)}:${email}`);
   const rateLimit = await loginRateLimiter.check(rateLimitKey);
 
   if (!rateLimit.allowed) {
@@ -90,4 +102,27 @@ export async function loginAction(
   }
 
   redirect(returnPath);
+}
+
+export async function googleLoginAction(formData: FormData) {
+  const returnPath = getSafeReturnPath(String(formData.get("returnPath") ?? "/admin"));
+  const headersList = await headers();
+  const origin = getRequestOrigin(headersList);
+  const callbackUrl = new URL("/auth/callback", origin);
+
+  callbackUrl.searchParams.set("retour", returnPath);
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: callbackUrl.toString(),
+    },
+  });
+
+  if (error || !data.url) {
+    redirect("/connexion?erreur=oauth");
+  }
+
+  redirect(data.url);
 }

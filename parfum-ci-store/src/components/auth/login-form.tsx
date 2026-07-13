@@ -3,7 +3,11 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { loginAction, type LoginActionState } from "@/app/(auth)/connexion/actions";
+import {
+  googleLoginAction,
+  loginAction,
+  type LoginActionState,
+} from "@/app/(auth)/connexion/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,35 +26,50 @@ export function LoginForm({ returnPath }: { returnPath: string }) {
   const [state, formAction] = useActionState<LoginActionState, FormData>(loginAction, {});
 
   return (
-    <form action={formAction} className="grid gap-5">
-      <input type="hidden" name="returnPath" value={returnPath} />
-      <div className="grid gap-2">
-        <Label htmlFor="email">Adresse email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          placeholder="admin@parfum.ci"
-          autoComplete="email"
-          required
-        />
+    <div className="grid gap-5">
+      <form action={googleLoginAction}>
+        <input type="hidden" name="returnPath" value={returnPath} />
+        <Button type="submit" variant="outline" className="w-full">
+          Continuer avec Google
+        </Button>
+      </form>
+
+      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <span className="h-px flex-1 bg-border" />
+        <span>ou</span>
+        <span className="h-px flex-1 bg-border" />
       </div>
-      <div className="grid gap-2">
-        <Label htmlFor="password">Mot de passe</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-        />
-      </div>
-      {state.error ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {state.error}
-        </p>
-      ) : null}
-      <LoginButton />
-    </form>
+
+      <form action={formAction} className="grid gap-5">
+        <input type="hidden" name="returnPath" value={returnPath} />
+        <div className="grid gap-2">
+          <Label htmlFor="email">Adresse email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="admin@parfum.ci"
+            autoComplete="email"
+            required
+          />
+        </div>
+        <div className="grid gap-2">
+          <Label htmlFor="password">Mot de passe</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+          />
+        </div>
+        {state.error ? (
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {state.error}
+          </p>
+        ) : null}
+        <LoginButton />
+      </form>
+    </div>
   );
 }

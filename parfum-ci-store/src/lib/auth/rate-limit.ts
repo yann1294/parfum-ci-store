@@ -86,4 +86,8 @@ export class InMemoryLoginRateLimiter implements LoginRateLimiter {
   }
 }
 
+export function normalizeLoginRateLimitKey(identifier: string) {
+  return identifier.trim().toLowerCase().replace(/\s+/g, "");
+}
+
 export const loginRateLimiter = new InMemoryLoginRateLimiter();

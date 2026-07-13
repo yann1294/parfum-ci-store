@@ -7,7 +7,13 @@ import type { Json } from "@/types/database.types";
 
 type AdminAuthAuditEvent = {
   actorId?: string | null;
-  action: "ADMIN_LOGIN_SUCCEEDED" | "ADMIN_LOGIN_FAILED" | "ADMIN_LOGIN_DENIED" | "ADMIN_LOGOUT";
+  action:
+    | "ADMIN_LOGIN_SUCCEEDED"
+    | "ADMIN_LOGIN_FAILED"
+    | "ADMIN_LOGIN_DENIED"
+    | "ADMIN_GOOGLE_LOGIN_SUCCEEDED"
+    | "ADMIN_GOOGLE_LOGIN_DENIED"
+    | "ADMIN_LOGOUT";
   email?: string;
   reason?: string;
 };

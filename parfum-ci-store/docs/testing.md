@@ -38,12 +38,32 @@ Do not add broad browser tests until the corresponding features exist.
 Admin authentication setup reads credentials only from ignored environment variables:
 
 ```bash
-PLAYWRIGHT_ADMIN_EMAIL=admin@example.com PLAYWRIGHT_ADMIN_PASSWORD='...' pnpm test:e2e
+PLAYWRIGHT_OWNER_EMAIL=owner@example.com PLAYWRIGHT_OWNER_PASSWORD='...' pnpm test:e2e
 ```
 
 The setup project writes authenticated browser state to `playwright/.auth/admin.json`, which is ignored by Git. Do not commit storage state, traces, videos, screenshots, or reports that contain authenticated cookies or session data.
 
-If `PLAYWRIGHT_ADMIN_EMAIL` and `PLAYWRIGHT_ADMIN_PASSWORD` are missing, the authenticated setup is skipped. Unauthenticated smoke tests may still run, but authenticated admin E2E coverage is not verified.
+Use these optional role-specific variables for broader Phase 3 browser coverage:
+
+- `PLAYWRIGHT_OWNER_EMAIL`, `PLAYWRIGHT_OWNER_PASSWORD`
+- `PLAYWRIGHT_INVENTORY_MANAGER_EMAIL`, `PLAYWRIGHT_INVENTORY_MANAGER_PASSWORD`
+- `PLAYWRIGHT_ORDER_MANAGER_EMAIL`, `PLAYWRIGHT_ORDER_MANAGER_PASSWORD`
+- `PLAYWRIGHT_SUPPORT_EMAIL`, `PLAYWRIGHT_SUPPORT_PASSWORD`
+- `PLAYWRIGHT_INACTIVE_EMAIL`, `PLAYWRIGHT_INACTIVE_PASSWORD`
+
+`PLAYWRIGHT_ADMIN_EMAIL` and `PLAYWRIGHT_ADMIN_PASSWORD` remain a backward-compatible owner/admin fallback. If role credentials are missing, the affected authenticated tests are skipped. Unauthenticated smoke tests may still run, but skipped authenticated coverage is not verified.
+
+Google's real consent screen is not automated in CI. Browser tests verify the Google button and safe failure paths; manual verification covers the real provider flow.
+
+## Environment Diagnostics
+
+Run:
+
+```bash
+pnpm env:check
+```
+
+The command reports only `SET` or `MISSING` for expected variables and never prints values.
 
 ## Required Check Before Completion
 

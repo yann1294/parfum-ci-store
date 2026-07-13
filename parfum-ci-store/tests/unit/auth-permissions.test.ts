@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getAdminNavigation } from "@/lib/auth/navigation";
+import { canAccessAdminPath, getAdminNavigation } from "@/lib/auth/navigation";
 import {
   canManageOwnerSecuritySettings,
   canManageInventory,
@@ -58,6 +58,8 @@ describe("admin role permissions", () => {
     expect(labels).not.toContain("Paiements");
     expect(labels).not.toContain("Messages");
     expect(labels).not.toContain("Paramètres");
+    expect(canAccessAdminPath(inventory, "/admin/inventaire")).toBe(true);
+    expect(canAccessAdminPath(inventory, "/admin/commandes")).toBe(false);
   });
 
   it("limits support users to order read and messages", () => {
@@ -74,6 +76,9 @@ describe("admin role permissions", () => {
     expect(labels).not.toContain("Catalogue");
     expect(labels).not.toContain("Inventaire");
     expect(labels).not.toContain("Paramètres");
+    expect(canAccessAdminPath(support, "/admin/commandes")).toBe(true);
+    expect(canAccessAdminPath(support, "/admin/paiements")).toBe(false);
+    expect(canAccessAdminPath(support, "/admin/inventaire")).toBe(false);
   });
 
   it("limits order managers to order, customer, and payment operations", () => {
@@ -90,6 +95,8 @@ describe("admin role permissions", () => {
     expect(labels).not.toContain("Inventaire");
     expect(labels).not.toContain("Messages");
     expect(labels).not.toContain("Paramètres");
+    expect(canAccessAdminPath(orderManager, "/admin/paiements")).toBe(true);
+    expect(canAccessAdminPath(orderManager, "/admin/inventaire")).toBe(false);
   });
 
   it("denies inactive staff for all capabilities and navigation modules", () => {
@@ -115,6 +122,7 @@ describe("safe return paths", () => {
 
   it("rejects malformed or auth-loop return paths", () => {
     expect(getSafeReturnPath("admin")).toBe("/admin");
+    expect(getSafeReturnPath("javascript:alert(1)")).toBe("/admin");
     expect(getSafeReturnPath("/connexion?retour=%2Fadmin")).toBe("/admin");
     expect(getSafeReturnPath("/acces-refuse")).toBe("/admin");
   });

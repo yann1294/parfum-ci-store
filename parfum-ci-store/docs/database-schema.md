@@ -3,6 +3,7 @@
 Supabase PostgreSQL is the source of truth. All exposed tables use UUID primary keys, UTC timestamps, constraints, indexes, and RLS. Monetary amounts are stored as integer XOF values.
 
 The first migration is `supabase/migrations/20260713000100_initial_schema.sql`.
+Phase 3 adds `supabase/migrations/20260713000200_auth_profile_sync.sql` for Auth-user profile synchronization.
 
 ## ERD
 
@@ -147,6 +148,10 @@ erDiagram
 
 - Every exposed table has RLS enabled.
 - Admin/staff users live in `profiles`, keyed to `auth.users(id)` with `on delete cascade`.
+- New `auth.users` rows are synchronized into `public.profiles` by `app_private.handle_new_auth_user()`.
+- Synchronized profiles use the Auth user UUID, are inserted only when missing, and are inactive by default.
+- The sync trigger may copy harmless display-name text from Auth metadata, but it never copies roles, active status, email domains, provider metadata, or authorization claims.
+- Existing profiles are never overwritten by the backfill; existing roles, inactive users, and owners are preserved.
 - Active staff reads use `app_private.has_staff_role(...)`; the helper is `SECURITY DEFINER`, outside exposed schemas, uses an empty `search_path`, fully qualifies relations, and is not executable by `PUBLIC`.
 - Anonymous users can read only active brands/categories, `ACTIVE` products, active variants for active products, approved active images for active products, and public store settings.
 - Public users cannot directly insert orders, inventory transactions, notifications, audit logs, or payment records.

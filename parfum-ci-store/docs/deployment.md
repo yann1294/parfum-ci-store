@@ -16,6 +16,13 @@ Use `.env.example` as the template. Real values belong in `.env.local` for devel
 
 Only `NEXT_PUBLIC_*` values may be exposed to the browser. Supabase secret keys, Resend API keys, order token secrets, and payment configuration are server-only.
 
+Supabase values come from the project dashboard:
+
+- `NEXT_PUBLIC_SUPABASE_URL`: Project URL from Project Settings or Connect dialog.
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: publishable/anon-style browser-safe key from API settings.
+- `SUPABASE_SECRET_KEY`: server-only secret/service-role-style key for privileged server code. Never prefix it with `NEXT_PUBLIC_`.
+- `SUPABASE_STORAGE_BUCKET`: Storage bucket name for product images.
+
 Required Supabase env:
 
 ```bash
@@ -24,6 +31,16 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
 SUPABASE_STORAGE_BUCKET=
 ```
+
+## Google OAuth
+
+Configure Google OAuth manually before production approval:
+
+- Google Cloud Console authorized redirect URI: `https://PROJECT_REF.supabase.co/auth/v1/callback`.
+- Supabase Dashboard Google provider: enable Google and store the Google client ID/secret.
+- Supabase Auth URL allow list: `http://localhost:3000/auth/callback` for development and the production callback URL, for example `https://www.example.com/auth/callback`.
+
+The application callback is `/auth/callback`; it never receives or stores Google passwords and never assigns staff roles.
 
 ## Release Checks
 

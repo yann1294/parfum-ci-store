@@ -27,7 +27,9 @@ export function AdminTopBar({ staff }: { staff: StaffProfile }) {
           </Button>
           <ThemeToggle />
           <DropdownMenu>
-            <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+            <DropdownMenuTrigger
+              render={<Button variant="outline" size="sm" aria-label="Compte admin" />}
+            >
               <UserCircle className="size-4" aria-hidden="true" />
               {staff.fullName}
             </DropdownMenuTrigger>

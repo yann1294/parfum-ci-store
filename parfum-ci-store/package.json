@@ -19,7 +19,8 @@
     "supabase:status": "pnpm exec supabase status",
     "db:push": "pnpm exec supabase db push",
     "db:types": "pnpm exec supabase gen types typescript --local > src/types/database.types.ts",
-    "db:migrations": "pnpm exec supabase migration list"
+    "db:migrations": "pnpm exec supabase migration list",
+    "env:check": "node scripts/env-diagnostics.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
