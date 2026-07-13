@@ -1,5 +1,6 @@
 import { Bell, UserCircle } from "lucide-react";
 
+import { logoutAction } from "@/app/admin/actions";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getRoleLabel, type StaffProfile } from "@/lib/auth/permissions";
 
-export function AdminTopBar() {
+export function AdminTopBar({ staff }: { staff: StaffProfile }) {
   return (
     <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -27,13 +29,21 @@ export function AdminTopBar() {
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
               <UserCircle className="size-4" aria-hidden="true" />
-              Admin
+              {staff.fullName}
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>Session</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-64">
+              <DropdownMenuLabel>
+                <span className="block text-sm font-medium">{staff.fullName}</span>
+                <span className="block text-xs font-normal text-muted-foreground">
+                  {getRoleLabel(staff.role)}
+                </span>
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profil temporaire</DropdownMenuItem>
-              <DropdownMenuItem>Déconnexion</DropdownMenuItem>
+              <form action={logoutAction}>
+                <DropdownMenuItem render={<button type="submit" className="w-full" />}>
+                  Déconnexion
+                </DropdownMenuItem>
+              </form>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

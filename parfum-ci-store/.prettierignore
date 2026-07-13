@@ -3,4 +3,6 @@ node_modules
 coverage
 playwright-report
 test-results
+playwright/.auth
 pnpm-lock.yaml
+supabase/.temp

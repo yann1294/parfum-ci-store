@@ -35,6 +35,16 @@ Use Playwright for critical flows:
 
 Do not add broad browser tests until the corresponding features exist.
 
+Admin authentication setup reads credentials only from ignored environment variables:
+
+```bash
+PLAYWRIGHT_ADMIN_EMAIL=admin@example.com PLAYWRIGHT_ADMIN_PASSWORD='...' pnpm test:e2e
+```
+
+The setup project writes authenticated browser state to `playwright/.auth/admin.json`, which is ignored by Git. Do not commit storage state, traces, videos, screenshots, or reports that contain authenticated cookies or session data.
+
+If `PLAYWRIGHT_ADMIN_EMAIL` and `PLAYWRIGHT_ADMIN_PASSWORD` are missing, the authenticated setup is skipped. Unauthenticated smoke tests may still run, but authenticated admin E2E coverage is not verified.
+
 ## Required Check Before Completion
 
 Run and report:
@@ -43,6 +53,7 @@ Run and report:
 pnpm typecheck
 pnpm lint
 pnpm test
+pnpm test:e2e
 pnpm build
 ```
 

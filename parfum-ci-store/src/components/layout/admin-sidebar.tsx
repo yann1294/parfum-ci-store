@@ -1,28 +1,35 @@
 import Link from "next/link";
+import type { ComponentType } from "react";
 import {
   BarChart3,
   Boxes,
   ClipboardList,
+  CreditCard,
   Home,
   LayoutDashboard,
   MessageSquare,
   Palette,
   Settings,
   Tags,
+  Users,
 } from "lucide-react";
 
-const adminItems = [
-  { label: "Tableau de bord", href: "/admin", icon: LayoutDashboard },
-  { label: "Catalogue", href: "/admin/catalogue", icon: Tags },
-  { label: "Inventaire", href: "/admin/inventaire", icon: Boxes },
-  { label: "Commandes", href: "/admin/commandes", icon: ClipboardList },
-  { label: "Messages", href: "/admin/messages", icon: MessageSquare },
-  { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-  { label: "Design system", href: "/admin/design-system", icon: Palette },
-  { label: "Paramètres", href: "/admin/parametres", icon: Settings },
-];
+import type { AdminNavigationItem } from "@/lib/auth/navigation";
 
-export function AdminSidebar() {
+const navIcons: Record<AdminNavigationItem["module"], ComponentType<{ className?: string }>> = {
+  dashboard: LayoutDashboard,
+  products: Tags,
+  inventory: Boxes,
+  orders: ClipboardList,
+  customers: Users,
+  payments: CreditCard,
+  messages: MessageSquare,
+  analytics: BarChart3,
+  "design-system": Palette,
+  settings: Settings,
+};
+
+export function AdminSidebar({ items }: { items: AdminNavigationItem[] }) {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:block">
       <div className="flex h-16 items-center border-b border-sidebar-border px-6">
@@ -35,8 +42,8 @@ export function AdminSidebar() {
         </Link>
       </div>
       <nav className="grid gap-1 p-4" aria-label="Navigation admin">
-        {adminItems.map((item) => {
-          const Icon = item.icon;
+        {items.map((item) => {
+          const Icon = navIcons[item.module];
           return (
             <Link
               key={item.href}

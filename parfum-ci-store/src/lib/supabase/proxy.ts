@@ -5,8 +5,15 @@ import { getPublicEnv } from "@/lib/env/public";
 import type { Database } from "@/types/database.types";
 
 export async function updateSession(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  const currentPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+
+  requestHeaders.set("x-current-path", currentPath);
+
   let response = NextResponse.next({
-    request,
+    request: {
+      headers: requestHeaders,
+    },
   });
   const env = getPublicEnv();
 
@@ -21,7 +28,9 @@ export async function updateSession(request: NextRequest) {
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({
-            request,
+            request: {
+              headers: requestHeaders,
+            },
           });
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);

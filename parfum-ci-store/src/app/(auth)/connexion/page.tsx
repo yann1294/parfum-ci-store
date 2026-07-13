@@ -1,32 +1,28 @@
 import { PageContainer } from "@/components/shared/page-container";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { LoginForm } from "@/components/auth/login-form";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
+import { getSafeReturnPath } from "@/lib/auth/redirects";
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ retour?: string }>;
+}) {
+  const params = await searchParams;
+  const returnPath = getSafeReturnPath(params?.retour);
+
   return (
     <main id="contenu" className="min-h-screen bg-background py-12">
       <PageContainer className="max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl">Connexion admin</CardTitle>
+            <h1 className="text-3xl font-semibold">Connexion admin</h1>
             <CardDescription>
-              Écran temporaire. L&apos;authentification Supabase sera branchée plus tard.
+              Connectez-vous avec votre email et votre mot de passe administrateur.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-5">
-              <div className="grid gap-2">
-                <Label htmlFor="email">Adresse email</Label>
-                <Input id="email" type="email" placeholder="admin@parfum.ci" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Mot de passe</Label>
-                <Input id="password" type="password" />
-              </div>
-              <Button type="button">Continuer</Button>
-            </form>
+            <LoginForm returnPath={returnPath} />
           </CardContent>
         </Card>
       </PageContainer>

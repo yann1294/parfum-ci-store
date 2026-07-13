@@ -4,7 +4,7 @@ const routes = [
   { path: "/", heading: /Parfums raffinés/i },
   { path: "/catalogue", heading: "Sélection temporaire" },
   { path: "/contact", heading: "Parlez-nous de votre besoin" },
-  { path: "/admin", heading: "Tableau de bord" },
+  { path: "/admin", heading: "Connexion admin" },
 ];
 
 for (const viewport of [

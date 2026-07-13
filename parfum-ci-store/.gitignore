@@ -14,6 +14,7 @@
 /coverage
 /playwright-report
 /test-results
+/playwright/.auth
 
 # next.js
 /.next/
@@ -38,6 +39,9 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# supabase local metadata
+supabase/.temp
 
 # typescript
 *.tsbuildinfo
