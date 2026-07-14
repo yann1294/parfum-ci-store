@@ -35,6 +35,9 @@ describe("AdminTopBar", () => {
     expect(
       consoleError.mock.calls.some((call) => call.join(" ").includes("MenuGroupContext")),
     ).toBe(false);
+    expect(
+      consoleError.mock.calls.some((call) => call.join(" ").includes("nativeButton")),
+    ).toBe(false);
 
     fireEvent.keyDown(document, { key: "Escape" });
     consoleError.mockRestore();

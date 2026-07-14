@@ -46,7 +46,10 @@ export function AdminTopBar({ staff }: { staff: StaffProfile }) {
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <form action={logoutAction}>
-                  <DropdownMenuItem render={<button type="submit" className="w-full" />}>
+                  <DropdownMenuItem
+                    nativeButton
+                    render={<button type="submit" className="w-full" />}
+                  >
                     Déconnexion
                   </DropdownMenuItem>
                 </form>
