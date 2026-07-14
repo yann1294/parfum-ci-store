@@ -54,6 +54,41 @@ test("owner password login, logout, back and refresh keep admin protected", asyn
   await expect(page.getByText("Propriétaire")).toBeVisible();
 
   await page.getByRole("button", { name: /Compte admin/i }).click();
+  await expect(page.getByText("Propriétaire")).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: "Déconnexion" })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  const visibleAdminLinks = await page
+    .getByRole("navigation", { name: "Navigation admin" })
+    .getByRole("link")
+    .evaluateAll((links) =>
+      links.map((link) => ({
+        label: link.textContent?.trim() ?? "",
+        href: (link as HTMLAnchorElement).pathname,
+      })),
+    );
+
+  for (const link of visibleAdminLinks) {
+    await page.getByRole("link", { name: link.label }).click();
+    await expect(page).not.toHaveURL(/\/connexion/);
+    await expect(page.getByRole("heading")).toBeVisible();
+  }
+
+  for (const path of ["/admin", "/admin/design-system"]) {
+    await page.goto(path);
+    await page.reload();
+    await expect(page).not.toHaveURL(/\/connexion/);
+    await expect(page.getByRole("button", { name: /Compte admin/i })).toBeVisible();
+  }
+
+  const secondPage = await page.context().newPage();
+  await secondPage.goto("/admin");
+  await expect(secondPage).not.toHaveURL(/\/connexion/);
+  await expect(secondPage.getByRole("button", { name: /Compte admin/i })).toBeVisible();
+  await secondPage.close();
+
+  await page.goto("/admin");
+  await page.getByRole("button", { name: /Compte admin/i }).click();
   await page.getByRole("menuitem", { name: "Déconnexion" }).click();
   await page.waitForURL("**/connexion");
 

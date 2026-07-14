@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -34,18 +35,22 @@ export function AdminTopBar({ staff }: { staff: StaffProfile }) {
               {staff.fullName}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>
-                <span className="block text-sm font-medium">{staff.fullName}</span>
-                <span className="block text-xs font-normal text-muted-foreground">
-                  {getRoleLabel(staff.role)}
-                </span>
-              </DropdownMenuLabel>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>
+                  <span className="block text-sm font-medium">{staff.fullName}</span>
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {getRoleLabel(staff.role)}
+                  </span>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <form action={logoutAction}>
-                <DropdownMenuItem render={<button type="submit" className="w-full" />}>
-                  Déconnexion
-                </DropdownMenuItem>
-              </form>
+              <DropdownMenuGroup>
+                <form action={logoutAction}>
+                  <DropdownMenuItem render={<button type="submit" className="w-full" />}>
+                    Déconnexion
+                  </DropdownMenuItem>
+                </form>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

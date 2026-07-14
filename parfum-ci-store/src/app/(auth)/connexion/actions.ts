@@ -5,7 +5,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { auditAdminAuthEvent } from "@/lib/audit/admin-auth";
-import { AuthenticationError, InactiveStaffError } from "@/lib/auth/errors";
+import { authDiagnostic, getAuthDiagnosticRequestId } from "@/lib/auth/diagnostics";
+import {
+  AuthenticationError,
+  InactiveStaffError,
+  StaffProfileLookupError,
+  StaffProfileMissingError,
+} from "@/lib/auth/errors";
 import { loginRateLimiter, normalizeLoginRateLimitKey } from "@/lib/auth/rate-limit";
 import { getSafeReturnPath } from "@/lib/auth/redirects";
 import { requireActiveStaff } from "@/lib/auth/server";
@@ -29,22 +35,11 @@ function getClientIp(headersList: Headers) {
   );
 }
 
-function getRequestOrigin(headersList: Headers) {
-  const forwardedProto = headersList.get("x-forwarded-proto");
-  const forwardedHost = headersList.get("x-forwarded-host");
-
-  if (forwardedHost) {
-    return `${forwardedProto ?? "https"}://${forwardedHost}`;
-  }
-
-  const host = headersList.get("host");
-  return host ? `http://${host}` : "http://localhost:3000";
-}
-
 export async function loginAction(
   _previousState: LoginActionState,
   formData: FormData,
 ): Promise<LoginActionState> {
+  const requestId = getAuthDiagnosticRequestId();
   const parsed = loginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -83,13 +78,29 @@ export async function loginAction(
 
   try {
     const staff = await requireActiveStaff();
+    authDiagnostic("PASSWORD_LOGIN_SUCCEEDED", { requestId });
+    authDiagnostic("PASSWORD_LOGIN_COOKIE_PERSISTED", { requestId });
     await loginRateLimiter.recordSuccess(rateLimitKey);
     await auditAdminAuthEvent({ actorId: staff.id, action: "ADMIN_LOGIN_SUCCEEDED", email });
   } catch (authError) {
-    await supabase.auth.signOut();
     await loginRateLimiter.recordFailure(rateLimitKey);
 
-    if (authError instanceof InactiveStaffError || authError instanceof AuthenticationError) {
+    if (authError instanceof StaffProfileLookupError) {
+      await auditAdminAuthEvent({
+        action: "ADMIN_LOGIN_DENIED",
+        email,
+        reason: authError.name,
+      });
+      return { error: "Connexion temporairement indisponible. Réessayez dans un instant." };
+    }
+
+    await supabase.auth.signOut();
+
+    if (
+      authError instanceof InactiveStaffError ||
+      authError instanceof StaffProfileMissingError ||
+      authError instanceof AuthenticationError
+    ) {
       await auditAdminAuthEvent({
         action: "ADMIN_LOGIN_DENIED",
         email,
@@ -102,27 +113,4 @@ export async function loginAction(
   }
 
   redirect(returnPath);
-}
-
-export async function googleLoginAction(formData: FormData) {
-  const returnPath = getSafeReturnPath(String(formData.get("returnPath") ?? "/admin"));
-  const headersList = await headers();
-  const origin = getRequestOrigin(headersList);
-  const callbackUrl = new URL("/auth/callback", origin);
-
-  callbackUrl.searchParams.set("retour", returnPath);
-
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: callbackUrl.toString(),
-    },
-  });
-
-  if (error || !data.url) {
-    redirect("/connexion?erreur=oauth");
-  }
-
-  redirect(data.url);
 }

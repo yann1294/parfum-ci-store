@@ -1,18 +1,23 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { authDiagnostic, getAuthDiagnosticRequestId } from "@/lib/auth/diagnostics";
 import { getPublicEnv } from "@/lib/env/public";
 import type { Database } from "@/types/database.types";
 
 export async function updateSession(request: NextRequest) {
-  const requestHeaders = new Headers(request.headers);
+  const requestId = getAuthDiagnosticRequestId();
   const currentPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
 
-  requestHeaders.set("x-current-path", currentPath);
+  function createRequestHeaders() {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-current-path", currentPath);
+    return requestHeaders;
+  }
 
   let response = NextResponse.next({
     request: {
-      headers: requestHeaders,
+      headers: createRequestHeaders(),
     },
   });
   const env = getPublicEnv();
@@ -29,18 +34,24 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({
             request: {
-              headers: requestHeaders,
+              headers: createRequestHeaders(),
             },
           });
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
           });
+          authDiagnostic("PROXY_SESSION_REFRESHED", { requestId, route: request.nextUrl.pathname });
         },
       },
     },
   );
 
-  await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getClaims();
+
+  authDiagnostic(error || !data?.claims?.sub ? "PROXY_SESSION_MISSING" : "PROXY_SESSION_PRESENT", {
+    requestId,
+    route: request.nextUrl.pathname,
+  });
 
   return response;
 }

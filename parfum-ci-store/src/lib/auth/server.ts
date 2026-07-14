@@ -2,7 +2,14 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 
-import { AuthenticationError, AuthorizationError, InactiveStaffError } from "@/lib/auth/errors";
+import { authDiagnostic, getAuthDiagnosticRequestId } from "@/lib/auth/diagnostics";
+import {
+  AuthenticationError,
+  AuthorizationError,
+  InactiveStaffError,
+  StaffProfileLookupError,
+  StaffProfileMissingError,
+} from "@/lib/auth/errors";
 import {
   hasRole,
   canManageInventory as canManageInventoryForStaff,
@@ -69,6 +76,7 @@ export async function requireAuthenticatedUser(options?: RequireOptions) {
 }
 
 export async function requireActiveStaff(options?: RequireOptions) {
+  const requestId = getAuthDiagnosticRequestId();
   const user = await requireAuthenticatedUser(options);
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
@@ -77,13 +85,23 @@ export async function requireActiveStaff(options?: RequireOptions) {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (error || !data) {
-    handleDenied(options);
+  if (error) {
+    authDiagnostic("STAFF_PROFILE_LOOKUP_FAILED", { requestId });
+    throw new StaffProfileLookupError();
+  }
+
+  if (!data) {
+    if (options?.mode === "redirect") {
+      redirect("/acces-refuse");
+    }
+
+    throw new StaffProfileMissingError();
   }
 
   const staff = toStaffProfile(data);
 
   if (!staff.active) {
+    authDiagnostic("STAFF_PROFILE_INACTIVE", { requestId });
     if (options?.mode === "redirect") {
       redirect("/acces-refuse");
     }
@@ -91,6 +109,7 @@ export async function requireActiveStaff(options?: RequireOptions) {
     throw new InactiveStaffError();
   }
 
+  authDiagnostic("STAFF_PROFILE_FOUND", { requestId });
   return staff;
 }
 

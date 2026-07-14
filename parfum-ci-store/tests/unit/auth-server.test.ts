@@ -50,7 +50,17 @@ describe("server auth helpers", () => {
     });
     const { requireActiveStaff } = await import("@/lib/auth/server");
 
-    await expect(requireActiveStaff()).rejects.toThrow("Insufficient permissions");
+    await expect(requireActiveStaff()).rejects.toThrow("Staff profile is missing");
+  });
+
+  it("does not classify profile lookup failures as missing sessions", async () => {
+    maybeSingle.mockResolvedValue({
+      data: null,
+      error: new Error("database unavailable"),
+    });
+    const { requireActiveStaff } = await import("@/lib/auth/server");
+
+    await expect(requireActiveStaff()).rejects.toThrow("Staff profile lookup failed");
   });
 
   it("rejects direct server action invocation for unauthorized roles", async () => {

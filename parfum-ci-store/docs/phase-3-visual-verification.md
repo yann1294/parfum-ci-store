@@ -181,6 +181,8 @@ Use a known test email and intentionally incorrect passwords. Do not write the p
 | `/admin/design-system` Design system | Yes   | Yes   | Yes               | Yes           | Yes              | Development active staff   |               |           |
 | `/admin/parametres` Paramètres       | Yes   | Yes   | No                | No            | No               | Settings managers          |               |           |
 
+Current module pages are protected placeholders. They verify authentication and authorization persistence but do not expose business data or mutations yet.
+
 ## P. Evidence
 
 Screenshots must not contain passwords, tokens, OAuth codes, cookies, real customer addresses, or real payment data.
@@ -188,3 +190,79 @@ Screenshots must not contain passwords, tokens, OAuth codes, cookies, real custo
 Evidence links or filenames:
 Defects:
 Retest notes:
+
+## Q. Phase 3 Regression: Account Dropdown
+
+1. Log in as OWNER.
+2. Open the account button in the admin top bar.
+3. Confirm no runtime error appears.
+4. Confirm the staff name is visible.
+5. Confirm `Propriétaire` is visible.
+6. Confirm `Déconnexion` is visible.
+7. Use keyboard navigation to reach the menu item.
+8. Close with Escape.
+
+Expected: The Base UI menu opens without `MenuGroupContext` errors and remains keyboard accessible.
+Actual:
+
+- [ ] PASS / [ ] FAIL
+
+## R. Phase 3 Regression: Password Session Persistence
+
+1. Log in as OWNER.
+2. Open `/admin`.
+3. Click every visible navigation item.
+4. Record each resulting URL.
+5. Confirm no route redirects to `/connexion`.
+6. Refresh every route.
+7. Return to dashboard.
+8. Open a second tab to `/admin`.
+9. Confirm both tabs remain authenticated.
+10. Inspect Network without copying cookie values.
+11. Confirm protected requests do not repeatedly return login redirects.
+
+Expected: Session cookies persist across client navigation, full refresh and a second tab.
+Actual:
+
+- [ ] PASS / [ ] FAIL
+
+## S. Phase 3 Regression: Google OAuth
+
+1. Start from a fresh incognito window.
+2. Open `/connexion`.
+3. Click `Continuer avec Google`.
+4. Select `dev.yann12@gmail.com`.
+5. Complete consent if requested.
+6. Confirm the browser passes through Supabase.
+7. Confirm `/auth/callback` runs.
+8. Confirm `/admin` loads.
+9. Open the account menu.
+10. Navigate across admin routes.
+11. Refresh.
+12. Confirm the session persists.
+13. Verify the Google identity in Supabase Authentication -> Users -> Identities.
+14. Confirm the database role remains `OWNER`.
+15. Do not record OAuth codes, tokens or cookies.
+
+Expected: OAuth creates a normal Supabase browser session and staff authorization still comes only from `public.profiles`.
+Actual:
+
+- [ ] PASS / [ ] FAIL
+
+## T. Phase 3 Regression: Google Failure Inspection
+
+Inspect only request names, statuses and safe development event codes. Do not copy query values, cookies, codes or tokens.
+
+| Symptom                                           | Likely area                            | Evidence to inspect                                                              |
+| ------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- |
+| Provider initiation failure                       | Browser Supabase OAuth call            | `GOOGLE_OAUTH_INIT_FAILED`, `/connexion` UI message                              |
+| Google redirect mismatch                          | Google Cloud or Supabase provider URLs | `/auth/v1/authorize` status and Supabase Auth logs                               |
+| Code exchange failure                             | `/auth/callback` exchange              | `GOOGLE_CODE_EXCHANGE_FAILED`, final `/connexion?erreur=oauth`                   |
+| Profile missing                                   | Staff approval/profile sync            | `GOOGLE_PROFILE_DENIED`, `profiles` row absent                                   |
+| Inactive profile                                  | Staff approval                         | `GOOGLE_PROFILE_DENIED`, `active = false`                                        |
+| Profile lookup failure                            | Database/RLS/service issue             | `STAFF_PROFILE_LOOKUP_FAILED`, final generic OAuth error                         |
+| Successful authentication followed by cookie loss | Callback or proxy cookie propagation   | `Set-Cookie` presence without copying values, no repeated `/connexion` redirects |
+
+Actual:
+
+- [ ] PASS / [ ] FAIL

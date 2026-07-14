@@ -5,7 +5,6 @@ const redirect = vi.fn((path: string) => {
 });
 const headers = vi.fn(async () => new Headers({ host: "localhost:3000" }));
 const signInWithPassword = vi.fn();
-const signInWithOAuth = vi.fn();
 const signOut = vi.fn();
 const requireActiveStaff = vi.fn();
 const requireAuthenticatedUser = vi.fn();
@@ -25,7 +24,6 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(async () => ({
     auth: {
       signInWithPassword,
-      signInWithOAuth,
       signOut,
     },
   })),
@@ -63,26 +61,6 @@ describe("admin login actions", () => {
 
     await expect(loginAction({}, formData)).resolves.toEqual({
       error: "Identifiants invalides.",
-    });
-  });
-
-  it("starts Google OAuth with the application callback", async () => {
-    signInWithOAuth.mockResolvedValue({
-      data: { url: "https://accounts.google.com/o/oauth2/v2/auth" },
-      error: null,
-    });
-    const { googleLoginAction } = await import("@/app/(auth)/connexion/actions");
-    const formData = new FormData();
-    formData.set("returnPath", "/admin");
-
-    await expect(googleLoginAction(formData)).rejects.toThrow(
-      "NEXT_REDIRECT:https://accounts.google.com/o/oauth2/v2/auth",
-    );
-    expect(signInWithOAuth).toHaveBeenCalledWith({
-      provider: "google",
-      options: {
-        redirectTo: "http://localhost:3000/auth/callback?retour=%2Fadmin",
-      },
     });
   });
 
