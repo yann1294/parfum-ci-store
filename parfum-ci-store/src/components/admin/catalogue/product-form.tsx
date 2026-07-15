@@ -10,6 +10,7 @@ import { TextField, TextareaField, NativeSelectField } from "@/components/admin/
 import { createProductFromForm, updateProductFromForm } from "@/app/admin/catalogue-actions";
 import { formatNotes } from "@/lib/catalogue/format";
 import type { AdminBrand, AdminCategory, AdminProduct } from "@/lib/catalogue/admin";
+import { fragranceFamilyOptions, targetAudienceOptions } from "@/lib/catalogue/validation";
 
 type ProductFormProps = {
   product?: AdminProduct;
@@ -88,18 +89,37 @@ export function ProductForm({ product, brands, categories, canMutate }: ProductF
               </option>
             ))}
           </NativeSelectField>
-          <TextField
-            label="Positionnement"
+          <NativeSelectField
+            label="Public cible"
             name="genderCategory"
-            defaultValue={product?.genderCategory ?? ""}
+            defaultValue={product?.genderCategory}
             disabled={!canMutate}
-          />
-          <TextField
-            label="Famille olfactive"
-            name="fragranceFamily"
-            defaultValue={product?.fragranceFamily ?? ""}
-            disabled={!canMutate}
-          />
+          >
+            <option value="none">Non renseigné</option>
+            {targetAudienceOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </NativeSelectField>
+          <div className="grid gap-2">
+            <NativeSelectField
+              label="Famille olfactive"
+              name="fragranceFamily"
+              defaultValue={product?.fragranceFamily}
+              disabled={!canMutate}
+            >
+              <option value="none">Non renseignée</option>
+              {fragranceFamilyOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </NativeSelectField>
+            <p className="text-sm text-muted-foreground">
+              Décrit la famille de senteurs dominante du parfum.
+            </p>
+          </div>
           <div className="md:col-span-2">
             <TextareaField
               label="Description courte"

@@ -4,8 +4,8 @@ import { PageContainer } from "@/components/shared/page-container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { ProductForm } from "@/components/admin/catalogue/product-form";
 import {
-  listAdminBrands,
-  listAdminCategories,
+  listAdminBrandOptions,
+  listAdminCategoryOptions,
 } from "@/lib/catalogue/admin";
 import { requireActiveStaff } from "@/lib/auth/server";
 import { getAdminCataloguePermission } from "@/lib/catalogue/permissions";
@@ -18,7 +18,10 @@ export default async function NewProductPage() {
     redirect("/acces-refuse");
   }
 
-  const [brands, categories] = await Promise.all([listAdminBrands(), listAdminCategories()]);
+  const [brands, categories] = await Promise.all([
+    listAdminBrandOptions(),
+    listAdminCategoryOptions(),
+  ]);
 
   return (
     <PageContainer>

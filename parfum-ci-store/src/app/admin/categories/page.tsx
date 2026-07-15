@@ -1,11 +1,20 @@
 import { PageContainer } from "@/components/shared/page-container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { EntityManager } from "@/components/admin/catalogue/entity-manager";
-import { listAdminCategories, requireCatalogueReadAccess } from "@/lib/catalogue/admin";
+import {
+  listAdminCategories,
+  normalizeAdminEntityListFilters,
+  requireCatalogueReadAccess,
+} from "@/lib/catalogue/admin";
 
-export default async function CategoriesPage() {
+export default async function CategoriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const params = await searchParams;
   const { permissions } = await requireCatalogueReadAccess();
-  const categories = await listAdminCategories();
+  const categories = await listAdminCategories(normalizeAdminEntityListFilters(params));
 
   return (
     <PageContainer>
@@ -17,9 +26,10 @@ export default async function CategoriesPage() {
       <div className="mt-8">
         <EntityManager
           type="category"
-          items={categories}
-          categories={categories}
+          result={categories}
+          categories={categories.items}
           canMutate={permissions.canMutate}
+          searchParams={params}
         />
       </div>
     </PageContainer>

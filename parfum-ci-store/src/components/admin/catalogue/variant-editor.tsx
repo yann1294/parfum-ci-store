@@ -1,119 +1,385 @@
 "use client";
 
-import { useTransition } from "react";
+import Link from "next/link";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TextField } from "@/components/admin/catalogue/catalogue-form-fields";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { NativeSelectField, TextField } from "@/components/admin/catalogue/catalogue-form-fields";
 import { createVariantFromForm, updateVariantFromForm } from "@/app/admin/catalogue-actions";
 import { formatXof } from "@/lib/catalogue/format";
-import type { AdminProduct } from "@/lib/catalogue/admin";
+import type { AdminProduct, AdminVariant, PaginatedResult } from "@/lib/catalogue/admin";
+
+type VariantEditorProps = {
+  product: AdminProduct;
+  variants: PaginatedResult<AdminVariant>;
+  canMutate: boolean;
+  canViewCostPrice: boolean;
+  searchParams: Record<string, string | undefined>;
+};
+
+function stockBadge(variant: AdminVariant) {
+  if (variant.availabilityStatus === "OUT_OF_STOCK") {
+    return <Badge variant="destructive">Rupture</Badge>;
+  }
+
+  if (variant.availabilityStatus === "LOW_STOCK") {
+    return <Badge variant="secondary">Stock bas</Badge>;
+  }
+
+  return <Badge>En stock</Badge>;
+}
+
+function buildPageHref(productId: string, searchParams: Record<string, string | undefined>, page: number) {
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(searchParams)) {
+    if (value && key.startsWith("variant")) {
+      params.set(key, value);
+    }
+  }
+
+  params.set("variantPage", String(page));
+  return `/admin/produits/${productId}?${params.toString()}`;
+}
 
 export function VariantEditor({
   product,
+  variants,
   canMutate,
   canViewCostPrice,
-}: {
-  product: AdminProduct;
-  canMutate: boolean;
-  canViewCostPrice: boolean;
-}) {
+  searchParams,
+}: VariantEditorProps) {
   const [pending, startTransition] = useTransition();
+  const [creating, setCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editingVariant = variants.items.find((variant) => variant.id === editingId) ?? null;
 
   function submitCreate(formData: FormData) {
     startTransition(async () => {
       const result = await createVariantFromForm(product.id, formData);
-      if (result.ok) toast.success("Variante créée");
-      else toast.error(result.message);
+      if (result.ok) {
+        toast.success("Variante créée");
+        setCreating(false);
+      } else {
+        toast.error(result.message);
+      }
     });
   }
 
   function submitUpdate(id: string, formData: FormData) {
     startTransition(async () => {
       const result = await updateVariantFromForm(id, product.id, formData);
-      if (result.ok) toast.success("Variante mise à jour");
-      else toast.error(result.message);
+      if (result.ok) {
+        toast.success("Variante mise à jour");
+        setEditingId(null);
+      } else {
+        toast.error(result.message);
+      }
     });
   }
 
   return (
     <div className="grid gap-4">
-      {canMutate ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Nouvelle variante</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={submitCreate} className="grid gap-4 md:grid-cols-4">
-              <TextField label="SKU" name="sku" required />
-              <TextField label="Taille ml" name="sizeMl" type="number" min={1} required />
-              <TextField label="Concentration" name="concentration" />
-              <TextField label="Prix de vente XOF" name="priceXof" inputMode="numeric" required />
-              <TextField label="Prix barré XOF" name="compareAtPriceXof" inputMode="numeric" />
-              {canViewCostPrice ? <TextField label="Coût XOF" name="costPriceXof" inputMode="numeric" /> : null}
-              <TextField label="Seuil stock bas" name="lowStockThreshold" type="number" min={0} defaultValue="0" />
-              <label className="flex items-center gap-2 self-end text-sm">
-                <input type="checkbox" name="active" defaultChecked />
-                Active
-              </label>
-              <div className="flex justify-end md:col-span-4">
-                <Button type="submit" disabled={pending}>
-                  Ajouter
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      ) : (
-        <p className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
-          Les ajustements de stock seront disponibles dans le module Inventaire.
-        </p>
-      )}
+      <Card>
+        <CardHeader className="gap-4 md:flex md:flex-row md:items-start md:justify-between">
+          <div>
+            <CardTitle>Variantes</CardTitle>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Les quantités sont gérées depuis le module Inventaire.
+            </p>
+          </div>
+          {canMutate ? (
+            <Dialog open={creating} onOpenChange={setCreating}>
+              <DialogTrigger render={<Button type="button" />}>Ajouter une variante</DialogTrigger>
+              <DialogContent className="sm:max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>Ajouter une variante</DialogTitle>
+                  <DialogDescription>
+                    Le stock physique et réservé reste géré depuis le module Inventaire.
+                  </DialogDescription>
+                </DialogHeader>
+                <VariantForm
+                  canViewCostPrice={canViewCostPrice}
+                  pending={pending}
+                  submitLabel="Ajouter"
+                  onSubmit={submitCreate}
+                />
+              </DialogContent>
+            </Dialog>
+          ) : null}
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <form action={`/admin/produits/${product.id}`} className="grid gap-3 md:grid-cols-5">
+            <TextField
+              label="Recherche SKU"
+              name="variantQ"
+              defaultValue={searchParams.variantQ ?? ""}
+            />
+            <NativeSelectField
+              label="Statut"
+              name="variantActive"
+              defaultValue={searchParams.variantActive ?? "ALL"}
+            >
+              <option value="ALL">Tous</option>
+              <option value="ACTIVE">Actives</option>
+              <option value="INACTIVE">Inactives</option>
+            </NativeSelectField>
+            <TextField
+              label="Concentration"
+              name="variantConcentration"
+              defaultValue={searchParams.variantConcentration ?? ""}
+            />
+            <TextField
+              label="Taille ml"
+              name="variantSizeMl"
+              type="number"
+              min={1}
+              defaultValue={searchParams.variantSizeMl ?? ""}
+            />
+            <NativeSelectField
+              label="Tri"
+              name="variantSort"
+              defaultValue={searchParams.variantSort ?? "sku_asc"}
+            >
+              <option value="sku_asc">SKU A-Z</option>
+              <option value="sku_desc">SKU Z-A</option>
+              <option value="size_asc">Taille</option>
+              <option value="price_asc">Prix croissant</option>
+              <option value="price_desc">Prix décroissant</option>
+              <option value="newest">Plus récentes</option>
+            </NativeSelectField>
+            <input type="hidden" name="variantPage" value="1" />
+            <div className="flex items-end md:col-span-5">
+              <Button type="submit" variant="outline">
+                Filtrer
+              </Button>
+            </div>
+          </form>
 
-      {product.variants.map((variant) => (
-        <Card key={variant.id}>
-          <CardHeader className="flex flex-row items-start justify-between">
-            <CardTitle>{variant.sku}</CardTitle>
-            <Badge variant={variant.active ? "default" : "secondary"}>
-              {variant.active ? "Active" : "Inactive"}
-            </Badge>
-          </CardHeader>
-          <CardContent>
-            <form action={(formData) => submitUpdate(variant.id, formData)} className="grid gap-4 md:grid-cols-4">
-              <TextField label="SKU" name="sku" defaultValue={variant.sku} disabled={!canMutate} />
-              <TextField label="Taille ml" name="sizeMl" type="number" defaultValue={variant.sizeMl} disabled={!canMutate} />
-              <TextField label="Concentration" name="concentration" defaultValue={variant.concentration ?? ""} disabled={!canMutate} />
-              <TextField label="Prix de vente XOF" name="priceXof" defaultValue={variant.priceXof} disabled={!canMutate} />
-              <TextField label="Prix barré XOF" name="compareAtPriceXof" defaultValue={variant.compareAtPriceXof ?? ""} disabled={!canMutate} />
-              {canViewCostPrice ? (
-                <TextField label="Coût XOF" name="costPriceXof" defaultValue={variant.costPriceXof ?? ""} disabled={!canMutate} />
-              ) : null}
-              <TextField label="Seuil stock bas" name="lowStockThreshold" type="number" defaultValue={variant.lowStockThreshold} disabled={!canMutate} />
-              <div className="grid gap-1 text-sm">
-                <span className="text-muted-foreground">Disponibilité</span>
-                <span>{variant.availableQuantity} disponible(s)</span>
-                <span className="text-xs text-muted-foreground">
-                  Stock: {variant.stockOnHand}, réservé: {variant.reservedQuantity}
-                </span>
+          {variants.items.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+              Aucune variante ne correspond aux filtres.
+            </div>
+          ) : (
+            <>
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>SKU</TableHead>
+                      <TableHead>Taille</TableHead>
+                      <TableHead>Concentration</TableHead>
+                      <TableHead>Prix</TableHead>
+                      {canViewCostPrice ? <TableHead>Coût</TableHead> : null}
+                      <TableHead>Stock physique</TableHead>
+                      <TableHead>Réservé</TableHead>
+                      <TableHead>Disponible</TableHead>
+                      <TableHead>Seuil</TableHead>
+                      <TableHead>État</TableHead>
+                      {canMutate ? <TableHead className="text-right">Action</TableHead> : null}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {variants.items.map((variant) => (
+                      <TableRow key={variant.id}>
+                        <TableCell className="font-medium">{variant.sku}</TableCell>
+                        <TableCell>{variant.sizeMl} ml</TableCell>
+                        <TableCell>{variant.concentration ?? "Non renseignée"}</TableCell>
+                        <TableCell>{formatXof(variant.priceXof)}</TableCell>
+                        {canViewCostPrice ? (
+                          <TableCell>
+                            {variant.costPriceXof === null ? "Non renseigné" : formatXof(variant.costPriceXof)}
+                          </TableCell>
+                        ) : null}
+                        <TableCell>{variant.stockOnHand}</TableCell>
+                        <TableCell>{variant.reservedQuantity}</TableCell>
+                        <TableCell>{variant.availableQuantity}</TableCell>
+                        <TableCell>{variant.lowStockThreshold}</TableCell>
+                        <TableCell>{stockBadge(variant)}</TableCell>
+                        {canMutate ? (
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingId(variant.id)}
+                            >
+                              Modifier
+                            </Button>
+                          </TableCell>
+                        ) : null}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="active" defaultChecked={variant.active} disabled={!canMutate} />
-                Active
-              </label>
-              <p className="text-sm text-muted-foreground">{formatXof(variant.priceXof)}</p>
-              {canMutate ? (
-                <div className="flex justify-end md:col-span-4">
-                  <Button type="submit" variant="outline" disabled={pending}>
-                    Enregistrer
-                  </Button>
-                </div>
+
+              <div className="grid gap-3 md:hidden">
+                {variants.items.map((variant) => (
+                  <div key={variant.id} className="rounded-lg border bg-card p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium">{variant.sku}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {variant.sizeMl} ml · {variant.concentration ?? "Non renseignée"}
+                        </p>
+                      </div>
+                      {stockBadge(variant)}
+                    </div>
+                    <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <dt className="text-muted-foreground">Prix</dt>
+                        <dd>{formatXof(variant.priceXof)}</dd>
+                      </div>
+                      {canViewCostPrice ? (
+                        <div>
+                          <dt className="text-muted-foreground">Coût</dt>
+                          <dd>{variant.costPriceXof === null ? "Non renseigné" : formatXof(variant.costPriceXof)}</dd>
+                        </div>
+                      ) : null}
+                      <div>
+                        <dt className="text-muted-foreground">Stock physique</dt>
+                        <dd>{variant.stockOnHand}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Réservé</dt>
+                        <dd>{variant.reservedQuantity}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Disponible</dt>
+                        <dd>{variant.availableQuantity}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Seuil stock bas</dt>
+                        <dd>{variant.lowStockThreshold}</dd>
+                      </div>
+                    </dl>
+                    {canMutate ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="mt-4"
+                        onClick={() => setEditingId(variant.id)}
+                      >
+                        Modifier
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+            <span>
+              Page {variants.page} sur {variants.totalPages} · {variants.total} variante(s)
+            </span>
+            <div className="flex gap-2">
+              {variants.page > 1 ? (
+                <Link
+                  href={buildPageHref(product.id, searchParams, variants.page - 1)}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  Précédent
+                </Link>
               ) : null}
-            </form>
-          </CardContent>
-        </Card>
-      ))}
+              {variants.page < variants.totalPages ? (
+                <Link
+                  href={buildPageHref(product.id, searchParams, variants.page + 1)}
+                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                >
+                  Suivant
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={Boolean(editingVariant)} onOpenChange={(open) => !open && setEditingId(null)}>
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Modifier la variante</DialogTitle>
+            <DialogDescription>
+              Les quantités sont gérées depuis le module Inventaire.
+            </DialogDescription>
+          </DialogHeader>
+          {editingVariant ? (
+            <VariantForm
+              variant={editingVariant}
+              canViewCostPrice={canViewCostPrice}
+              pending={pending}
+              submitLabel="Enregistrer"
+              onSubmit={(formData) => submitUpdate(editingVariant.id, formData)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function VariantForm({
+  variant,
+  canViewCostPrice,
+  pending,
+  submitLabel,
+  onSubmit,
+}: {
+  variant?: AdminVariant;
+  canViewCostPrice: boolean;
+  pending: boolean;
+  submitLabel: string;
+  onSubmit: (formData: FormData) => void;
+}) {
+  return (
+    <form action={onSubmit} className="grid gap-4 md:grid-cols-4">
+      <TextField label="SKU" name="sku" defaultValue={variant?.sku} required />
+      <TextField label="Taille ml" name="sizeMl" type="number" min={1} defaultValue={variant?.sizeMl} required />
+      <TextField label="Concentration" name="concentration" defaultValue={variant?.concentration ?? ""} />
+      <TextField label="Prix de vente XOF" name="priceXof" inputMode="numeric" defaultValue={variant?.priceXof} required />
+      <TextField label="Prix barré XOF" name="compareAtPriceXof" inputMode="numeric" defaultValue={variant?.compareAtPriceXof ?? ""} />
+      {canViewCostPrice ? (
+        <TextField label="Coût XOF" name="costPriceXof" inputMode="numeric" defaultValue={variant?.costPriceXof ?? ""} />
+      ) : null}
+      <TextField
+        label="Seuil stock bas"
+        name="lowStockThreshold"
+        type="number"
+        min={0}
+        defaultValue={variant?.lowStockThreshold ?? 0}
+      />
+      <label className="flex items-center gap-2 self-end text-sm">
+        <input type="checkbox" name="active" defaultChecked={variant?.active ?? true} />
+        Active
+      </label>
+      <p className="rounded-lg bg-muted/40 p-3 text-sm text-muted-foreground md:col-span-4">
+        Les champs de stock physique et réservé sont en lecture seule dans le catalogue.
+      </p>
+      <div className="flex justify-end md:col-span-4">
+        <Button type="submit" disabled={pending}>
+          {pending ? "Enregistrement..." : submitLabel}
+        </Button>
+      </div>
+    </form>
   );
 }

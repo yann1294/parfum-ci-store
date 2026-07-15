@@ -22,6 +22,20 @@ const slug = z
 
 const notes = z.array(nonEmptyString.max(80)).max(12).default([]);
 
+export const targetAudienceOptions = ["Homme", "Femme", "Unisexe", "Enfant"] as const;
+export const fragranceFamilyOptions = [
+  "Florale",
+  "Boisée",
+  "Ambrée",
+  "Hespéridée",
+  "Aromatique",
+  "Fougère",
+  "Chyprée",
+  "Gourmande",
+  "Cuirée",
+  "Aquatique",
+] as const;
+
 export const createBrandSchema = z
   .object({
     name: nonEmptyString.max(120),
@@ -56,11 +70,11 @@ export const createProductSchema = z
     slug: slug.optional(),
     shortDescription: optionalText,
     description: optionalText,
-    fragranceFamily: optionalText,
+    fragranceFamily: z.enum(fragranceFamilyOptions).nullable().optional(),
     topNotes: notes,
     heartNotes: notes,
     baseNotes: notes,
-    genderCategory: optionalText,
+    genderCategory: z.enum(targetAudienceOptions).nullable().optional(),
     featured: z.boolean().default(false),
     seoTitle: optionalText,
     seoDescription: optionalText,

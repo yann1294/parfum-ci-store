@@ -16,6 +16,7 @@ import {
   updateVariantAction,
 } from "@/lib/catalogue/actions";
 import { parseNotes, parseXofInput } from "@/lib/catalogue/format";
+import { fragranceFamilyOptions, targetAudienceOptions } from "@/lib/catalogue/validation";
 
 type ActionResult<T = unknown> =
   | { ok: true; data: T }
@@ -36,6 +37,15 @@ function nullableText(formData: FormData, key: string) {
   return text(formData, key) ?? null;
 }
 
+function nullableOption<T extends readonly string[]>(formData: FormData, key: string, options: T) {
+  const value = text(formData, key);
+  if (!value || value === "none") {
+    return null;
+  }
+
+  return (options as readonly string[]).includes(value) ? (value as T[number]) : null;
+}
+
 function bool(formData: FormData, key: string) {
   return formData.get(key) === "on" || formData.get(key) === "true";
 }
@@ -52,8 +62,8 @@ export async function createProductFromForm(formData: FormData): Promise<ActionR
     description: nullableText(formData, "description"),
     brandId: nullableUuid(formData, "brandId"),
     categoryId: nullableUuid(formData, "categoryId"),
-    genderCategory: nullableText(formData, "genderCategory"),
-    fragranceFamily: nullableText(formData, "fragranceFamily"),
+    genderCategory: nullableOption(formData, "genderCategory", targetAudienceOptions),
+    fragranceFamily: nullableOption(formData, "fragranceFamily", fragranceFamilyOptions),
     topNotes: parseNotes(formData.get("topNotes")),
     heartNotes: parseNotes(formData.get("heartNotes")),
     baseNotes: parseNotes(formData.get("baseNotes")),
@@ -77,8 +87,8 @@ export async function updateProductFromForm(id: string, formData: FormData): Pro
     description: nullableText(formData, "description"),
     brandId: nullableUuid(formData, "brandId"),
     categoryId: nullableUuid(formData, "categoryId"),
-    genderCategory: nullableText(formData, "genderCategory"),
-    fragranceFamily: nullableText(formData, "fragranceFamily"),
+    genderCategory: nullableOption(formData, "genderCategory", targetAudienceOptions),
+    fragranceFamily: nullableOption(formData, "fragranceFamily", fragranceFamilyOptions),
     topNotes: parseNotes(formData.get("topNotes")),
     heartNotes: parseNotes(formData.get("heartNotes")),
     baseNotes: parseNotes(formData.get("baseNotes")),

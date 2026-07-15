@@ -17,6 +17,12 @@
 - Phase 5 admin catalogue UI creates products as `DRAFT`.
 - `OWNER` and `ADMIN` may create/edit brands, categories, products, variants, images, featured state, slugs, activation, and archival.
 - `INVENTORY_MANAGER` has read-only catalogue access in Phase 5. Stock adjustments remain in the inventory module.
+- `Public cible` represents the product target audience: Homme, Femme, Unisexe, or Enfant.
+- `Famille olfactive` represents the perfume scent family, for example Florale, Boisée, Ambrée, Hespéridée, Aromatique, Fougère, Chyprée, Gourmande, Cuirée, or Aquatique.
+- Brand and category administration uses server-side search, deterministic sorting, and pagination. Default page size is 20 and the maximum accepted page size is 100.
+- Product variant administration uses server-side search and pagination. Default page size is 10 and the maximum accepted page size is 100.
+- The catalogue module displays physical stock, reserved stock, calculated available stock, and low-stock threshold as read-only inventory context.
+- Do not render broken inventory links. Link to `Gérer le stock` only when a real authorized inventory route exists for the variant.
 
 ## Cart and Checkout
 

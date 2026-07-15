@@ -111,10 +111,19 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - Use `PageContainer` for page width and gutters.
 - Use `SectionHeading` for page and major section introductions.
 - Use `EmptyState`, `LoadingSkeleton`, and `ErrorState` for consistent operational states.
+- Catalogue administration lists must use URL-backed search/filter controls, server pagination, desktop tables, and mobile cards.
+- Brand, category, and variant creation belongs in compact dialogs or drawers, not permanently expanded forms above long lists.
 - Use `ThemeToggle` only in app shells or settings surfaces.
 - Public header/footer social links must come from `src/config/site.ts` until database settings replace it.
 - Menus, sheets, dialogs, selects, tabs, and dropdowns must remain keyboard accessible.
 - Respect `prefers-reduced-motion`; avoid decorative motion that is not tied to user feedback.
+
+## Catalogue Terminology
+
+- `Famille olfactive` describes the dominant scent family. Use concise help text near the control.
+- `Public cible` is used for Homme, Femme, Unisexe, and Enfant positioning.
+- Do not use the English label `Postponement`.
+- Use compact status badges for inventory states such as `En stock`, `Stock bas`, and `Rupture`; color must not be the only signal.
 
 ## Prohibited Color Usage
 

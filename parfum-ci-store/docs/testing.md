@@ -82,8 +82,13 @@ Full Storage RLS behavior requires configured Supabase auth users and must not b
 Unit/component coverage includes:
 
 - French XOF formatting and parsing;
+- URL filter parsing and maximum page-size enforcement for brands, categories, and variants;
+- server-side pagination assumptions for brand/category/variant screens;
+- corrected `Public cible` terminology and `Famille olfactive` help text;
 - role-aware catalogue navigation and permissions;
 - read-only inventory-manager access;
+- inventory stock summaries staying read-only in the catalogue module;
+- variant create/edit dialogs replacing always-rendered forms for every variant;
 - product list rendering without cost-price leakage.
 
 Playwright should use ignored environment variables for role credentials and a non-sensitive fixture image under test fixtures. Live image integration is verified only when a real image passes through preparation, `uploadToSignedUrl`, finalization, row persistence, public retrieval, and deletion.

@@ -10,18 +10,36 @@ import { ImageManager } from "@/components/admin/catalogue/image-manager";
 import { PublicationControls } from "@/components/admin/catalogue/publication-controls";
 import {
   getAdminProductById,
-  listAdminBrands,
-  listAdminCategories,
+  listAdminBrandOptions,
+  listAdminCategoryOptions,
+  listAdminProductVariants,
+  normalizeAdminVariantListFilters,
   requireCatalogueReadAccess,
 } from "@/lib/catalogue/admin";
 
-export default async function ProductEditorPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProductEditorPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
   const { id } = await params;
+  const search = await searchParams;
   const { permissions } = await requireCatalogueReadAccess();
-  const [brands, categories, product] = await Promise.all([
-    listAdminBrands(),
-    listAdminCategories(),
+  const variantFilters = normalizeAdminVariantListFilters({
+    q: search.variantQ,
+    active: search.variantActive,
+    concentration: search.variantConcentration,
+    sizeMl: search.variantSizeMl,
+    sort: search.variantSort,
+    page: search.variantPage,
+  });
+  const [brands, categories, product, variants] = await Promise.all([
+    listAdminBrandOptions(),
+    listAdminCategoryOptions(),
     getAdminProductById(id, permissions),
+    listAdminProductVariants(id, variantFilters, permissions),
   ]);
 
   if (!product) {
@@ -56,8 +74,10 @@ export default async function ProductEditorPage({ params }: { params: Promise<{ 
         <TabsContent value="variantes" className="mt-6">
           <VariantEditor
             product={product}
+            variants={variants}
             canMutate={permissions.canMutate}
             canViewCostPrice={permissions.canViewCostPrice}
+            searchParams={search}
           />
         </TabsContent>
         <TabsContent value="images" className="mt-6">

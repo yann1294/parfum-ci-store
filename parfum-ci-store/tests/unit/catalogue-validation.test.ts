@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  createProductSchema,
   createVariantSchema,
+  fragranceFamilyOptions,
   prepareImageUploadSchema,
+  targetAudienceOptions,
   updateVariantSchema,
 } from "@/lib/catalogue/validation";
 
@@ -40,5 +43,29 @@ describe("catalogue validation", () => {
         declaredByteSize: 1000,
       }),
     ).toThrow();
+  });
+
+  it("uses controlled French target audience and fragrance-family values", () => {
+    expect(targetAudienceOptions).toContain("Unisexe");
+    expect(fragranceFamilyOptions).toContain("Boisée");
+
+    expect(() =>
+      createProductSchema.parse({
+        name: "Musc Royal",
+        genderCategory: "Postponement",
+        fragranceFamily: "Boisée",
+      }),
+    ).toThrow();
+
+    expect(
+      createProductSchema.parse({
+        name: "Musc Royal",
+        genderCategory: "Unisexe",
+        fragranceFamily: "Boisée",
+      }),
+    ).toMatchObject({
+      genderCategory: "Unisexe",
+      fragranceFamily: "Boisée",
+    });
   });
 });

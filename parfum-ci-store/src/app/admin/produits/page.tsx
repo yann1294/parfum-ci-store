@@ -2,8 +2,8 @@ import { PageContainer } from "@/components/shared/page-container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { ProductFilters, ProductList } from "@/components/admin/catalogue/product-list";
 import {
-  listAdminBrands,
-  listAdminCategories,
+  listAdminBrandOptions,
+  listAdminCategoryOptions,
   listAdminProducts,
   requireCatalogueReadAccess,
   type AdminProductListFilters,
@@ -16,7 +16,7 @@ export default async function AdminProductsPage({
 }) {
   const params = await searchParams;
   const { permissions } = await requireCatalogueReadAccess();
-  const [brands, categories] = await Promise.all([listAdminBrands(), listAdminCategories()]);
+  const [brands, categories] = await Promise.all([listAdminBrandOptions(), listAdminCategoryOptions()]);
   const filters: AdminProductListFilters = {
     q: params.q,
     status: params.status as AdminProductListFilters["status"],
