@@ -3,6 +3,7 @@ import type { ComponentType } from "react";
 import {
   BarChart3,
   Boxes,
+  FolderTree,
   ClipboardList,
   CreditCard,
   Home,
@@ -10,6 +11,7 @@ import {
   MessageSquare,
   Palette,
   Settings,
+  ShieldCheck,
   Tags,
   Users,
 } from "lucide-react";
@@ -19,6 +21,8 @@ import type { AdminNavigationItem } from "@/lib/auth/navigation";
 const navIcons: Record<AdminNavigationItem["module"], ComponentType<{ className?: string }>> = {
   dashboard: LayoutDashboard,
   products: Tags,
+  brands: ShieldCheck,
+  categories: FolderTree,
   inventory: Boxes,
   orders: ClipboardList,
   customers: Users,

@@ -213,6 +213,8 @@ The `product-images` bucket is configured by migration:
 
 Storage writes on `storage.objects` are restricted to authenticated active `OWNER` and `ADMIN` profiles for `bucket_id = 'product-images'`. Public downloads rely on the public bucket model.
 
+The Phase 5 admin UI reads staff catalogue data through server-only authorized repositories. Public catalogue queries must continue to use the safe public boundary and must not expose `cost_price_xof`.
+
 ## Local Reset, Seed, and Verification
 
 For local development only, run:

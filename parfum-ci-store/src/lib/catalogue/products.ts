@@ -40,7 +40,7 @@ const PRODUCT_WITH_RELATIONS_COLUMNS = `
   brands:brand_id(id, name, slug, description, active, sort_order, created_at, updated_at),
   categories:category_id(id, parent_id, name, slug, description, active, sort_order, created_at, updated_at),
   product_variants(id, product_id, sku, size_ml, concentration, price_xof, compare_at_price_xof, stock_on_hand, reserved_quantity, low_stock_threshold, active, created_at, updated_at),
-  product_images(id, product_id, storage_path, image_url, alt_text, sort_order, approved, active, created_at, updated_at)
+  product_images(id, product_id, bucket_id, object_path, storage_path, image_url, alt_text, sort_order, approved, active, is_primary, mime_type, byte_size, width, height, created_by, created_at, updated_at)
 ` as const;
 
 type ProductQueryResult = {
@@ -77,12 +77,20 @@ type ProductQueryRow = ProductRow & {
   product_images: Array<{
     id: string;
     product_id: string;
+    bucket_id: string;
+    object_path: string | null;
     storage_path: string | null;
     image_url: string | null;
     alt_text: string;
     sort_order: number;
     approved: boolean;
     active: boolean;
+    is_primary: boolean;
+    mime_type: string | null;
+    byte_size: number | null;
+    width: number | null;
+    height: number | null;
+    created_by: string | null;
     created_at: string;
     updated_at: string;
   }>;

@@ -14,6 +14,8 @@ export type AdminNavigationItem = {
   module:
     | "dashboard"
     | "products"
+    | "brands"
+    | "categories"
     | "inventory"
     | "orders"
     | "customers"
@@ -26,7 +28,9 @@ export type AdminNavigationItem = {
 
 const adminNavigation: AdminNavigationItem[] = [
   { label: "Tableau de bord", href: "/admin", module: "dashboard" },
-  { label: "Catalogue", href: "/admin/catalogue", module: "products" },
+  { label: "Produits", href: "/admin/produits", module: "products" },
+  { label: "Marques", href: "/admin/marques", module: "brands" },
+  { label: "Catégories", href: "/admin/categories", module: "categories" },
   { label: "Inventaire", href: "/admin/inventaire", module: "inventory" },
   { label: "Commandes", href: "/admin/commandes", module: "orders" },
   { label: "Clients", href: "/admin/clients", module: "customers" },
@@ -44,6 +48,8 @@ function canAccessAdminModule(staff: StaffProfile, module: AdminNavigationItem["
     case "design-system":
       return staff.active;
     case "products":
+    case "brands":
+    case "categories":
       return canReadProducts(staff);
     case "inventory":
       return canManageInventory(staff);

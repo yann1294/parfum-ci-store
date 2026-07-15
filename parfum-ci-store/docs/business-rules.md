@@ -14,6 +14,9 @@
 - Image object paths are generated server-side. Browser input must never supply bucket names, folders, raw storage paths, or original filenames as stored object names.
 - Image finalization validates declared size and MIME type, checks actual magic bytes server-side, rejects active content signatures, then inserts `product_images`.
 - Image replacement creates a new validated object and database record before attempting old-object cleanup. Storage/database operations are compensated, not cross-service atomic.
+- Phase 5 admin catalogue UI creates products as `DRAFT`.
+- `OWNER` and `ADMIN` may create/edit brands, categories, products, variants, images, featured state, slugs, activation, and archival.
+- `INVENTORY_MANAGER` has read-only catalogue access in Phase 5. Stock adjustments remain in the inventory module.
 
 ## Cart and Checkout
 

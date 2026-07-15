@@ -79,6 +79,18 @@ Product images use direct signed uploads:
 
 Vercel functions must not receive the 5 MB image file body. Storage cleanup is compensating rather than cross-service atomic; monitor `CATALOGUE_IMAGE_CLEANUP_FAILED` audit events.
 
+## Admin Catalogue
+
+Phase 5 adds authenticated admin routes:
+
+- `/admin/produits`
+- `/admin/produits/nouveau`
+- `/admin/produits/[id]`
+- `/admin/marques`
+- `/admin/categories`
+
+Before enabling catalogue operations in production, confirm the Phase 4 migration has been applied, generated database types are current, `product-images` exists with the expected policies, and role-specific staff accounts have been tested.
+
 ## Post-Deploy Checks
 
 - Public pages load in French.

@@ -51,7 +51,9 @@ describe("admin role permissions", () => {
 
     expect(canManageProducts(inventory)).toBe(false);
     expect(canManageInventory(inventory)).toBe(true);
-    expect(labels).toContain("Catalogue");
+    expect(labels).toContain("Produits");
+    expect(labels).toContain("Marques");
+    expect(labels).toContain("Catégories");
     expect(labels).toContain("Inventaire");
     expect(labels).not.toContain("Commandes");
     expect(labels).not.toContain("Clients");

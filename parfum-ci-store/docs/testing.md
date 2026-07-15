@@ -77,6 +77,17 @@ Full Storage RLS behavior requires configured Supabase auth users and must not b
 - authorized delete allowed;
 - anonymous direct access cannot retrieve `cost_price_xof`.
 
+## Phase 5 Admin Catalogue
+
+Unit/component coverage includes:
+
+- French XOF formatting and parsing;
+- role-aware catalogue navigation and permissions;
+- read-only inventory-manager access;
+- product list rendering without cost-price leakage.
+
+Playwright should use ignored environment variables for role credentials and a non-sensitive fixture image under test fixtures. Live image integration is verified only when a real image passes through preparation, `uploadToSignedUrl`, finalization, row persistence, public retrieval, and deletion.
+
 ## Environment Diagnostics
 
 Run:

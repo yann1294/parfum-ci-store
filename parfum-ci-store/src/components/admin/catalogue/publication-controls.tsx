@@ -1,0 +1,84 @@
+"use client";
+
+import { useTransition } from "react";
+import { toast } from "sonner";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { changeProductStatus } from "@/app/admin/catalogue-actions";
+import type { AdminProduct } from "@/lib/catalogue/admin";
+
+function readiness(product: AdminProduct) {
+  return [
+    { label: "Nom renseigné", ok: product.name.trim().length > 0 },
+    { label: "Description complète renseignée", ok: Boolean(product.description?.trim()) },
+    {
+      label: "Au moins une variante active",
+      ok: product.variants.some((variant) => variant.active),
+    },
+    {
+      label: "Au moins un prix de vente positif",
+      ok: product.variants.some((variant) => variant.active && variant.priceXof > 0),
+    },
+    {
+      label: "Au moins une image validée",
+      ok: product.images.some((image) => image.active && image.approved && image.objectPath),
+    },
+  ];
+}
+
+export function PublicationControls({
+  product,
+  canMutate,
+}: {
+  product: AdminProduct;
+  canMutate: boolean;
+}) {
+  const [pending, startTransition] = useTransition();
+  const checks = readiness(product);
+  const ready = checks.every((check) => check.ok);
+
+  function setStatus(status: "DRAFT" | "ACTIVE" | "ARCHIVED") {
+    startTransition(async () => {
+      const result = await changeProductStatus(product.id, status);
+      if (result.ok) toast.success("Statut mis à jour");
+      else toast.error(result.message);
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Publication</CardTitle>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <Alert variant={ready ? "default" : "destructive"}>
+          <AlertTitle>{ready ? "Prêt pour activation" : "Activation incomplète"}</AlertTitle>
+          <AlertDescription>
+            <ul className="mt-2 grid gap-1">
+              {checks.map((check) => (
+                <li key={check.label}>
+                  {check.ok ? "OK" : "Manquant"} - {check.label}
+                </li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+        {canMutate ? (
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" onClick={() => setStatus("ACTIVE")} disabled={pending || !ready}>
+              Activer
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setStatus("DRAFT")} disabled={pending}>
+              Repasser en brouillon
+            </Button>
+            <Button type="button" variant="destructive" onClick={() => setStatus("ARCHIVED")} disabled={pending}>
+              Archiver
+            </Button>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}

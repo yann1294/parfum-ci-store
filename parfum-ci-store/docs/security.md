@@ -30,6 +30,8 @@
 - Product image Storage writes are limited by `storage.objects` policies to authenticated active `OWNER` and `ADMIN` profiles for `bucket_id = 'product-images'`.
 - `ORDER_MANAGER`, `CUSTOMER_SUPPORT`, anonymous users, inactive staff, and authenticated users without active staff profiles cannot upload, replace, move, copy, or delete product images.
 - Public catalogue reads use safe DTOs and Phase 4 public views that do not expose `cost_price_xof`.
+- Phase 5 admin catalogue routes are `/admin/produits`, `/admin/produits/nouveau`, `/admin/produits/[id]`, `/admin/marques`, and `/admin/categories`.
+- `OWNER` and `ADMIN` may mutate catalogue data and view cost prices. `INVENTORY_MANAGER` has read-only catalogue access in Phase 5 and cannot view cost prices or image mutation controls. `ORDER_MANAGER` and `CUSTOMER_SUPPORT` do not receive catalogue mutation access.
 
 ## Admin Roles
 
@@ -96,6 +98,8 @@ Use Zod at every external input boundary:
 4. Invalid uploaded objects are deleted. If the database insert fails after validation, the object is removed as compensation.
 
 Storage and PostgreSQL changes are not a single atomic transaction. Cleanup failures are audited with sanitized metadata only.
+
+Phase 5 UI calls the same server-side preparation and finalization operations. The browser receives a signed upload token only to call Supabase Storage directly; it is never displayed or logged by the UI.
 
 ## Test Users
 
