@@ -20,7 +20,9 @@
     "db:push": "pnpm exec supabase db push",
     "db:types": "pnpm exec supabase gen types typescript --local > src/types/database.types.ts",
     "db:migrations": "pnpm exec supabase migration list",
-    "env:check": "node scripts/env-diagnostics.mjs"
+    "env:check": "node scripts/env-diagnostics.mjs",
+    "seed:phase5": "node --experimental-strip-types --experimental-default-type=module scripts/seed-phase5-e2e.ts",
+    "cleanup:phase5": "node --experimental-strip-types --experimental-default-type=module scripts/cleanup-phase5-e2e.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

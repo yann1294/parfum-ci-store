@@ -93,6 +93,36 @@ Unit/component coverage includes:
 
 Playwright should use ignored environment variables for role credentials and a non-sensitive fixture image under test fixtures. Live image integration is verified only when a real image passes through preparation, `uploadToSignedUrl`, finalization, row persistence, public retrieval, and deletion.
 
+### Phase 5 E2E Seed Data
+
+Development/test catalogue pagination and role checks can use the guarded seed scripts:
+
+```bash
+ALLOW_E2E_SEED=true pnpm seed:phase5
+ALLOW_E2E_SEED=true pnpm cleanup:phase5
+```
+
+Required environment-variable names:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `SUPABASE_SECRET_KEY`
+- `ALLOW_E2E_SEED=true`
+
+The scripts refuse to run when `NODE_ENV=production` or `VERCEL_ENV=production`, never print secret values, and operate only on records containing the exact prefix `E2E-20260716-A`.
+
+Seeded records:
+
+- 25 fictional brands;
+- 25 fictional categories;
+- one primary draft product;
+- additional draft, archived, and active-intended products;
+- 25 variants across `EDP`, `EDT`, and `extrait`;
+- in-stock, low-stock, and out-of-stock inventory states.
+
+Phase 4 activation rules require a validated product image for `ACTIVE` products. The seed does not insert rows into `storage.objects` and does not fabricate image records. Active-intended products are only moved to `ACTIVE` when a real finalized image already exists for that product. Real Storage image tests still run through the authenticated signed-upload UI/Playwright flow so Storage policies, upload tokens, MIME validation, finalization, public retrieval, and deletion are exercised honestly.
+
+Cleanup deletes only prefixed products, variants, brands, categories, image upload rows, image rows, and related Storage objects belonging to prefixed products. It respects foreign-key ordering and does not target non-E2E data.
+
 ## Environment Diagnostics
 
 Run:
