@@ -55,6 +55,28 @@ Use these optional role-specific variables for broader Phase 3 browser coverage:
 
 Google's real consent screen is not automated in CI. Browser tests verify the Google button and safe failure paths; manual verification covers the real provider flow.
 
+## Phase 4 Catalogue And Storage
+
+Unit tests cover slug generation, slug collision behavior, XOF validation, image path safety, image size and magic-byte validation, activation rules, availability calculation, public DTO cost-price omission, and Phase 4 migration contents.
+
+After applying the Phase 4 migration to a local or staging Supabase database, run:
+
+```bash
+psql "$DATABASE_URL" -f supabase/tests/phase4_catalogue_storage.sql
+```
+
+That script verifies the `product-images` bucket configuration, Storage policy shape, anonymous cost-price column protection, public view shape, and activation trigger presence.
+
+Full Storage RLS behavior requires configured Supabase auth users and must not be marked as passed unless it actually runs against Supabase:
+
+- anonymous upload denied;
+- inactive staff upload denied;
+- unauthorized role upload denied;
+- authorized product manager upload allowed;
+- unauthorized delete denied;
+- authorized delete allowed;
+- anonymous direct access cannot retrieve `cost_price_xof`.
+
 ## Environment Diagnostics
 
 Run:

@@ -6,6 +6,14 @@
 - Product variants control purchasability. A product without an active in-stock variant cannot be purchased.
 - Prices are displayed in XOF.
 - Product imagery must include meaningful alt text.
+- Product slugs are normalized, lowercase, collision-safe, and stable after name changes unless an authorized explicit slug update is requested.
+- `DRAFT` products are not public or orderable.
+- `ACTIVE` products require a non-empty name, non-empty description, at least one active variant with a positive selling price, and at least one validated approved image.
+- `ARCHIVED` products are not public and cannot receive new images.
+- Product image uploads use direct signed Supabase Storage uploads; 5 MB files must not pass through a Server Action or Vercel Function.
+- Image object paths are generated server-side. Browser input must never supply bucket names, folders, raw storage paths, or original filenames as stored object names.
+- Image finalization validates declared size and MIME type, checks actual magic bytes server-side, rejects active content signatures, then inserts `product_images`.
+- Image replacement creates a new validated object and database record before attempting old-object cleanup. Storage/database operations are compensated, not cross-service atomic.
 
 ## Cart and Checkout
 
@@ -21,6 +29,9 @@
 - Stock changes use inventory ledger entries with reason, actor, and related order when applicable.
 - Overselling must be prevented inside the order transaction.
 - Manual adjustments require an audit log.
+- Catalogue product/variant schemas must not expose direct updates to `stock_on_hand` or `reserved_quantity`.
+- New variants default to zero inventory. Stock changes belong to the inventory ledger workflow.
+- Available stock is calculated as `stock_on_hand - reserved_quantity`.
 
 ## Orders
 

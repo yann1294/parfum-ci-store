@@ -21,7 +21,7 @@ Supabase values come from the project dashboard:
 - `NEXT_PUBLIC_SUPABASE_URL`: Project URL from Project Settings or Connect dialog.
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: publishable/anon-style browser-safe key from API settings.
 - `SUPABASE_SECRET_KEY`: server-only secret/service-role-style key for privileged server code. Never prefix it with `NEXT_PUBLIC_`.
-- `SUPABASE_STORAGE_BUCKET`: Storage bucket name for product images.
+- `SUPABASE_STORAGE_BUCKET`: legacy server-side storage bucket setting. Phase 4 product-image code uses the fixed migration-managed bucket id `product-images`.
 
 Required Supabase env:
 
@@ -63,6 +63,21 @@ pnpm build
 - Run `pnpm exec supabase db reset` only against a local Supabase instance when migrations change.
 - Never reset the linked remote database as part of deployment verification.
 - Run `psql "$DATABASE_URL" -f supabase/tests/schema_smoke.sql` after applying migrations.
+- Apply Phase 4 with `pnpm exec supabase db push`, then regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`.
+- Run `psql "$DATABASE_URL" -f supabase/tests/phase4_catalogue_storage.sql` after applying the Phase 4 migration.
+
+## Product Images
+
+The `product-images` bucket is public, limited to 5 MB, and accepts JPEG, PNG, and WebP only. Do not store confidential imagery in it.
+
+Product images use direct signed uploads:
+
+1. server prepares a signed upload;
+2. browser uploads directly to Supabase Storage;
+3. server finalizes and validates the object;
+4. server inserts the image record and writes an audit event.
+
+Vercel functions must not receive the 5 MB image file body. Storage cleanup is compensating rather than cross-service atomic; monitor `CATALOGUE_IMAGE_CLEANUP_FAILED` audit events.
 
 ## Post-Deploy Checks
 

@@ -26,6 +26,10 @@
 - Proxy may preserve a safe current path and refresh cookies, but it is only an optimistic filter. Authorization must happen in Server Components, Server Actions, Route Handlers, or data-access code close to the protected data or mutation.
 - The admin layout also checks the current admin path against the role-aware route policy, so direct URL entry to unauthorized modules is denied server-side.
 - Admin navigation links point only to protected admin routes. Temporary module pages do not expose business data or mutations; they exist so navigation exercises the authorization boundary without adding storefront, inventory, order, or payment features.
+- Catalogue mutation services and catalogue Server Actions call `requireActiveStaff` and enforce `canManageProducts` internally.
+- Product image Storage writes are limited by `storage.objects` policies to authenticated active `OWNER` and `ADMIN` profiles for `bucket_id = 'product-images'`.
+- `ORDER_MANAGER`, `CUSTOMER_SUPPORT`, anonymous users, inactive staff, and authenticated users without active staff profiles cannot upload, replace, move, copy, or delete product images.
+- Public catalogue reads use safe DTOs and Phase 4 public views that do not expose `cost_price_xof`.
 
 ## Admin Roles
 
@@ -47,6 +51,8 @@
 - Login audit events store actor IDs where available and email hashes only; passwords, tokens, and raw email values are not stored.
 - Google OAuth callback audit events never store OAuth codes, provider tokens, Supabase access tokens, refresh tokens, cookies, authorization headers, or Google client secrets.
 - Development-only auth diagnostics emit event codes and optional route/reason metadata only. They must not include cookie values, OAuth URLs, authorization codes, tokens, raw profiles, raw users, email addresses, or secrets.
+- Product-image signed upload URLs and tokens are secret for their short lifetime. Do not log them, audit them, or store them outside the upload flow.
+- Product images are stored in a public bucket and are not confidential if the URL is known.
 - Login rate limiting uses a development-safe in-memory adapter behind an interface. The adapter normalizes by caller/email at the action boundary, expires entries, and caps stored keys, but it is process-local and not distributed across serverless instances.
 - Supabase Auth also applies provider-level authentication rate limits. Configure those limits in the Supabase dashboard for production alongside application-level controls.
 - Production can upgrade the adapter to a durable store such as Supabase, Redis, Upstash free-tier/low-cost Redis, Vercel KV, Cloudflare Turnstile plus WAF rules, or another inexpensive edge rate-limit provider without changing login action call sites.
@@ -64,6 +70,7 @@ Sensitive operations must be server-side and audited:
 
 - Admin role changes
 - Product, variant, price, and status updates
+- Product image finalization, replacement, and deletion
 - Inventory adjustments
 - Order status transitions
 - Payment verification
@@ -80,6 +87,15 @@ Use Zod at every external input boundary:
 - Checkout forms
 - Contact forms
 - Search and tracking parameters
+
+## Catalogue Image Upload Flow
+
+1. `prepareProductImageUpload` validates the active staff profile, requires product-management permission, verifies the product, validates declared size/MIME type, generates a safe object path, creates a pending upload row, and requests a Supabase signed upload URL with the cookie-backed server client.
+2. The browser uploads directly to Supabase Storage using the signed upload token.
+3. `finalizeProductImageUpload` re-authorizes staff, reloads the pending upload, confirms the object exists, downloads it, validates byte size and magic bytes, rejects active content signatures, inserts `product_images`, and writes sanitized audit metadata.
+4. Invalid uploaded objects are deleted. If the database insert fails after validation, the object is removed as compensation.
+
+Storage and PostgreSQL changes are not a single atomic transaction. Cleanup failures are audited with sanitized metadata only.
 
 ## Test Users
 

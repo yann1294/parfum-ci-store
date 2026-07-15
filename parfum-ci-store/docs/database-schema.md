@@ -4,6 +4,7 @@ Supabase PostgreSQL is the source of truth. All exposed tables use UUID primary 
 
 The first migration is `supabase/migrations/20260713000100_initial_schema.sql`.
 Phase 3 adds `supabase/migrations/20260713000200_auth_profile_sync.sql` for Auth-user profile synchronization.
+Phase 4 adds `supabase/migrations/20260714000100_catalogue_storage_domain.sql` for product image Storage, public catalogue views, activation invariants, and cost-price protection.
 
 ## ERD
 
@@ -44,8 +45,19 @@ erDiagram
   product_images {
     uuid id PK
     uuid product_id FK
+    text bucket_id
+    text object_path UK
     boolean approved
     boolean active
+    boolean is_primary
+    text mime_type
+    bigint byte_size
+  }
+  product_image_uploads {
+    uuid id PK
+    uuid product_id FK
+    text object_path UK
+    text status
   }
   customers {
     uuid id PK
@@ -115,6 +127,7 @@ erDiagram
   categories ||--o{ products : classifies
   products ||--o{ product_variants : has
   products ||--o{ product_images : has
+  products ||--o{ product_image_uploads : prepares
   customers ||--o{ orders : places
   orders ||--o{ order_items : contains
   products ||--o{ order_items : snapshot
@@ -154,10 +167,16 @@ erDiagram
 - Existing profiles are never overwritten by the backfill; existing roles, inactive users, and owners are preserved.
 - Active staff reads use `app_private.has_staff_role(...)`; the helper is `SECURITY DEFINER`, outside exposed schemas, uses an empty `search_path`, fully qualifies relations, and is not executable by `PUBLIC`.
 - Anonymous users can read only active brands/categories, `ACTIVE` products, active variants for active products, approved active images for active products, and public store settings.
+- Phase 4 narrows catalogue grants so anonymous clients cannot select `product_variants.cost_price_xof`. Public catalogue access should use the safe `public_catalogue_products`, `public_catalogue_variants`, and `public_catalogue_images` views or application DTOs.
+- Product image objects live in the public `product-images` Supabase Storage bucket. Public bucket objects are not confidential; a draft image can be retrieved by anyone who knows its exact public URL.
+- Product image object paths are generated server-side as `products/<product-uuid>/<random-uuid>.<jpg|png|webp>` and stored as the canonical reference.
+- `ACTIVE` products are rejected unless they have a non-empty name, non-empty description, at least one active variant with a positive price, and at least one approved active validated image.
+- Mutations that would remove the last valid active variant or image from an `ACTIVE` product are rejected by database triggers.
 - Public users cannot directly insert orders, inventory transactions, notifications, audit logs, or payment records.
 - Sensitive writes must happen through server-side routes/actions using the privileged server client or through controlled database functions.
 - Product and category slugs are unique and lowercase URL slugs.
 - Product variants require a unique SKU, positive `size_ml`, non-negative prices, non-negative stock counts, and `reserved_quantity <= stock_on_hand`.
+- Available stock is calculated as `stock_on_hand - reserved_quantity`; it is not stored as a separate editable field.
 - Order currency is fixed to `XOF`.
 - Order delivery country is fixed to `CI`.
 - Order totals must satisfy `total_xof = subtotal_xof + delivery_fee_xof - discount_xof`.
@@ -180,6 +199,20 @@ The first migration adds indexes for:
 - Notification status and scheduled timestamp.
 - Audit resource and created timestamp.
 
+Phase 4 adds indexes for case-insensitive product slugs, active/featured product listing, product brand/category filters, variant active/price filters, product image sort order, primary image uniqueness, and pending image upload expiry.
+
+## Supabase Storage
+
+The `product-images` bucket is configured by migration:
+
+- `id`: `product-images`
+- `name`: `product-images`
+- `public`: `true`
+- file size limit: `5242880` bytes
+- MIME types: `image/jpeg`, `image/png`, `image/webp`
+
+Storage writes on `storage.objects` are restricted to authenticated active `OWNER` and `ADMIN` profiles for `bucket_id = 'product-images'`. Public downloads rely on the public bucket model.
+
 ## Local Reset, Seed, and Verification
 
 For local development only, run:
@@ -188,6 +221,7 @@ For local development only, run:
 pnpm exec supabase start
 pnpm exec supabase db reset
 psql "$DATABASE_URL" -f supabase/tests/schema_smoke.sql
+psql "$DATABASE_URL" -f supabase/tests/phase4_catalogue_storage.sql
 ```
 
 `supabase db reset` is destructive to the local Supabase database only. Do not run it against the linked remote project. The seed creates placeholder store settings plus a few brands and categories. It intentionally does not create a fake owner UUID.
@@ -197,6 +231,7 @@ For the linked existing Supabase project, review migrations first, then apply fo
 ```bash
 pnpm exec supabase migration list
 pnpm exec supabase db push
+pnpm exec supabase gen types typescript --linked > src/types/database.types.ts
 ```
 
 ## Type Generation
