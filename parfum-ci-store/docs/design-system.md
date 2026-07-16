@@ -115,6 +115,8 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - Brand, category, and variant creation belongs in compact dialogs or drawers, not permanently expanded forms above long lists.
 - Product editor pages must show a breadcrumb, visible `Retour aux produits` action, product name, and status badge. The return control must include text, not an icon-only affordance.
 - Product image upload surfaces distinguish temporary pending cards from persisted image cards. Successful pending cards are removed after finalization and refresh; failed pending cards remain retryable.
+- Storefront product cards use stable image aspect ratios, `next/image`, French XOF prices, and availability labels. They must not show cost price, physical stock, or reserved stock.
+- Public catalogue filters are URL-backed and accessible on mobile and desktop. Filtered URLs may be shareable, but canonical SEO must avoid indexing arbitrary UTM or heavy filter combinations.
 - Use `ThemeToggle` only in app shells or settings surfaces.
 - Public header/footer social links must come from `src/config/site.ts` until database settings replace it.
 - Menus, sheets, dialogs, selects, tabs, and dropdowns must remain keyboard accessible.

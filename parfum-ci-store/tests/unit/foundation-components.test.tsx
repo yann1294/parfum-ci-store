@@ -35,11 +35,8 @@ describe("foundation components", () => {
     expect(screen.getByRole("status", { name: "Chargement du catalogue" })).toBeDefined();
   });
 
-  it("keeps temporary social links typed and centralized", () => {
-    expect(siteConfig.socialLinks.map((link) => link.label)).toEqual([
-      "Instagram",
-      "Facebook",
-      "WhatsApp",
-    ]);
+  it("keeps optional social links typed and centralized", () => {
+    expect(siteConfig.socialLinks.every((link) => link.label && link.href)).toBe(true);
+    expect(siteConfig.socialLinks.every((link) => link.href.startsWith("https://"))).toBe(true);
   });
 });

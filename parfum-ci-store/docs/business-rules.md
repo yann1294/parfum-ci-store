@@ -3,6 +3,9 @@
 ## Catalogue
 
 - Public catalogue shows active brands, active categories, and published products only.
+- Phase 6 public catalogue and product-detail pages read through the database public catalogue boundary and never through staff DTOs.
+- Public product pages require `ACTIVE` status, at least one active positive-price variant, and at least one finalized approved image.
+- Unknown, `DRAFT`, and `ARCHIVED` product slugs must produce the same public not-found behaviour.
 - Product variants control purchasability. A product without an active in-stock variant cannot be purchased.
 - Prices are displayed in XOF.
 - Product imagery must include meaningful alt text.
@@ -23,6 +26,8 @@
 - Product variant administration uses server-side search and pagination. Default page size is 10 and the maximum accepted page size is 100.
 - The catalogue module displays physical stock, reserved stock, calculated available stock, and low-stock threshold as read-only inventory context.
 - Do not render broken inventory links. Link to `Gérer le stock` only when a real authorized inventory route exists for the variant.
+- Public availability is displayed as `En stock`, `Stock faible`, or `Rupture de stock`; physical and reserved stock quantities are not displayed publicly.
+- Phase 6 cart is client-side product discovery state only. It does not create orders, process payments, or reserve inventory.
 
 ## Cart and Checkout
 

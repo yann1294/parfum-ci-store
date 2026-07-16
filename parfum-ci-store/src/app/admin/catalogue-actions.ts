@@ -26,6 +26,16 @@ function revalidateCatalogueAdmin() {
   revalidatePath("/admin/produits");
   revalidatePath("/admin/marques");
   revalidatePath("/admin/categories");
+  revalidatePath("/");
+  revalidatePath("/catalogue");
+}
+
+function revalidatePublicProduct(slug?: string | null) {
+  revalidatePath("/");
+  revalidatePath("/catalogue");
+  if (slug) {
+    revalidatePath(`/parfums/${slug}`);
+  }
 }
 
 function text(formData: FormData, key: string) {
@@ -75,6 +85,7 @@ export async function createProductFromForm(formData: FormData): Promise<ActionR
 
   if (result.ok) {
     revalidateCatalogueAdmin();
+    revalidatePublicProduct();
   }
 
   return result;
@@ -101,6 +112,7 @@ export async function updateProductFromForm(id: string, formData: FormData): Pro
   if (result.ok) {
     revalidateCatalogueAdmin();
     revalidatePath(`/admin/produits/${id}`);
+    revalidatePublicProduct(text(formData, "slug"));
   }
 
   return result;
@@ -112,6 +124,7 @@ export async function changeProductStatus(id: string, status: "DRAFT" | "ACTIVE"
   if (result.ok) {
     revalidateCatalogueAdmin();
     revalidatePath(`/admin/produits/${id}`);
+    revalidatePublicProduct();
   }
 
   return result;
@@ -135,6 +148,7 @@ export async function createVariantFromForm(productId: string, formData: FormDat
   if (result.ok) {
     revalidatePath(`/admin/produits/${productId}`);
     revalidatePath("/admin/produits");
+    revalidatePublicProduct();
   }
 
   return result;
@@ -157,6 +171,7 @@ export async function updateVariantFromForm(variantId: string, productId: string
   if (result.ok) {
     revalidatePath(`/admin/produits/${productId}`);
     revalidatePath("/admin/produits");
+    revalidatePublicProduct();
   }
 
   return result;
@@ -173,6 +188,7 @@ export async function createBrandFromForm(formData: FormData) {
 
   if (result.ok) {
     revalidateCatalogueAdmin();
+    revalidatePublicProduct();
   }
 
   return result;
@@ -189,6 +205,7 @@ export async function updateBrandFromForm(id: string, formData: FormData) {
 
   if (result.ok) {
     revalidateCatalogueAdmin();
+    revalidatePublicProduct();
   }
 
   return result;
@@ -206,6 +223,7 @@ export async function createCategoryFromForm(formData: FormData) {
 
   if (result.ok) {
     revalidateCatalogueAdmin();
+    revalidatePublicProduct();
   }
 
   return result;
@@ -223,6 +241,7 @@ export async function updateCategoryFromForm(id: string, formData: FormData) {
 
   if (result.ok) {
     revalidateCatalogueAdmin();
+    revalidatePublicProduct();
   }
 
   return result;
@@ -248,6 +267,7 @@ export async function finalizeImageUploadForProduct(input: {
   if (result.ok) {
     revalidatePath(`/admin/produits/${input.productId}`);
     revalidatePath("/admin/produits");
+    revalidatePublicProduct();
   }
 
   return result;
@@ -259,6 +279,7 @@ export async function deleteImageForProduct(productId: string, imageId: string) 
   if (result.ok) {
     revalidatePath(`/admin/produits/${productId}`);
     revalidatePath("/admin/produits");
+    revalidatePublicProduct();
   }
 
   return result;

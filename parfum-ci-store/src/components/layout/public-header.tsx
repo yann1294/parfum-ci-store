@@ -4,6 +4,7 @@ import { MobileNavigation } from "@/components/layout/mobile-navigation";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { siteConfig } from "@/config/site";
+import { CartSummaryLink } from "@/components/storefront/cart-summary-link";
 
 export function PublicHeader() {
   return (
@@ -27,6 +28,7 @@ export function PublicHeader() {
           <div className="hidden md:block">
             <ThemeToggle />
           </div>
+          <CartSummaryLink />
           <Link href="/connexion" className={buttonVariants({ variant: "outline", size: "sm" })}>
             Admin
           </Link>

@@ -135,6 +135,16 @@ Phase 4 activation rules require a validated product image for `ACTIVE` products
 
 Cleanup deletes only prefixed products, variants, brands, categories, image upload rows, image rows, and related Storage objects belonging to prefixed products. It respects foreign-key ordering and does not target non-E2E data.
 
+## Phase 6 Storefront
+
+Unit coverage includes public catalogue filter parsing, bounded page sizes, WhatsApp URL encoding, first-touch attribution, and the client cart boundary.
+
+Public product flow tests require an `ACTIVE` product with a real finalized product image and at least one active positive-price variant. The Phase 5 seed does not fabricate image records; finalize an image through the normal OWNER/ADMIN upload UI before marking live storefront product E2E as passed.
+
+The cart is Phase 6 discovery state only. It stores variant snapshots and first-touch attribution in first-party storage, but checkout and order creation remain later operational phases and must revalidate server-side.
+
+SEO checks should cover canonical URLs, hidden-product not-found behaviour, Product JSON-LD, sitemap, robots, and absence of staff-only fields in rendered HTML.
+
 ## Environment Diagnostics
 
 Run:

@@ -101,6 +101,20 @@ Storage and PostgreSQL changes are not a single atomic transaction. Cleanup fail
 
 Phase 5 UI calls the same server-side preparation and finalization operations. The browser receives a signed upload token only to call Supabase Storage directly; it is never displayed or logged by the UI.
 
+## Public Storefront Boundary
+
+Phase 6 public catalogue pages read through the established public catalogue boundary:
+
+- `public.public_catalogue_products`
+- `public.public_catalogue_variants`
+- `public.public_catalogue_images`
+
+Public DTOs must not expose `cost_price_xof`, `stock_on_hand`, `reserved_quantity`, staff IDs, audit records, signed upload tokens, Storage write URLs, or internal notes. Public pages may display calculated availability states and public image URLs only.
+
+The Phase 6 cart is client-side discovery state. It does not create orders, process payments, or reserve inventory. Later checkout code must recalculate prices and availability server-side.
+
+First-touch attribution accepts only normalized UTM fields and must never be used for authorization.
+
 ## Test Users
 
 Create staff test users manually in Supabase Auth and then insert or update their `profiles` rows with current roles and `active` values. Do not add fake owner UUIDs to seed data and do not commit test credentials.

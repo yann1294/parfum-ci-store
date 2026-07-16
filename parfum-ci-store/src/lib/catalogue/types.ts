@@ -51,6 +51,7 @@ export type PublicProductImageDto = {
   isPrimary: boolean;
   mimeType: string | null;
   byteSize: number | null;
+  publicUrl?: string;
 };
 
 export type PublicProductDto = {

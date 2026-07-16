@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Manrope } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { siteConfig } from "@/config/site";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -19,6 +20,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.siteUrl),
   title: {
     default: "Parfum CI",
     template: "%s | Parfum CI",

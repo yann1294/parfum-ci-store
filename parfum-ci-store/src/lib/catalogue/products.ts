@@ -11,10 +11,10 @@ import {
   type CreateProductInput,
   type UpdateProductInput,
 } from "@/lib/catalogue/validation";
-import { toPublicProductDto } from "@/lib/catalogue/mappers";
-import type { BrandRow, CategoryRow, ProductRow, PublicProductDto } from "@/lib/catalogue/types";
+import type { PublicProductDto } from "@/lib/catalogue/types";
 import { generateProductSlug, isUniqueViolation, resolveSlugCollision } from "@/lib/catalogue/slug";
 import type { Database } from "@/types/database.types";
+import { getPublicProductImageUrl } from "@/lib/catalogue/public-images";
 
 const PRODUCT_PUBLIC_COLUMNS = `
   id,
@@ -35,110 +35,118 @@ const PRODUCT_PUBLIC_COLUMNS = `
   updated_at
 ` as const;
 
-const PRODUCT_WITH_RELATIONS_COLUMNS = `
-  ${PRODUCT_PUBLIC_COLUMNS},
-  brands:brand_id(id, name, slug, description, active, sort_order, created_at, updated_at),
-  categories:category_id(id, parent_id, name, slug, description, active, sort_order, created_at, updated_at),
-  product_variants(id, product_id, sku, size_ml, concentration, price_xof, compare_at_price_xof, stock_on_hand, reserved_quantity, low_stock_threshold, active, created_at, updated_at),
-  product_images(id, product_id, bucket_id, object_path, storage_path, image_url, alt_text, sort_order, approved, active, is_primary, mime_type, byte_size, width, height, created_by, created_at, updated_at)
-` as const;
+type PublicProductViewRow = Database["public"]["Views"]["public_catalogue_products"]["Row"];
+type PublicVariantViewRow = Database["public"]["Views"]["public_catalogue_variants"]["Row"];
+type PublicImageViewRow = Database["public"]["Views"]["public_catalogue_images"]["Row"];
 
-type ProductQueryResult = {
-  data: unknown[] | null;
-  error: Error | null;
-};
+function mapPublicViewProduct(
+  product: PublicProductViewRow,
+  variants: PublicVariantViewRow[],
+  images: PublicImageViewRow[],
+): PublicProductDto {
+  if (!product.id || !product.name || !product.slug) {
+    throw new Error("Invalid public product row");
+  }
 
-type CatalogueFilterQuery = PromiseLike<ProductQueryResult> & {
-  or(filters: string): CatalogueFilterQuery;
-  eq(column: string, value: string): CatalogueFilterQuery;
-  ilike(column: string, pattern: string): CatalogueFilterQuery;
-  order(column: string, options: { ascending: boolean }): CatalogueFilterQuery;
-};
-
-type ProductQueryRow = ProductRow & {
-  brands: BrandRow | null;
-  categories: CategoryRow | null;
-  product_variants: ProductRow extends never ? never : Array<{
-    id: string;
-    product_id: string;
-    sku: string;
-    size_ml: number;
-    concentration: string | null;
-    price_xof: number;
-    compare_at_price_xof: number | null;
-    stock_on_hand: number;
-    reserved_quantity: number;
-    low_stock_threshold: number;
-    active: boolean;
-    created_at: string;
-    updated_at: string;
-    cost_price_xof?: never;
-  }>;
-  product_images: Array<{
-    id: string;
-    product_id: string;
-    bucket_id: string;
-    object_path: string | null;
-    storage_path: string | null;
-    image_url: string | null;
-    alt_text: string;
-    sort_order: number;
-    approved: boolean;
-    active: boolean;
-    is_primary: boolean;
-    mime_type: string | null;
-    byte_size: number | null;
-    width: number | null;
-    height: number | null;
-    created_by: string | null;
-    created_at: string;
-    updated_at: string;
-  }>;
-};
-
-function mapProductRow(row: ProductQueryRow): PublicProductDto {
-  return toPublicProductDto({
-    product: row,
-    brand: row.brands,
-    category: row.categories,
-    variants: row.product_variants.map((variant) => ({ ...variant, cost_price_xof: null })),
-    images: row.product_images,
-  });
+  return {
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    shortDescription: product.short_description,
+    description: product.description,
+    fragranceFamily: product.fragrance_family,
+    topNotes: product.top_notes ?? [],
+    heartNotes: product.heart_notes ?? [],
+    baseNotes: product.base_notes ?? [],
+    genderCategory: product.gender_category,
+    featured: Boolean(product.featured),
+    brand: product.brand_id && product.brand_name && product.brand_slug
+      ? {
+          id: product.brand_id,
+          name: product.brand_name,
+          slug: product.brand_slug,
+          description: null,
+        }
+      : null,
+    category: product.category_id && product.category_name && product.category_slug
+      ? {
+          id: product.category_id,
+          parentId: null,
+          name: product.category_name,
+          slug: product.category_slug,
+          description: null,
+        }
+      : null,
+    variants: variants
+      .filter((variant) => variant.id && variant.price_xof && variant.price_xof > 0)
+      .map((variant) => ({
+        id: variant.id as string,
+        sku: variant.sku ?? "",
+        sizeMl: variant.size_ml ?? 0,
+        concentration: variant.concentration,
+        priceXof: variant.price_xof ?? 0,
+        compareAtPriceXof: variant.compare_at_price_xof,
+        availableQuantity: variant.available_quantity ?? 0,
+        availabilityStatus:
+          variant.availability_status === "LOW_STOCK" ||
+          variant.availability_status === "OUT_OF_STOCK"
+            ? variant.availability_status
+            : "IN_STOCK",
+      })),
+    images: images
+      .filter((image) => image.id && image.product_id && image.object_path)
+      .map((image) => ({
+        id: image.id as string,
+        productId: image.product_id as string,
+        bucketId: image.bucket_id ?? "product-images",
+        objectPath: image.object_path as string,
+        altText: image.alt_text ?? product.name,
+        sortOrder: image.sort_order ?? 0,
+        isPrimary: Boolean(image.is_primary),
+        mimeType: image.mime_type,
+        byteSize: image.byte_size,
+        publicUrl: getPublicProductImageUrl(image.object_path as string),
+      }))
+      .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.sortOrder - b.sortOrder),
+  } as PublicProductDto & { images: Array<PublicProductDto["images"][number] & { publicUrl: string }> };
 }
 
-function applyCatalogueFilters(query: CatalogueFilterQuery, filters: CatalogueQueryInput) {
-  let nextQuery = query;
-
-  if (filters.search) {
-    const search = `%${filters.search.replace(/[%_]/g, "\\$&")}%`;
-    nextQuery = nextQuery.or(
-      `name.ilike.${search},short_description.ilike.${search},description.ilike.${search},fragrance_family.ilike.${search}`,
-    );
+async function loadPublicProductRelations(productIds: string[]) {
+  if (productIds.length === 0) {
+    return { variants: new Map<string, PublicVariantViewRow[]>(), images: new Map<string, PublicImageViewRow[]>() };
   }
 
-  if (filters.brandSlug) {
-    nextQuery = nextQuery.eq("brands.slug", filters.brandSlug);
+  const supabase = await createSupabaseServerClient();
+  const [{ data: variantRows, error: variantError }, { data: imageRows, error: imageError }] =
+    await Promise.all([
+      supabase
+        .from("public_catalogue_variants")
+        .select(
+          "id, product_id, sku, size_ml, concentration, price_xof, compare_at_price_xof, available_quantity, availability_status",
+        )
+        .in("product_id", productIds),
+      supabase
+        .from("public_catalogue_images")
+        .select("id, product_id, bucket_id, object_path, alt_text, sort_order, is_primary, mime_type, byte_size, width, height, created_at")
+        .in("product_id", productIds),
+    ]);
+
+  if (variantError) throw variantError;
+  if (imageError) throw imageError;
+
+  const variants = new Map<string, PublicVariantViewRow[]>();
+  for (const row of variantRows ?? []) {
+    if (!row.product_id) continue;
+    variants.set(row.product_id, [...(variants.get(row.product_id) ?? []), row]);
   }
 
-  if (filters.categorySlug) {
-    nextQuery = nextQuery.eq("categories.slug", filters.categorySlug);
+  const images = new Map<string, PublicImageViewRow[]>();
+  for (const row of imageRows ?? []) {
+    if (!row.product_id) continue;
+    images.set(row.product_id, [...(images.get(row.product_id) ?? []), row]);
   }
 
-  if (filters.fragranceFamily) {
-    nextQuery = nextQuery.ilike("fragrance_family", filters.fragranceFamily);
-  }
-
-  switch (filters.sort) {
-    case "price_asc":
-    case "price_desc":
-      nextQuery = nextQuery.order("created_at", { ascending: false });
-      break;
-    case "newest":
-      nextQuery = nextQuery.order("created_at", { ascending: false });
-      break;
-  }
-
-  return nextQuery;
+  return { variants, images };
 }
 
 export async function listActiveProducts(input: Partial<CatalogueQueryInput> = {}) {
@@ -147,19 +155,61 @@ export async function listActiveProducts(input: Partial<CatalogueQueryInput> = {
   const from = (filters.page - 1) * filters.pageSize;
   const to = from + filters.pageSize - 1;
   let query = supabase
-    .from("products")
-    .select(PRODUCT_WITH_RELATIONS_COLUMNS)
-    .eq("status", "ACTIVE")
-    .range(from, to) as unknown as CatalogueFilterQuery;
+    .from("public_catalogue_products")
+    .select(
+      "id, name, slug, short_description, description, fragrance_family, top_notes, heart_notes, base_notes, gender_category, featured, created_at, brand_id, brand_name, brand_slug, category_id, category_name, category_slug",
+    )
+    .range(from, to);
 
-  query = applyCatalogueFilters(query, filters);
+  if (filters.search) {
+    const search = `%${filters.search.replace(/[%_]/g, "\\$&")}%`;
+    query = query.or(
+      `name.ilike.${search},short_description.ilike.${search},description.ilike.${search},fragrance_family.ilike.${search}`,
+    );
+  }
+
+  if (filters.brandSlug) query = query.eq("brand_slug", filters.brandSlug);
+  if (filters.categorySlug) query = query.eq("category_slug", filters.categorySlug);
+  if (filters.fragranceFamily) query = query.eq("fragrance_family", filters.fragranceFamily);
+  if (filters.genderCategory) query = query.eq("gender_category", filters.genderCategory);
+
+  query = query.order("created_at", { ascending: false }).order("id", { ascending: true });
+
   const { data, error } = await query;
 
   if (error) {
     throw error;
   }
 
-  return (data ?? []).map((row) => mapProductRow(row as unknown as ProductQueryRow));
+  const ids = (data ?? []).flatMap((row) => (row.id ? [row.id] : []));
+  const { variants, images } = await loadPublicProductRelations(ids);
+  let products = (data ?? [])
+    .map((row) => mapPublicViewProduct(row, variants.get(row.id ?? "") ?? [], images.get(row.id ?? "") ?? []))
+    .filter((product) => product.variants.length > 0 && product.images.length > 0);
+
+  if (filters.concentration) {
+    products = products.filter((product) =>
+      product.variants.some((variant) => variant.concentration === filters.concentration),
+    );
+  }
+  if (filters.sizeMl) {
+    products = products.filter((product) => product.variants.some((variant) => variant.sizeMl === filters.sizeMl));
+  }
+  if (filters.availability) {
+    products = products.filter((product) =>
+      product.variants.some((variant) => variant.availabilityStatus === filters.availability),
+    );
+  }
+
+  if (filters.sort === "price_asc" || filters.sort === "price_desc") {
+    products = products.sort((a, b) => {
+      const aPrice = Math.min(...a.variants.map((variant) => variant.priceXof));
+      const bPrice = Math.min(...b.variants.map((variant) => variant.priceXof));
+      return filters.sort === "price_asc" ? aPrice - bPrice : bPrice - aPrice;
+    });
+  }
+
+  return products;
 }
 
 export async function listFeaturedProducts(limit = 8) {
@@ -171,9 +221,10 @@ export async function listFeaturedProducts(limit = 8) {
 export async function getActiveProductBySlug(slug: string) {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_WITH_RELATIONS_COLUMNS)
-    .eq("status", "ACTIVE")
+    .from("public_catalogue_products")
+    .select(
+      "id, name, slug, short_description, description, fragrance_family, top_notes, heart_notes, base_notes, gender_category, featured, created_at, brand_id, brand_name, brand_slug, category_id, category_name, category_slug",
+    )
     .eq("slug", slug)
     .maybeSingle();
 
@@ -185,7 +236,51 @@ export async function getActiveProductBySlug(slug: string) {
     return null;
   }
 
-  return mapProductRow(data as unknown as ProductQueryRow);
+  const id = data.id;
+  if (!id) return null;
+  const { variants, images } = await loadPublicProductRelations([id]);
+  const product = mapPublicViewProduct(data, variants.get(id) ?? [], images.get(id) ?? []);
+  return product.variants.length > 0 && product.images.length > 0 ? product : null;
+}
+
+export async function listPublicFacets() {
+  const products = await listActiveProducts({ page: 1, pageSize: 48 });
+  const brands = new Map<string, NonNullable<PublicProductDto["brand"]>>();
+  const categories = new Map<string, NonNullable<PublicProductDto["category"]>>();
+  const fragranceFamilies = new Set<string>();
+  const genderCategories = new Set<string>();
+  const concentrations = new Set<string>();
+  const sizes = new Set<number>();
+
+  for (const product of products) {
+    if (product.brand) brands.set(product.brand.slug, product.brand);
+    if (product.category) categories.set(product.category.slug, product.category);
+    if (product.fragranceFamily) fragranceFamilies.add(product.fragranceFamily);
+    if (product.genderCategory) genderCategories.add(product.genderCategory);
+    for (const variant of product.variants) {
+      if (variant.concentration) concentrations.add(variant.concentration);
+      if (variant.sizeMl) sizes.add(variant.sizeMl);
+    }
+  }
+
+  return {
+    brands: [...brands.values()].slice(0, 24),
+    categories: [...categories.values()].slice(0, 24),
+    fragranceFamilies: [...fragranceFamilies].sort().slice(0, 12),
+    genderCategories: [...genderCategories].sort().slice(0, 8),
+    concentrations: [...concentrations].sort().slice(0, 12),
+    sizes: [...sizes].sort((a, b) => a - b).slice(0, 12),
+  };
+}
+
+export async function listRelatedProducts(product: PublicProductDto, limit = 4) {
+  const related = await listActiveProducts({
+    page: 1,
+    pageSize: 12,
+    fragranceFamily: product.fragranceFamily ?? undefined,
+  });
+
+  return related.filter((item) => item.id !== product.id).slice(0, limit);
 }
 
 async function productSlugExists(slug: string) {

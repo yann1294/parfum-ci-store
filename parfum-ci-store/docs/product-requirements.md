@@ -29,6 +29,8 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - Browse products by brand, category, search, and featured collections.
 - View product details, imagery, variant options, stock status, and XOF pricing.
 - Add available variants to a cart without creating an account.
+- Phase 6 implements public discovery, product detail, WhatsApp enquiry, attribution capture, SEO, sitemap, robots, and a client-side cart foundation.
+- Phase 6 does not create orders, reserve inventory, process payments, or perform delivery workflow.
 - Complete guest checkout with customer contact and delivery details.
 - Choose manual Mobile Money payment or cash on delivery.
 - Receive order confirmation and status notifications.

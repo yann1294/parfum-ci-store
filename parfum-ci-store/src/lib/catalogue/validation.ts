@@ -146,6 +146,7 @@ export const catalogueQuerySchema = z
     concentration: trimmedString.max(80).optional(),
     sizeMl: z.number().int().positive().optional(),
     fragranceFamily: trimmedString.max(80).optional(),
+    genderCategory: z.enum(targetAudienceOptions).optional(),
     availability: z.enum(["IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"]).optional(),
     sort: z.enum(["newest", "price_asc", "price_desc"]).default("newest"),
   })

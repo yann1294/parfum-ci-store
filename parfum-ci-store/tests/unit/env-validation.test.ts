@@ -31,6 +31,8 @@ describe("environment validation", () => {
     const { getPublicEnv } = await import("@/lib/env/public");
 
     expect(getPublicEnv()).toEqual({
+      NEXT_PUBLIC_SITE_URL: "https://example.test",
+      NEXT_PUBLIC_SITE_NAME: "Parfum CI",
       NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "publishable",
     });

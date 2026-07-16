@@ -26,11 +26,23 @@ Supabase values come from the project dashboard:
 Required Supabase env:
 
 ```bash
+NEXT_PUBLIC_SITE_URL=
+NEXT_PUBLIC_SITE_NAME=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
 SUPABASE_STORAGE_BUCKET=
 ```
+
+Optional public storefront settings:
+
+- `NEXT_PUBLIC_WHATSAPP_NUMBER`
+- `NEXT_PUBLIC_INSTAGRAM_URL`
+- `NEXT_PUBLIC_FACEBOOK_URL`
+- `NEXT_PUBLIC_TIKTOK_URL`
+- `NEXT_PUBLIC_CONTACT_EMAIL`
+
+Set `NEXT_PUBLIC_SITE_URL` to the canonical production origin. Do not rely on localhost fallbacks in production metadata, sitemap, robots, or WhatsApp product links.
 
 ## Google OAuth
 
@@ -78,6 +90,18 @@ Product images use direct signed uploads:
 4. server inserts the image record and writes an audit event.
 
 Vercel functions must not receive the 5 MB image file body. Storage cleanup is compensating rather than cross-service atomic; monitor `CATALOGUE_IMAGE_CLEANUP_FAILED` audit events.
+
+The storefront uses `next/image` for public product images and restricts remote images to the configured Supabase hostname under `/storage/v1/object/public/product-images/**`.
+
+## Public SEO
+
+Phase 6 generates:
+
+- static metadata for public informational pages;
+- product metadata from public product queries only;
+- Product JSON-LD for active products;
+- `/sitemap.xml` with public static routes and active product URLs;
+- `/robots.txt` that blocks admin/auth/cart paths and blocks all crawling on non-production deployments.
 
 ## Admin Catalogue
 
