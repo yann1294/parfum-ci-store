@@ -139,7 +139,7 @@ PASS/FAIL:PASS
 
 Expected: File states are independent; one failure does not leave successful uploads as stale pending cards.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Multiple Images, Primary, Alt Text, Ordering
 
