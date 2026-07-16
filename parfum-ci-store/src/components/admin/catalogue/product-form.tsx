@@ -27,6 +27,8 @@ export function ProductForm({ product, brands, categories, canMutate }: ProductF
   const isEdit = Boolean(product);
 
   useEffect(() => {
+    window.dispatchEvent(new CustomEvent("product-editor-dirty-change", { detail: { dirty } }));
+
     if (!dirty) return;
 
     const onBeforeUnload = (event: BeforeUnloadEvent) => {

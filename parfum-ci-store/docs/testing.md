@@ -89,9 +89,21 @@ Unit/component coverage includes:
 - read-only inventory-manager access;
 - inventory stock summaries staying read-only in the catalogue module;
 - variant create/edit dialogs replacing always-rendered forms for every variant;
+- product-editor breadcrumb and deterministic `Retour aux produits` navigation;
+- validated `/admin/produits` return-path preservation from list filters;
+- unsaved-change interception before leaving the editor;
+- image upload pending-state cleanup after successful finalization;
+- object URL cleanup for local image previews;
 - product list rendering without cost-price leakage.
 
 Playwright should use ignored environment variables for role credentials and a non-sensitive fixture image under test fixtures. Live image integration is verified only when a real image passes through preparation, `uploadToSignedUrl`, finalization, row persistence, public retrieval, and deletion.
+
+Image upload tests should treat temporary pending cards and persisted image cards as separate states:
+
+- pending cards hold the selected `File`, local object URL, draft alt text, and current upload/finalization status;
+- successful finalization revalidates the product editor route, calls a client refresh, removes the pending card, resets the file input, and revokes the object URL;
+- upload or finalization failures leave the pending card visible with a safe retry/removal path;
+- tests must not require `window.location.reload()`.
 
 ### Phase 5 E2E Seed Data
 

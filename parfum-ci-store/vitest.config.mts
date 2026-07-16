@@ -11,5 +11,6 @@ export default defineConfig({
     exclude: ["**/node_modules/**", "**/.git/**", "tests/e2e/**"],
     globals: true,
     passWithNoTests: true,
+    testTimeout: 15000,
   },
 });

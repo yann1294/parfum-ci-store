@@ -112,11 +112,13 @@ export function ProductList({
   page,
   totalPages,
   queryString,
+  returnPath = "/admin/produits",
 }: {
   products: AdminProduct[];
   page: number;
   totalPages: number;
   queryString?: (page: number) => string;
+  returnPath?: string;
 }) {
   if (products.length === 0) {
     return (
@@ -171,7 +173,10 @@ export function ProductList({
                 <TableCell>{priceRange(product)}</TableCell>
                 <TableCell>{availabilitySummary(product)}</TableCell>
                 <TableCell>
-                  <Link href={`/admin/produits/${product.id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  <Link
+                    href={`/admin/produits/${product.id}?retour=${encodeURIComponent(returnPath)}`}
+                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                  >
                     Ouvrir
                   </Link>
                 </TableCell>
@@ -198,7 +203,10 @@ export function ProductList({
               </div>
               <p className="text-sm">{priceRange(product)}</p>
               <p className="text-sm text-muted-foreground">{availabilitySummary(product)}</p>
-              <Link href={`/admin/produits/${product.id}`} className={buttonVariants({ variant: "outline" })}>
+              <Link
+                href={`/admin/produits/${product.id}?retour=${encodeURIComponent(returnPath)}`}
+                className={buttonVariants({ variant: "outline" })}
+              >
                 Ouvrir
               </Link>
             </CardContent>

@@ -113,6 +113,8 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - Use `EmptyState`, `LoadingSkeleton`, and `ErrorState` for consistent operational states.
 - Catalogue administration lists must use URL-backed search/filter controls, server pagination, desktop tables, and mobile cards.
 - Brand, category, and variant creation belongs in compact dialogs or drawers, not permanently expanded forms above long lists.
+- Product editor pages must show a breadcrumb, visible `Retour aux produits` action, product name, and status badge. The return control must include text, not an icon-only affordance.
+- Product image upload surfaces distinguish temporary pending cards from persisted image cards. Successful pending cards are removed after finalization and refresh; failed pending cards remain retryable.
 - Use `ThemeToggle` only in app shells or settings surfaces.
 - Public header/footer social links must come from `src/config/site.ts` until database settings replace it.
 - Menus, sheets, dialogs, selects, tabs, and dropdowns must remain keyboard accessible.

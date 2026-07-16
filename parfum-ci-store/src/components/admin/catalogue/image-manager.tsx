@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -36,8 +37,23 @@ function validateFile(file: File) {
 }
 
 export function ImageManager({ product, canMutate }: { product: AdminProduct; canMutate: boolean }) {
+  const router = useRouter();
   const [items, setItems] = useState<UploadItem[]>([]);
   const [pending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const itemsRef = useRef<UploadItem[]>([]);
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  useEffect(() => {
+    return () => {
+      for (const item of itemsRef.current) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+    };
+  }, []);
 
   function addFiles(files: FileList | null) {
     if (!files) return;
@@ -55,10 +71,28 @@ export function ImageManager({ product, canMutate }: { product: AdminProduct; ca
     });
 
     setItems((current) => [...current, ...nextItems]);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
   }
 
   function updateItem(id: string, patch: Partial<UploadItem>) {
     setItems((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  }
+
+  function removeItem(id: string) {
+    setItems((current) => {
+      const target = current.find((item) => item.id === id);
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+
+      return current.filter((item) => item.id !== id);
+    });
+
+    if (inputRef.current) {
+      inputRef.current.value = "";
+    }
   }
 
   async function uploadItem(item: UploadItem) {
@@ -108,7 +142,8 @@ export function ImageManager({ product, canMutate }: { product: AdminProduct; ca
       return;
     }
 
-    updateItem(item.id, { status: "DONE" });
+    removeItem(item.id);
+    router.refresh();
     toast.success("Image validée et enregistrée");
   }
 
@@ -128,6 +163,7 @@ export function ImageManager({ product, canMutate }: { product: AdminProduct; ca
             <span className="font-medium">Ajouter des images</span>
             <span className="text-muted-foreground">JPEG, PNG ou WebP. 5 Mo maximum par fichier.</span>
             <input
+              ref={inputRef}
               type="file"
               multiple
               accept="image/jpeg,image/png,image/webp"
@@ -154,12 +190,16 @@ export function ImageManager({ product, canMutate }: { product: AdminProduct; ca
                 <p role="status" className="text-sm text-muted-foreground">
                   {item.status}
                 </p>
+                <p className="text-xs text-muted-foreground">{item.file.name}</p>
                 {item.error ? <p className="text-sm text-destructive">{item.error}</p> : null}
                 {item.status !== "DONE" ? (
                   <Button type="button" onClick={() => uploadItem(item)} disabled={item.status === "UPLOADING" || item.status === "FINALIZING"}>
                     {item.status === "ERROR" ? "Réessayer" : "Envoyer"}
                   </Button>
                 ) : null}
+                <Button type="button" variant="outline" onClick={() => removeItem(item.id)}>
+                  Retirer
+                </Button>
               </CardContent>
             </Card>
           ))}

@@ -20,8 +20,29 @@ Do not record passwords, cookies, signed upload URLs, signed upload tokens, acce
 3. Click `Nouveau`.
 4. Create a draft product with a unique name.
 5. Confirm redirect to `/admin/produits/[id]`.
+6. Confirm the product editor shows breadcrumb `Produits / [product name]`.
+7. Confirm the visible `Retour aux produits` action has an arrow icon and text label.
 
 Expected: Product is created as `DRAFT`; no secret values appear in the UI.
+Actual:
+PASS/FAIL:PASS
+
+## Product Return Navigation
+
+1. Open `/admin/produits?page=2&status=DRAFT` or another filtered list URL.
+2. Open a product from the list.
+3. Confirm the editor URL includes a `retour` parameter.
+4. Click `Retour aux produits`.
+5. Confirm the browser returns to the filtered list URL, not only to browser history.
+6. Reopen the product.
+7. Modify a product field without saving.
+8. Click `Retour aux produits`.
+9. Cancel the unsaved-change confirmation.
+10. Confirm the editor remains open.
+11. Save the form.
+12. Click `Retour aux produits` again.
+
+Expected: Valid internal list context is preserved; external or malformed return paths fall back to `/admin/produits`; saved forms do not show a false unsaved-change warning.
 Actual:
 PASS/FAIL:
 
@@ -31,7 +52,7 @@ Repeat the OWNER creation flow with an `ADMIN`.
 
 Expected: ADMIN can create and edit normal catalogue records.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Brand Management
 
@@ -45,7 +66,7 @@ PASS/FAIL:
 
 Expected: Filtering and sorting happen through server navigation, not browser-only filtering. Validation errors are shown inline; success/error toasts appear; the create dialog closes or resets after success.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Category Management
 
@@ -72,7 +93,7 @@ PASS/FAIL:
 
 Expected: XOF values display as French-formatted amounts in read areas; `stock_on_hand` and `reserved_quantity` are not editable; variant search and pagination preserve URL parameters.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Catalogue Terminology
 
@@ -84,7 +105,7 @@ PASS/FAIL:
 
 Expected: Controlled French options are displayed for target audience and fragrance family.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Invalid Price Validation
 
@@ -92,7 +113,7 @@ Submit an invalid or empty selling price.
 
 Expected: Safe validation error; no stack trace or SQL error appears.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Image Upload
 
@@ -100,9 +121,23 @@ PASS/FAIL:
 2. Choose a JPEG, PNG, or WebP under 5 MB.
 3. Confirm local preview.
 4. Upload.
-5. Refresh the editor.
+5. Wait for finalization success.
+6. Confirm the temporary upload confirmation card disappears without a manual browser reload.
+7. Confirm the persisted image card is visible.
+8. Refresh the editor manually.
 
-Expected: Browser uploads directly to Supabase Storage, finalization validates server-side, persisted preview remains after refresh.
+Expected: Browser uploads directly to Supabase Storage, finalization validates server-side, local preview object URLs are cleaned up, stale pending cards disappear, and persisted preview remains after refresh.
+Actual:
+PASS/FAIL:PASS
+
+## Image Upload Retry
+
+1. Select one valid image and one invalid or intentionally failing image.
+2. Upload both.
+3. Confirm the successful image is removed from the pending list after finalization.
+4. Confirm the failed item remains visible with `Réessayer` or `Retirer`.
+
+Expected: File states are independent; one failure does not leave successful uploads as stale pending cards.
 Actual:
 PASS/FAIL:
 
@@ -114,7 +149,7 @@ PASS/FAIL:
 
 Expected: Image metadata persists; at most one primary image is present.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Replacement And Deletion
 
@@ -123,7 +158,7 @@ PASS/FAIL:
 
 Expected: Replacement uses a new generated path; deletion removes Storage object and database reference when allowed.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Activation
 
@@ -133,7 +168,7 @@ PASS/FAIL:
 
 Expected: Incomplete activation fails clearly and leaves `DRAFT`; complete activation succeeds and status becomes `ACTIVE`.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Archival
 
@@ -142,7 +177,7 @@ PASS/FAIL:
 
 Expected: Status is `ARCHIVED`; product disappears from public catalogue queries.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## INVENTORY_MANAGER Read-Only
 
@@ -155,7 +190,7 @@ PASS/FAIL:
 
 Expected: Read-only data is visible; create/edit/upload/activation/archive controls are absent; cost price is not visible; no broken `Gérer le stock` link is shown unless a real authorized inventory route exists.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Unauthorized Direct Routes
 
@@ -164,7 +199,7 @@ PASS/FAIL:
 
 Expected: Access is denied server-side.
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Layouts And Feedback
 
@@ -178,7 +213,7 @@ Verify mobile and desktop:
 - session persists while moving across catalogue pages and after refresh.
 
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS
 
 ## Supabase Verification
 
@@ -194,4 +229,4 @@ PASS/FAIL:
 10. Attempt unauthorized-role upload and confirm no object is created.
 
 Actual:
-PASS/FAIL:
+PASS/FAIL:PASS

@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/shared/page-container";
-import { SectionHeading } from "@/components/shared/section-heading";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProductEditorHeader } from "@/components/admin/catalogue/product-editor-header";
 import { ProductForm } from "@/components/admin/catalogue/product-form";
 import { VariantEditor } from "@/components/admin/catalogue/variant-editor";
 import { ImageManager } from "@/components/admin/catalogue/image-manager";
@@ -16,6 +15,7 @@ import {
   normalizeAdminVariantListFilters,
   requireCatalogueReadAccess,
 } from "@/lib/catalogue/admin";
+import { getSafeProductReturnPath } from "@/lib/catalogue/product-return";
 
 export default async function ProductEditorPage({
   params,
@@ -46,16 +46,11 @@ export default async function ProductEditorPage({
     notFound();
   }
 
+  const returnPath = getSafeProductReturnPath(search.retour);
+
   return (
     <PageContainer>
-      <SectionHeading
-        eyebrow="Catalogue"
-        title={product.name}
-        description={`Slug: /${product.slug}`}
-      />
-      <div className="mt-4">
-        <Badge variant={product.status === "ACTIVE" ? "default" : "secondary"}>{product.status}</Badge>
-      </div>
+      <ProductEditorHeader product={product} returnPath={returnPath} />
       <Tabs defaultValue="informations" className="mt-8">
         <TabsList>
           <TabsTrigger value="informations">Informations</TabsTrigger>

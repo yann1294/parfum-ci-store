@@ -36,6 +36,7 @@ export default async function AdminProductsPage({
     next.set("page", String(page));
     return `/admin/produits?${next.toString()}`;
   };
+  const currentListPath = queryString(result.page);
 
   return (
     <PageContainer>
@@ -56,6 +57,7 @@ export default async function AdminProductsPage({
           page={result.page}
           totalPages={result.totalPages}
           queryString={queryString}
+          returnPath={currentListPath}
         />
       </div>
     </PageContainer>
