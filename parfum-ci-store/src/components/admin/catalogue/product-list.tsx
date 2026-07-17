@@ -14,6 +14,7 @@ import {
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatXof } from "@/lib/catalogue/format";
 import type { AdminBrand, AdminCategory, AdminProduct } from "@/lib/catalogue/admin";
+import { getAdminAvailabilitySummary } from "@/lib/catalogue/product-availability";
 
 function statusLabel(status: AdminProduct["status"]) {
   return {
@@ -36,8 +37,7 @@ function priceRange(product: AdminProduct) {
 }
 
 function availabilitySummary(product: AdminProduct) {
-  const available = product.variants.reduce((sum, variant) => sum + variant.availableQuantity, 0);
-  return available > 0 ? `${available} disponible(s)` : "Rupture";
+  return getAdminAvailabilitySummary({ status: product.status, variants: product.variants });
 }
 
 export function ProductFilters({

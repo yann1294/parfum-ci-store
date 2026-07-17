@@ -1,8 +1,17 @@
 import Link from "next/link";
 
-import { siteConfig } from "@/config/site";
+import { buildSocialLinks, siteConfig } from "@/config/site";
+import { getStorefrontContent } from "@/lib/storefront/content";
 
-export function PublicFooter() {
+export async function PublicFooter() {
+  const content = await getStorefrontContent();
+  const socialLinks = buildSocialLinks({
+    instagramUrl: content.social.instagramUrl || undefined,
+    facebookUrl: content.social.facebookUrl || undefined,
+    tiktokUrl: content.social.tiktokUrl || undefined,
+    whatsappNumber: content.social.whatsappNumber || siteConfig.whatsappNumber,
+  });
+
   return (
     <footer className="border-t bg-surface">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1fr_auto] lg:px-8">
@@ -13,7 +22,7 @@ export function PublicFooter() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {siteConfig.socialLinks.map((link) => {
+          {socialLinks.map((link) => {
             const Icon = link.icon;
             return (
               <Link

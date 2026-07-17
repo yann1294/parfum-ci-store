@@ -4,15 +4,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatXof } from "@/lib/catalogue/format";
+import { getPublicProductAvailabilityLabel } from "@/lib/catalogue/product-availability";
 import type { PublicProductDto } from "@/lib/catalogue/types";
-
-function availabilityLabel(status: string) {
-  return {
-    IN_STOCK: "En stock",
-    LOW_STOCK: "Stock faible",
-    OUT_OF_STOCK: "Rupture de stock",
-  }[status] ?? "Disponibilité à confirmer";
-}
 
 export function productPriceLabel(product: PublicProductDto) {
   const prices = product.variants.map((variant) => variant.priceXof).filter((price) => price > 0);
@@ -24,11 +17,7 @@ export function productPriceLabel(product: PublicProductDto) {
 
 export function ProductCard({ product, priority = false }: { product: PublicProductDto; priority?: boolean }) {
   const image = product.images[0];
-  const availability = product.variants.some((variant) => variant.availabilityStatus === "IN_STOCK")
-    ? "IN_STOCK"
-    : product.variants.some((variant) => variant.availabilityStatus === "LOW_STOCK")
-      ? "LOW_STOCK"
-      : "OUT_OF_STOCK";
+  const availability = getPublicProductAvailabilityLabel(product);
 
   return (
     <Card className="overflow-hidden p-0">
@@ -55,7 +44,7 @@ export function ProductCard({ product, priority = false }: { product: PublicProd
           </div>
           <p className="text-sm text-muted-foreground">{product.fragranceFamily ?? "Famille olfactive à découvrir"}</p>
           <p className="font-medium">{productPriceLabel(product)}</p>
-          <p className="text-sm text-muted-foreground">{availabilityLabel(availability)}</p>
+          <p className="text-sm text-muted-foreground">{availability}</p>
         </CardContent>
       </Link>
     </Card>

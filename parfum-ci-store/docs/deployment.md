@@ -77,6 +77,7 @@ pnpm build
 - Run `psql "$DATABASE_URL" -f supabase/tests/schema_smoke.sql` after applying migrations.
 - Apply Phase 4 with `pnpm exec supabase db push`, then regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`.
 - Run `psql "$DATABASE_URL" -f supabase/tests/phase4_catalogue_storage.sql` after applying the Phase 4 migration.
+- Phase 6.5 adds the `store_content` migration. Review it, then apply with `pnpm exec supabase db push` and regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`.
 
 ## Product Images
 
@@ -119,6 +120,9 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 
 - Public pages load in French.
 - Catalogue reads published products only.
+- Catalogue pagination returns bounded pages with default size 12 and maximum size 48.
+- `/admin/contenu` is accessible only to OWNER and ADMIN; public Contact and Delivery pages reflect saved content after revalidation.
+- Public cart copy contains no internal phase terminology and the WhatsApp CTA does not create orders or reserve inventory.
 - Admin routes require authentication.
 - Checkout creates orders without exposing secrets.
 - Resend sends transactional messages.

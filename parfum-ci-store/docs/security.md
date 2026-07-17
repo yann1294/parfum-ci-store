@@ -55,6 +55,8 @@
 - Development-only auth diagnostics emit event codes and optional route/reason metadata only. They must not include cookie values, OAuth URLs, authorization codes, tokens, raw profiles, raw users, email addresses, or secrets.
 - Product-image signed upload URLs and tokens are secret for their short lifetime. Do not log them, audit them, or store them outside the upload flow.
 - Product images are stored in a public bucket and are not confidential if the URL is known.
+- Storefront content editing is restricted to active OWNER and ADMIN staff through `/admin/contenu` and the `store_content` RLS policies. Public reads are limited to rows explicitly marked `public_readable`.
+- Storefront content schemas accept structured text fields and repeatable items only. They do not render arbitrary HTML and must never store scripts, secrets, tokens, signed URLs, customer data, or private settings.
 - Login rate limiting uses a development-safe in-memory adapter behind an interface. The adapter normalizes by caller/email at the action boundary, expires entries, and caps stored keys, but it is process-local and not distributed across serverless instances.
 - Supabase Auth also applies provider-level authentication rate limits. Configure those limits in the Supabase dashboard for production alongside application-level controls.
 - Production can upgrade the adapter to a durable store such as Supabase, Redis, Upstash free-tier/low-cost Redis, Vercel KV, Cloudflare Turnstile plus WAF rules, or another inexpensive edge rate-limit provider without changing login action call sites.
@@ -114,6 +116,8 @@ Public DTOs must not expose `cost_price_xof`, `stock_on_hand`, `reserved_quantit
 The Phase 6 cart is client-side discovery state. It does not create orders, process payments, or reserve inventory. Later checkout code must recalculate prices and availability server-side.
 
 First-touch attribution accepts only normalized UTM fields and must never be used for authorization.
+
+Content update audit events store the content section key only. They must not include complete page payloads, secrets, or customer data.
 
 ## Test Users
 

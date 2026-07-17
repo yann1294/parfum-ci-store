@@ -40,9 +40,17 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 
 - Admin users authenticate through Supabase Auth.
 - Admins manage brands, categories, products, variants, images, settings, and social links.
+- Phase 6.5 adds `/admin/contenu` so OWNER and ADMIN can manage structured public copy for home, about, contact, delivery/payment, social links, and shop coordinates without editing source code.
 - Admins review orders, verify manual payments, update fulfillment states, and respond to messages.
 - Inventory adjustments are recorded through ledger entries, not direct stock edits.
 - Sensitive admin operations are audited.
+
+## Phase 6.5 Corrections
+
+- Public catalogue pagination is server-side with default page size 12 and maximum page size 48.
+- Publication status is separate from stock status. Draft products display as `Brouillon` in admin and are hidden publicly; archived products display as `Archivé` in admin and are hidden publicly.
+- Public Contact and Delivery pages use managed structured content when configured.
+- The cart remains pre-checkout discovery state. `Commander via WhatsApp` opens a manual enquiry and does not create orders, reserve stock, decrement inventory, or confirm payment.
 
 ## Non-Goals for MVP
 

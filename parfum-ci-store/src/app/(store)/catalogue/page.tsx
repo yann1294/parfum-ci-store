@@ -6,7 +6,8 @@ import { PageContainer } from "@/components/shared/page-container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ProductCard } from "@/components/storefront/product-card";
-import { listActiveProducts, listPublicFacets } from "@/lib/catalogue/products";
+import { listActiveProductsPage, listPublicFacets } from "@/lib/catalogue/products";
+import { pageWindow } from "@/lib/catalogue/pagination";
 import { targetAudienceOptions } from "@/lib/catalogue/validation";
 
 export const metadata: Metadata = {
@@ -23,9 +24,10 @@ function parsePage(value: string | undefined) {
 function buildHref(params: Record<string, string | undefined>, patch: Record<string, string | undefined>) {
   const next = new URLSearchParams();
   for (const [key, value] of Object.entries({ ...params, ...patch })) {
-    if (value) next.set(key, value);
+    if (value && !(key === "page" && value === "1")) next.set(key, value);
   }
-  return `/catalogue?${next.toString()}`;
+  const query = next.toString();
+  return query ? `/catalogue?${query}` : "/catalogue";
 }
 
 export default async function CataloguePage({
@@ -50,7 +52,9 @@ export default async function CataloguePage({
     availability: params.availability as "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | undefined,
     sort: (params.sort as "newest" | "price_asc" | "price_desc" | undefined) ?? "newest",
   };
-  const [products, facets] = await Promise.all([listActiveProducts(filters), listPublicFacets()]);
+  const [result, facets] = await Promise.all([listActiveProductsPage(filters), listPublicFacets()]);
+  const products = result.products;
+  const pages = pageWindow(result.page, result.totalPages);
 
   return (
     <PageContainer className="py-12">
@@ -115,7 +119,11 @@ export default async function CataloguePage({
           </form>
         </aside>
         <section className="grid gap-5">
-          <p className="text-sm text-muted-foreground">{products.length} résultat(s) sur cette page.</p>
+          <p className="text-sm text-muted-foreground">
+            {result.total > 0
+              ? `Produits ${result.rangeStart}-${result.rangeEnd} sur ${result.total}`
+              : "Aucun produit ne correspond aux filtres actuels."}
+          </p>
           {products.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {products.map((product) => <ProductCard key={product.id} product={product} />)}
@@ -123,11 +131,34 @@ export default async function CataloguePage({
           ) : (
             <EmptyState title="Aucun parfum trouvé" description="Essayez de retirer un filtre ou de modifier votre recherche." />
           )}
-          <nav className="flex justify-between" aria-label="Pagination catalogue">
-            <Link href={buildHref(params, { page: String(Math.max(page - 1, 1)) })} className={buttonVariants({ variant: "outline" })} aria-disabled={page <= 1}>
+          <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Pagination catalogue">
+            <Link
+              href={buildHref(params, { page: String(Math.max(result.page - 1, 1)) })}
+              className={buttonVariants({ variant: "outline" })}
+              aria-disabled={result.page <= 1}
+            >
               Précédent
             </Link>
-            <Link href={buildHref(params, { page: String(page + 1) })} className={buttonVariants({ variant: "outline" })}>
+            <div className="flex flex-wrap justify-center gap-2">
+              {pages.map((pageNumber) => (
+                <Link
+                  key={pageNumber}
+                  href={buildHref(params, { page: String(pageNumber) })}
+                  className={buttonVariants({
+                    variant: pageNumber === result.page ? "default" : "outline",
+                    size: "sm",
+                  })}
+                  aria-current={pageNumber === result.page ? "page" : undefined}
+                >
+                  {pageNumber}
+                </Link>
+              ))}
+            </div>
+            <Link
+              href={buildHref(params, { page: String(Math.min(result.page + 1, result.totalPages)) })}
+              className={buttonVariants({ variant: "outline" })}
+              aria-disabled={result.page >= result.totalPages}
+            >
               Suivant
             </Link>
           </nav>

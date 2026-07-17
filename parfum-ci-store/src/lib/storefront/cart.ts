@@ -11,6 +11,7 @@ export type CartLine = {
   sizeMl: number;
   concentration: string | null;
   unitPriceXof: number;
+  availabilityStatus?: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
   quantity: number;
 };
 
@@ -59,6 +60,11 @@ export function updateCartQuantity(variantId: string, quantity: number) {
     .map((line) => (line.variantId === variantId ? { ...line, quantity: safeQuantity } : line))
     .filter((line) => line.quantity > 0);
   writeCart({ ...current, lines });
+}
+
+export function clearCart() {
+  const current = readCart();
+  writeCart({ ...current, lines: [] });
 }
 
 export function clearCartForTests() {

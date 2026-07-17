@@ -117,6 +117,9 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - Product image upload surfaces distinguish temporary pending cards from persisted image cards. Successful pending cards are removed after finalization and refresh; failed pending cards remain retryable.
 - Storefront product cards use stable image aspect ratios, `next/image`, French XOF prices, and availability labels. They must not show cost price, physical stock, or reserved stock.
 - Public catalogue filters are URL-backed and accessible on mobile and desktop. Filtered URLs may be shareable, but canonical SEO must avoid indexing arbitrary UTM or heavy filter combinations.
+- Public catalogue pagination uses a compact, mobile-friendly control with previous/next and nearby page numbers. The result summary should read like `Produits 1-12 sur 100`.
+- Public Contact and Delivery pages use action cards, simple sections, and configured content only. Empty optional content is hidden instead of replaced with fake claims.
+- The admin content editor uses section navigation, restrained cards, visible labels, field help text, and save feedback consistent with other back-office forms.
 - Use `ThemeToggle` only in app shells or settings surfaces.
 - Public header/footer social links must come from `src/config/site.ts` until database settings replace it.
 - Menus, sheets, dialogs, selects, tabs, and dropdowns must remain keyboard accessible.
@@ -128,6 +131,7 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - `Public cible` is used for Homme, Femme, Unisexe, and Enfant positioning.
 - Do not use the English label `Postponement`.
 - Use compact status badges for inventory states such as `En stock`, `Stock bas`, and `Rupture`; color must not be the only signal.
+- In admin catalogue lists, publication status has priority over stock status. Draft products should read `Brouillon`, not `Rupture de stock`.
 
 ## Prohibited Color Usage
 

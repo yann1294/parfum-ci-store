@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Palette,
+  FileText,
   Settings,
   ShieldCheck,
   Tags,
@@ -30,6 +31,7 @@ const navIcons: Record<AdminNavigationItem["module"], ComponentType<{ className?
   messages: MessageSquare,
   analytics: BarChart3,
   "design-system": Palette,
+  content: FileText,
   settings: Settings,
 };
 

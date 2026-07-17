@@ -8,17 +8,28 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { ProductCard } from "@/components/storefront/product-card";
 import { listFeaturedProducts, listPublicFacets } from "@/lib/catalogue/products";
-import { buildWhatsAppUrl, siteConfig } from "@/config/site";
+import { buildWhatsAppUrlForNumber, normalizeWhatsAppNumber, siteConfig } from "@/config/site";
+import { getStorefrontContent } from "@/lib/storefront/content";
 
-export const metadata: Metadata = {
-  title: "Parfumerie premium en Côte d'Ivoire",
-  description: siteConfig.heroDescription,
-  alternates: { canonical: "/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await getStorefrontContent();
+  return {
+    title: content.home.seoTitle || "Parfumerie premium en Côte d'Ivoire",
+    description: content.home.seoDescription || content.home.heroSubtitle,
+    alternates: { canonical: "/" },
+  };
+}
 
 export default async function HomePage() {
-  const [featured, facets] = await Promise.all([listFeaturedProducts(4), listPublicFacets()]);
-  const whatsappUrl = buildWhatsAppUrl(siteConfig.whatsappDefaultText);
+  const [featured, facets, content] = await Promise.all([
+    listFeaturedProducts(4),
+    listPublicFacets(),
+    getStorefrontContent(),
+  ]);
+  const whatsappUrl = buildWhatsAppUrlForNumber(
+    normalizeWhatsAppNumber(content.social.whatsappNumber) ?? siteConfig.whatsappNumber,
+    siteConfig.whatsappDefaultText,
+  );
 
   return (
     <PageContainer className="py-12 md:py-16">
@@ -27,17 +38,17 @@ export default async function HomePage() {
           <Badge variant="secondary">Parfumerie en Côte d&apos;Ivoire</Badge>
           <div className="space-y-5">
             <h1 className="font-heading text-5xl font-semibold leading-none text-foreground md:text-7xl">
-              {siteConfig.heroTitle}
+              {content.home.heroTitle}
             </h1>
-            <p className="max-w-xl text-lg leading-8 text-muted-foreground">{siteConfig.heroDescription}</p>
+            <p className="max-w-xl text-lg leading-8 text-muted-foreground">{content.home.heroSubtitle}</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link href="/catalogue" className={buttonVariants({ size: "lg" })}>
-              {siteConfig.primaryCta}
+              {content.home.primaryCtaLabel}
             </Link>
             {whatsappUrl ? (
               <Link href={whatsappUrl} className={buttonVariants({ variant: "outline", size: "lg" })} target="_blank">
-                Écrire sur WhatsApp
+                {content.home.secondaryCtaLabel || "Écrire sur WhatsApp"}
               </Link>
             ) : null}
           </div>
@@ -74,9 +85,10 @@ export default async function HomePage() {
       </section>
 
       <section className="mt-16 grid gap-5 md:grid-cols-3">
-        {siteConfig.trustPoints.map((point) => (
-          <div key={point} className="rounded-lg border bg-surface p-5">
-            <p className="font-medium">{point}</p>
+        {content.home.trustPoints.map((point) => (
+          <div key={point.title} className="rounded-lg border bg-surface p-5">
+            <p className="font-medium">{point.title}</p>
+            {point.description ? <p className="mt-2 text-sm text-muted-foreground">{point.description}</p> : null}
           </div>
         ))}
       </section>
@@ -84,10 +96,11 @@ export default async function HomePage() {
       <section className="mt-16 grid gap-6 md:grid-cols-2">
         <SectionHeading eyebrow="Commande" title="Comment commander" />
         <ol className="grid gap-3">
-          {siteConfig.orderingSteps.map((step, index) => (
-            <li key={step} className="rounded-lg border bg-surface p-4">
+          {content.home.orderingSteps.map((step, index) => (
+            <li key={step.title} className="rounded-lg border bg-surface p-4">
               <span className="font-medium">{index + 1}. </span>
-              {step}
+              <span className="font-medium">{step.title}</span>
+              {step.description ? <p className="mt-1 text-sm text-muted-foreground">{step.description}</p> : null}
             </li>
           ))}
         </ol>

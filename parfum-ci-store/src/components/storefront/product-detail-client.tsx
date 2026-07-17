@@ -11,13 +11,10 @@ import type { PublicProductDto, PublicVariantDto } from "@/lib/catalogue/types";
 import { addCartLine } from "@/lib/storefront/cart";
 import { readAttribution } from "@/lib/storefront/attribution";
 import { absoluteUrl, buildWhatsAppUrl } from "@/config/site";
+import { publicAvailabilityLabel } from "@/lib/catalogue/product-availability";
 
 function availabilityLabel(status: PublicVariantDto["availabilityStatus"]) {
-  return {
-    IN_STOCK: "En stock",
-    LOW_STOCK: "Stock faible",
-    OUT_OF_STOCK: "Rupture de stock",
-  }[status];
+  return publicAvailabilityLabel(status);
 }
 
 export function ProductDetailClient({ product }: { product: PublicProductDto }) {
@@ -61,6 +58,7 @@ export function ProductDetailClient({ product }: { product: PublicProductDto }) 
         sizeMl: selectedVariant.sizeMl,
         concentration: selectedVariant.concentration,
         unitPriceXof: selectedVariant.priceXof,
+        availabilityStatus: selectedVariant.availabilityStatus,
         quantity: Math.min(quantity, availableMax),
       },
       readAttribution(),

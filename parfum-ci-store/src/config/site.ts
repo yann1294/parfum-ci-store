@@ -14,7 +14,7 @@ export type NavigationItem = {
   href: string;
 };
 
-function normalizeWhatsAppNumber(value: string | undefined) {
+export function normalizeWhatsAppNumber(value: string | undefined) {
   if (!value) return null;
   const digits = value.replace(/\D/g, "");
   return digits.length >= 8 ? digits : null;
@@ -26,6 +26,22 @@ function cleanBaseUrl(value: string) {
 
 const publicEnv = getPublicEnv();
 const whatsappNumber = normalizeWhatsAppNumber(publicEnv.NEXT_PUBLIC_WHATSAPP_NUMBER);
+
+export function buildSocialLinks(input: {
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  tiktokUrl?: string | null;
+  whatsappNumber?: string | null;
+}) {
+  const normalizedWhatsApp = normalizeWhatsAppNumber(input.whatsappNumber ?? undefined);
+
+  return [
+    input.instagramUrl ? { label: "Instagram", href: input.instagramUrl, icon: Camera } : null,
+    input.facebookUrl ? { label: "Facebook", href: input.facebookUrl, icon: Users } : null,
+    input.tiktokUrl ? { label: "TikTok", href: input.tiktokUrl, icon: Music2 } : null,
+    normalizedWhatsApp ? { label: "WhatsApp", href: `https://wa.me/${normalizedWhatsApp}`, icon: MessageCircle } : null,
+  ].filter(Boolean) as SocialLink[];
+}
 
 export const siteConfig = {
   name: publicEnv.NEXT_PUBLIC_SITE_NAME,
@@ -60,20 +76,12 @@ export const siteConfig = {
     { label: "Contact", href: "/contact" },
     { label: "Panier", href: "/panier" },
   ] satisfies NavigationItem[],
-  socialLinks: [
-    publicEnv.NEXT_PUBLIC_INSTAGRAM_URL
-      ? { label: "Instagram", href: publicEnv.NEXT_PUBLIC_INSTAGRAM_URL, icon: Camera }
-      : null,
-    publicEnv.NEXT_PUBLIC_FACEBOOK_URL
-      ? { label: "Facebook", href: publicEnv.NEXT_PUBLIC_FACEBOOK_URL, icon: Users }
-      : null,
-    publicEnv.NEXT_PUBLIC_TIKTOK_URL
-      ? { label: "TikTok", href: publicEnv.NEXT_PUBLIC_TIKTOK_URL, icon: Music2 }
-      : null,
-    whatsappNumber
-      ? { label: "WhatsApp", href: `https://wa.me/${whatsappNumber}`, icon: MessageCircle }
-      : null,
-  ].filter(Boolean) as SocialLink[],
+  socialLinks: buildSocialLinks({
+    instagramUrl: publicEnv.NEXT_PUBLIC_INSTAGRAM_URL,
+    facebookUrl: publicEnv.NEXT_PUBLIC_FACEBOOK_URL,
+    tiktokUrl: publicEnv.NEXT_PUBLIC_TIKTOK_URL,
+    whatsappNumber,
+  }),
 };
 
 export function absoluteUrl(path = "/") {
@@ -83,6 +91,11 @@ export function absoluteUrl(path = "/") {
 
 export function buildWhatsAppUrl(message: string) {
   if (!siteConfig.whatsappNumber) return null;
+  return buildWhatsAppUrlForNumber(siteConfig.whatsappNumber, message);
+}
+
+export function buildWhatsAppUrlForNumber(number: string | null, message: string) {
+  if (!number) return null;
   const params = new URLSearchParams({ text: message });
-  return `https://wa.me/${siteConfig.whatsappNumber}?${params.toString()}`;
+  return `https://wa.me/${number}?${params.toString()}`;
 }

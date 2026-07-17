@@ -215,6 +215,19 @@ Storage writes on `storage.objects` are restricted to authenticated active `OWNE
 
 The Phase 5 admin UI reads staff catalogue data through server-only authorized repositories. Public catalogue queries must continue to use the safe public boundary and must not expose `cost_price_xof`.
 
+## Storefront Content
+
+Phase 6.5 adds `public.store_content` as a forward-only content-management table.
+
+- `page_key` is the primary key and is constrained to `home`, `about`, `contact`, `delivery`, or `social`.
+- `content` is JSONB constrained to an object. Application Zod schemas strictly validate the object shape for each page key.
+- `public_readable` controls public read exposure.
+- `updated_by` references `public.profiles(id)` for staff attribution.
+- `created_at` and `updated_at` use UTC timestamps; `updated_at` is maintained by `public.set_updated_at()`.
+- RLS is enabled. Anonymous and authenticated visitors may read rows where `public_readable is true`; authenticated active OWNER and ADMIN staff may insert/update content.
+
+This table stores public copy and social/contact values only. It must not store secrets, arbitrary HTML, customer data, tokens, signed URLs, or private settings.
+
 ## Local Reset, Seed, and Verification
 
 For local development only, run:

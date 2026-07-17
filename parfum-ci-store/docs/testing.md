@@ -145,6 +145,23 @@ The cart is Phase 6 discovery state only. It stores variant snapshots and first-
 
 SEO checks should cover canonical URLs, hidden-product not-found behaviour, Product JSON-LD, sitemap, robots, and absence of staff-only fields in rendered HTML.
 
+## Phase 6.5 Corrections
+
+Unit and integration coverage should include:
+
+- public catalogue default page size 12 and maximum page size 48;
+- at least 100 mocked or seeded active products proving only the requested page is returned/rendered;
+- filter/search/sort URL preservation and page reset when filters change;
+- admin availability labels for draft, archived, no variants, inactive variants, zero available quantity, low stock, and in-stock;
+- OWNER/ADMIN content edit permission and unauthorized-role denial;
+- structured content validation limits for repeatable items;
+- public Contact and Delivery pages hiding absent optional fields;
+- cart `Continuer mes achats` target `/catalogue`;
+- absence of public implementation-phase wording;
+- WhatsApp cart message encoding and no inventory reservation/decrement.
+
+Playwright content-management tests require staff credentials from ignored environment variables and a migrated Supabase project with `store_content` applied. If those are unavailable, mark live persistence and browser content-edit tests `NOT VERIFIED`.
+
 ## Environment Diagnostics
 
 Run:

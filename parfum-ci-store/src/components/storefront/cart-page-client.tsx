@@ -4,11 +4,36 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { formatXof } from "@/lib/catalogue/format";
-import { readCart, updateCartQuantity, type CartState } from "@/lib/storefront/cart";
+import { publicAvailabilityLabel } from "@/lib/catalogue/product-availability";
+import { absoluteUrl, buildWhatsAppUrlForNumber, normalizeWhatsAppNumber, siteConfig } from "@/config/site";
+import { clearCart, readCart, updateCartQuantity, type CartLine, type CartState } from "@/lib/storefront/cart";
 
-export function CartPageClient() {
+function cartLineAvailability(line: CartLine) {
+  return publicAvailabilityLabel(line.availabilityStatus ?? "IN_STOCK");
+}
+
+export function buildCartWhatsAppMessage(cart: CartState, subtotal: number) {
+  return [
+    "Bonjour, je souhaite commander ces articles :",
+    ...cart.lines.flatMap((line, index) => [
+      "",
+      `${index + 1}. ${line.productName}`,
+      `Taille: ${line.sizeMl} ml`,
+      `Concentration: ${line.concentration ?? "Non renseignée"}`,
+      `Quantité: ${line.quantity}`,
+      `Prix unitaire: ${formatXof(line.unitPriceXof)}`,
+      `Total ligne: ${formatXof(line.unitPriceXof * line.quantity)}`,
+      `Lien: ${absoluteUrl(`/parfums/${line.productSlug}`)}`,
+    ]),
+    "",
+    `Sous-total panier: ${formatXof(subtotal)}`,
+    "Merci de confirmer la disponibilité finale, les frais de livraison et les instructions de paiement.",
+  ].join("\n");
+}
+
+export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) {
   const [cart, setCart] = useState<CartState>({ lines: [], attribution: null });
 
   useEffect(() => {
@@ -26,6 +51,11 @@ export function CartPageClient() {
     () => cart.lines.reduce((sum, line) => sum + line.unitPriceXof * line.quantity, 0),
     [cart.lines],
   );
+  const normalizedWhatsAppNumber = normalizeWhatsAppNumber(whatsappNumber) ?? siteConfig.whatsappNumber;
+  const whatsappUrl = useMemo(
+    () => buildWhatsAppUrlForNumber(normalizedWhatsAppNumber, buildCartWhatsAppMessage(cart, subtotal)),
+    [cart, normalizedWhatsAppNumber, subtotal],
+  );
 
   if (cart.lines.length === 0) {
     return (
@@ -33,7 +63,7 @@ export function CartPageClient() {
         <h1 className="font-heading text-4xl">Votre panier est vide</h1>
         <p className="mt-2 text-muted-foreground">Ajoutez un parfum depuis le catalogue.</p>
         <Link href="/catalogue" className={buttonVariants({ className: "mt-5" })}>
-          Voir le catalogue
+          Continuer mes achats
         </Link>
       </div>
     );
@@ -56,18 +86,27 @@ export function CartPageClient() {
                 {line.sizeMl} ml · {line.concentration ?? "Parfum"}
               </p>
               <p className="mt-2">{formatXof(line.unitPriceXof)}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{cartLineAvailability(line)}</p>
+              {line.availabilityStatus === "OUT_OF_STOCK" ? (
+                <p className="mt-1 text-sm text-destructive">Disponibilité à confirmer avant commande.</p>
+              ) : null}
             </div>
-            <label className="grid gap-1 text-sm">
-              Quantité
-              <input
-                type="number"
-                min={0}
-                max={20}
-                value={line.quantity}
-                onChange={(event) => updateCartQuantity(line.variantId, Number.parseInt(event.currentTarget.value, 10) || 0)}
-                className="h-10 w-24 rounded-lg border border-input bg-background px-3"
-              />
-            </label>
+            <div className="grid gap-3">
+              <label className="grid gap-1 text-sm">
+                Quantité
+                <input
+                  type="number"
+                  min={0}
+                  max={20}
+                  value={line.quantity}
+                  onChange={(event) => updateCartQuantity(line.variantId, Number.parseInt(event.currentTarget.value, 10) || 0)}
+                  className="h-10 w-24 rounded-lg border border-input bg-background px-3"
+                />
+              </label>
+              <Button type="button" variant="outline" size="sm" onClick={() => updateCartQuantity(line.variantId, 0)}>
+                Retirer
+              </Button>
+            </div>
           </article>
         ))}
       </section>
@@ -78,12 +117,27 @@ export function CartPageClient() {
           <span>{formatXof(subtotal)}</span>
         </div>
         <p className="mt-4 text-sm text-muted-foreground">
-          Le checkout et la réservation de stock seront traités dans la phase commande. Les prix et disponibilités
-          seront revérifiés côté serveur.
+          La disponibilité finale et les modalités de paiement seront confirmées avant validation de la commande.
         </p>
-        <Link href="/catalogue" className={buttonVariants({ variant: "outline", className: "mt-5 w-full" })}>
-          Continuer les achats
-        </Link>
+        <div className="mt-5 grid gap-3">
+          {whatsappUrl ? (
+            <a href={whatsappUrl} target="_blank" rel="noreferrer" className={buttonVariants({ className: "w-full" })}>
+              Commander via WhatsApp
+            </a>
+          ) : null}
+          <Link href="/catalogue" className={buttonVariants({ variant: "outline", className: "w-full" })}>
+            Continuer mes achats
+          </Link>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (window.confirm("Vider le panier ?")) clearCart();
+            }}
+          >
+            Vider le panier
+          </Button>
+        </div>
       </aside>
     </div>
   );

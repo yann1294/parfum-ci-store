@@ -40,7 +40,25 @@ PASS/FAIL:
 
 Verify search, brand, category, Public cible, Famille olfactive, sort and pagination.
 
-Expected: Filters update URL parameters, persist after refresh, and can be cleared. No draft or archived products appear.
+Expected: Filters update URL parameters, persist after refresh, and can be cleared. Results are bounded to 12 per page by default, show a summary such as `Produits 1-12 sur 100`, and no draft or archived products appear.
+Actual:
+PASS/FAIL:
+
+## Admin Content
+
+Expected: OWNER or ADMIN can open `/admin/contenu`, edit Contact and Delivery fields, save, and see public pages update without a redeploy. INVENTORY_MANAGER, ORDER_MANAGER, CUSTOMER_SUPPORT and inactive users cannot edit content.
+Actual:
+PASS/FAIL:
+
+## Contact
+
+Expected: Contact displays only configured telephone, WhatsApp, e-mail, address, hours, map and social links. No fake form appears.
+Actual:
+PASS/FAIL:
+
+## Livraison Et Paiement
+
+Expected: Delivery zones, fees, timeframes, pickup, Mobile Money, cash-on-delivery and FAQ appear only when configured. No unsupported promises appear.
 Actual:
 PASS/FAIL:
 
@@ -64,13 +82,19 @@ PASS/FAIL:
 
 ## Cart
 
-Expected: Add-to-cart creates a client-side cart line without creating orders or reserving stock. Refresh preserves the client cart.
+Expected: Add-to-cart creates a client-side cart line without creating orders or reserving stock. Refresh preserves the client cart. `Continuer mes achats` opens `/catalogue`. No public text mentions implementation phases.
 Actual:
 PASS/FAIL:
 
 ## WhatsApp
 
-Expected: The WhatsApp link is hidden when no number is configured; otherwise the encoded message includes product, variant, price and canonical product URL.
+Expected: The WhatsApp link is hidden when no number is configured; otherwise the encoded message includes product, variant, quantity, line totals, subtotal and canonical product URLs. It states availability, delivery fees and payment instructions will be confirmed manually.
+Actual:
+PASS/FAIL:
+
+## Admin Availability Labels
+
+Expected: A new draft product with no variants displays `Brouillon`, not `Rupture de stock`. An active product with no variants displays `Stock non configuré`; inactive-only variants display `Aucune variante active`; zero available stock displays `Rupture de stock`; low stock displays `Stock faible`; available stock displays `En stock`.
 Actual:
 PASS/FAIL:
 

@@ -15,6 +15,7 @@ import type { PublicProductDto } from "@/lib/catalogue/types";
 import { generateProductSlug, isUniqueViolation, resolveSlugCollision } from "@/lib/catalogue/slug";
 import type { Database } from "@/types/database.types";
 import { getPublicProductImageUrl } from "@/lib/catalogue/public-images";
+import { getPublicCataloguePagination } from "@/lib/catalogue/pagination";
 
 const PRODUCT_PUBLIC_COLUMNS = `
   id,
@@ -150,16 +151,30 @@ async function loadPublicProductRelations(productIds: string[]) {
 }
 
 export async function listActiveProducts(input: Partial<CatalogueQueryInput> = {}) {
+  const page = await listActiveProductsPage(input);
+  return page.products;
+}
+
+export type PublicCataloguePage = {
+  products: PublicProductDto[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  rangeStart: number;
+  rangeEnd: number;
+};
+
+export async function listActiveProductsPage(input: Partial<CatalogueQueryInput> = {}): Promise<PublicCataloguePage> {
   const filters = catalogueQuerySchema.parse(input);
   const supabase = await createSupabaseServerClient();
-  const from = (filters.page - 1) * filters.pageSize;
-  const to = from + filters.pageSize - 1;
   let query = supabase
     .from("public_catalogue_products")
     .select(
       "id, name, slug, short_description, description, fragrance_family, top_notes, heart_notes, base_notes, gender_category, featured, created_at, brand_id, brand_name, brand_slug, category_id, category_name, category_slug",
+      { count: "exact" },
     )
-    .range(from, to);
+    .limit(filters.pageSize);
 
   if (filters.search) {
     const search = `%${filters.search.replace(/[%_]/g, "\\$&")}%`;
@@ -175,10 +190,33 @@ export async function listActiveProducts(input: Partial<CatalogueQueryInput> = {
 
   query = query.order("created_at", { ascending: false }).order("id", { ascending: true });
 
-  const { data, error } = await query;
+  const countQuery = query;
+  const firstFrom = (filters.page - 1) * filters.pageSize;
+  const firstTo = firstFrom + filters.pageSize - 1;
+  const { data: firstData, error, count: firstCount } = await countQuery.range(firstFrom, firstTo);
+  let data = firstData;
+  let count = firstCount;
 
   if (error) {
     throw error;
+  }
+
+  let pagination = getPublicCataloguePagination({
+    page: filters.page,
+    pageSize: filters.pageSize,
+    total: count ?? 0,
+  });
+
+  if (pagination.page !== filters.page) {
+    const retry = await query.range(pagination.from, pagination.to);
+    if (retry.error) throw retry.error;
+    data = retry.data;
+    count = retry.count ?? count;
+    pagination = getPublicCataloguePagination({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      total: count ?? 0,
+    });
   }
 
   const ids = (data ?? []).flatMap((row) => (row.id ? [row.id] : []));
@@ -209,7 +247,15 @@ export async function listActiveProducts(input: Partial<CatalogueQueryInput> = {
     });
   }
 
-  return products;
+  return {
+    products,
+    page: pagination.page,
+    pageSize: pagination.pageSize,
+    total: pagination.total,
+    totalPages: pagination.totalPages,
+    rangeStart: products.length === 0 ? 0 : pagination.rangeStart,
+    rangeEnd: products.length === 0 ? 0 : Math.min(pagination.rangeStart + products.length - 1, pagination.rangeEnd),
+  };
 }
 
 export async function listFeaturedProducts(limit = 8) {

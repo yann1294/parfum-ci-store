@@ -27,6 +27,8 @@
 - The catalogue module displays physical stock, reserved stock, calculated available stock, and low-stock threshold as read-only inventory context.
 - Do not render broken inventory links. Link to `Gérer le stock` only when a real authorized inventory route exists for the variant.
 - Public availability is displayed as `En stock`, `Stock faible`, or `Rupture de stock`; physical and reserved stock quantities are not displayed publicly.
+- Admin catalogue availability labels are derived from variants and inventory. `DRAFT` shows `Brouillon`; `ARCHIVED` shows `Archivé`; ACTIVE products with no variants show `Stock non configuré`; inactive-only variants show `Aucune variante active`; active variants with zero available quantity show `Rupture de stock`; available quantity at or below threshold shows `Stock faible`; otherwise `En stock`.
+- Public catalogue pagination is server-side. Default page size is 12 and the accepted maximum is 48. Filters, search, sort, and page state are represented in the URL.
 - Phase 6 cart is client-side product discovery state only. It does not create orders, process payments, or reserve inventory.
 
 ## Cart and Checkout
@@ -36,6 +38,14 @@
 - Checkout input must be validated with Zod server-side.
 - Order totals are recalculated server-side from current product variant prices.
 - The client must not be trusted for price, stock, payment status, or order status.
+- The Phase 6.5 cart WhatsApp CTA is a manual enquiry. It may include product names, variants, quantities, formatted line totals, subtotal, and canonical product URLs, but it must not claim an order is confirmed.
+
+## Public Content
+
+- Public content is structured, validated, and managed from `/admin/contenu`.
+- OWNER and ADMIN may edit public content. Other roles are read-only or denied for content editing.
+- Contact and Delivery pages display only configured fields. Do not invent delivery promises, guarantees, addresses, certifications, founding dates, or awards.
+- Content updates revalidate affected public routes so changes do not require a redeploy.
 
 ## Inventory
 
