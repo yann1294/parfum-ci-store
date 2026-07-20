@@ -7,26 +7,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { changeProductStatus } from "@/app/admin/catalogue-actions";
+import { getPublicationReadiness } from "@/lib/catalogue/publication-readiness";
 import type { AdminProduct } from "@/lib/catalogue/admin";
-
-function readiness(product: AdminProduct) {
-  return [
-    { label: "Nom renseigné", ok: product.name.trim().length > 0 },
-    { label: "Description complète renseignée", ok: Boolean(product.description?.trim()) },
-    {
-      label: "Au moins une variante active",
-      ok: product.variants.some((variant) => variant.active),
-    },
-    {
-      label: "Au moins un prix de vente positif",
-      ok: product.variants.some((variant) => variant.active && variant.priceXof > 0),
-    },
-    {
-      label: "Au moins une image validée",
-      ok: product.images.some((image) => image.active && image.approved && image.objectPath),
-    },
-  ];
-}
 
 export function PublicationControls({
   product,
@@ -36,8 +18,10 @@ export function PublicationControls({
   canMutate: boolean;
 }) {
   const [pending, startTransition] = useTransition();
-  const checks = readiness(product);
+  const checks = getPublicationReadiness(product);
   const ready = checks.every((check) => check.ok);
+  const hasVariants = product.variants.length > 0;
+  const hasActiveVariant = product.variants.some((variant) => variant.active);
 
   function setStatus(status: "DRAFT" | "ACTIVE" | "ARCHIVED") {
     startTransition(async () => {
@@ -63,6 +47,11 @@ export function PublicationControls({
                 </li>
               ))}
             </ul>
+            {hasVariants && !hasActiveVariant ? (
+              <p className="mt-3 font-medium">
+                Activez au moins une variante avant de publier ce produit.
+              </p>
+            ) : null}
           </AlertDescription>
         </Alert>
         {canMutate ? (

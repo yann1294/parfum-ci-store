@@ -1,5 +1,5 @@
-export const PUBLIC_CATALOGUE_DEFAULT_PAGE_SIZE = 12;
-export const PUBLIC_CATALOGUE_MAX_PAGE_SIZE = 48;
+export const PUBLIC_CATALOGUE_DEFAULT_PAGE_SIZE = 8;
+export const PUBLIC_CATALOGUE_MAX_PAGE_SIZE = 32;
 
 export type CataloguePagination = {
   page: number;
@@ -52,4 +52,3 @@ export function pageWindow(currentPage: number, totalPages: number, radius = 2) 
   const end = Math.min(totalPages, currentPage + radius);
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
-

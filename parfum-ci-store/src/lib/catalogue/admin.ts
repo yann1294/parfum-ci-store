@@ -12,6 +12,7 @@ import {
   ADMIN_ENTITY_DEFAULT_PAGE_SIZE,
   ADMIN_MAX_PAGE_SIZE,
   ADMIN_VARIANT_DEFAULT_PAGE_SIZE,
+  normalizeAdminSearch,
   normalizeAdminEntityListFilters,
   normalizeAdminVariantListFilters,
   type AdminEntityListFilters,
@@ -54,7 +55,9 @@ export type AdminVariant = {
   reservedQuantity: number;
   availableQuantity: number;
   lowStockThreshold: number;
-  availabilityStatus: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+  availabilityStatus: "UNCONFIGURED" | "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+  inventoryInitialized?: boolean;
+  inventoryInitializedAt?: string | null;
   active: boolean;
 };
 
@@ -103,8 +106,14 @@ export type AdminProductListFilters = {
   brandId?: string;
   categoryId?: string;
   availability?: "ALL" | "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+  fragranceFamily?: string;
   page?: number;
   pageSize?: number;
+};
+
+export type SafeCatalogueError = {
+  code: "CATALOGUE_SEARCH_FAILED";
+  message: "La recherche est temporairement indisponible.";
 };
 
 export type PaginatedResult<T> = {
@@ -147,6 +156,7 @@ type ProductRow = {
     stock_on_hand: number;
     reserved_quantity: number;
     low_stock_threshold: number;
+    inventory_initialized_at?: string | null;
     active: boolean;
   }>;
   product_images: Array<{
@@ -164,6 +174,17 @@ type ProductRow = {
     byte_size?: number | null;
   }>;
 };
+
+function emptyAdminProductsResult(page: number, pageSize: number, error?: SafeCatalogueError) {
+  return {
+    products: [],
+    page,
+    pageSize,
+    total: 0,
+    totalPages: 1,
+    error,
+  };
+}
 
 export async function requireCatalogueReadAccess() {
   const staff = await requireActiveStaff({ mode: "redirect" });
@@ -185,6 +206,9 @@ function getImagePublicUrl(bucketId: string, objectPath: string | null) {
 }
 
 function mapVariant(row: ProductRow["product_variants"][number], includeCost: boolean): AdminVariant {
+  const inventoryInitializedAt = row.inventory_initialized_at ?? null;
+  const inventoryInitialized = Boolean(inventoryInitializedAt);
+
   return {
     id: row.id,
     productId: row.product_id,
@@ -202,7 +226,10 @@ function mapVariant(row: ProductRow["product_variants"][number], includeCost: bo
       row.stock_on_hand,
       row.reserved_quantity,
       row.low_stock_threshold,
+      inventoryInitialized,
     ),
+    inventoryInitialized,
+    inventoryInitializedAt,
     active: row.active,
   };
 }
@@ -431,7 +458,7 @@ export async function listAdminProductVariants(
   let query = createSupabaseAdminClient()
     .from("product_variants")
     .select(
-      "id, product_id, sku, size_ml, concentration, price_xof, compare_at_price_xof, cost_price_xof, stock_on_hand, reserved_quantity, low_stock_threshold, active, created_at",
+      "id, product_id, sku, size_ml, concentration, price_xof, compare_at_price_xof, cost_price_xof, stock_on_hand, reserved_quantity, low_stock_threshold, inventory_initialized_at, active, created_at",
       { count: "exact" },
     )
     .eq("product_id", productId)
@@ -482,7 +509,7 @@ export async function listAdminProductVariants(
 
   if (error) throw error;
 
-  const items = ((data ?? []) as ProductRow["product_variants"]).map((variant) =>
+  const items = ((data ?? []) as unknown as ProductRow["product_variants"]).map((variant) =>
     mapVariant(variant, permissions.canViewCostPrice),
   );
 
@@ -503,7 +530,29 @@ export async function listAdminProducts(
   const pageSize = Math.min(Math.max(filters.pageSize ?? 20, 1), 50);
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
-  let query = createSupabaseAdminClient()
+  const supabase = createSupabaseAdminClient();
+  const normalizedSearch = normalizeAdminSearch(filters.q);
+  let searchProductIds: string[] | null = null;
+
+  if (normalizedSearch) {
+    try {
+      searchProductIds = await findAdminProductIdsForSearch(supabase, normalizedSearch);
+    } catch (error) {
+      console.error("CATALOGUE_SEARCH_FAILED", {
+        message: error instanceof Error ? error.message : "unknown",
+      });
+      return emptyAdminProductsResult(page, pageSize, {
+        code: "CATALOGUE_SEARCH_FAILED",
+        message: "La recherche est temporairement indisponible.",
+      });
+    }
+
+    if (searchProductIds.length === 0) {
+      return emptyAdminProductsResult(page, pageSize);
+    }
+  }
+
+  let query = supabase
     .from("products")
     .select(
       `
@@ -512,7 +561,7 @@ export async function listAdminProducts(
         seo_description, created_at,
         brands:brand_id(id, name),
         categories:category_id(id, name),
-        product_variants(id, product_id, sku, size_ml, concentration, price_xof, compare_at_price_xof, cost_price_xof, stock_on_hand, reserved_quantity, low_stock_threshold, active),
+        product_variants(id, product_id, sku, size_ml, concentration, price_xof, compare_at_price_xof, cost_price_xof, stock_on_hand, reserved_quantity, low_stock_threshold, inventory_initialized_at, active),
         product_images(id, product_id, bucket_id, object_path, storage_path, alt_text, sort_order, approved, active, is_primary, mime_type, byte_size)
       `,
       { count: "exact" },
@@ -532,15 +581,25 @@ export async function listAdminProducts(
     query = query.eq("category_id", filters.categoryId);
   }
 
-  if (filters.q) {
-    const q = filters.q.replace(/[%_]/g, "\\$&");
-    query = query.or(`name.ilike.%${q}%,slug.ilike.%${q}%,product_variants.sku.ilike.%${q}%`);
+  if (filters.fragranceFamily) {
+    query = query.eq("fragrance_family", filters.fragranceFamily);
+  }
+
+  if (searchProductIds) {
+    query = query.in("id", searchProductIds);
   }
 
   const { data, error, count } = await query;
 
   if (error) {
-    throw error;
+    console.error("CATALOGUE_SEARCH_FAILED", {
+      message: error.message,
+      code: error.code,
+    });
+    return emptyAdminProductsResult(page, pageSize, {
+      code: "CATALOGUE_SEARCH_FAILED",
+      message: "La recherche est temporairement indisponible.",
+    });
   }
 
   let products = ((data ?? []) as unknown as ProductRow[]).map((row) =>
@@ -559,7 +618,33 @@ export async function listAdminProducts(
     pageSize,
     total: count ?? products.length,
     totalPages: Math.max(Math.ceil((count ?? products.length) / pageSize), 1),
+    error: undefined,
   };
+}
+
+async function findAdminProductIdsForSearch(supabase: ReturnType<typeof createSupabaseAdminClient>, search: string) {
+  const pattern = `%${search.replace(/[%_]/g, "\\$&")}%`;
+  const [productNames, productSlugs, productDescriptions, brands, variants] = await Promise.all([
+    supabase.from("products").select("id").ilike("name", pattern).limit(200),
+    supabase.from("products").select("id").ilike("slug", pattern).limit(200),
+    supabase.from("products").select("id").ilike("description", pattern).limit(200),
+    supabase.from("brands").select("id, products(id)").ilike("name", pattern).limit(100),
+    supabase.from("product_variants").select("product_id").ilike("sku", pattern).limit(200),
+  ]);
+
+  for (const result of [productNames, productSlugs, productDescriptions, brands, variants]) {
+    if (result.error) throw result.error;
+  }
+
+  return [
+    ...new Set([
+      ...(productNames.data ?? []).map((row) => row.id),
+      ...(productSlugs.data ?? []).map((row) => row.id),
+      ...(productDescriptions.data ?? []).map((row) => row.id),
+      ...(brands.data ?? []).flatMap((row) => row.products?.map((product) => product.id) ?? []),
+      ...(variants.data ?? []).map((row) => row.product_id),
+    ]),
+  ];
 }
 
 export async function getAdminProductById(id: string, permissions: AdminCataloguePermission) {
@@ -572,7 +657,7 @@ export async function getAdminProductById(id: string, permissions: AdminCatalogu
         seo_description, created_at,
         brands:brand_id(id, name),
         categories:category_id(id, name),
-        product_variants(id, product_id, sku, size_ml, concentration, price_xof, compare_at_price_xof, cost_price_xof, stock_on_hand, reserved_quantity, low_stock_threshold, active),
+        product_variants(id, product_id, sku, size_ml, concentration, price_xof, compare_at_price_xof, cost_price_xof, stock_on_hand, reserved_quantity, low_stock_threshold, inventory_initialized_at, active),
         product_images(id, product_id, bucket_id, object_path, storage_path, alt_text, sort_order, approved, active, is_primary, mime_type, byte_size)
       `,
     )

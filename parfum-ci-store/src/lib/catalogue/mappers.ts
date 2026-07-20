@@ -47,8 +47,10 @@ export function toPublicVariantDto(
     | "stock_on_hand"
     | "reserved_quantity"
     | "low_stock_threshold"
-  >,
+  > & { inventory_initialized_at?: string | null },
 ) {
+  const inventoryInitialized = Boolean(row.inventory_initialized_at);
+
   return {
     id: row.id,
     sku: row.sku,
@@ -61,11 +63,13 @@ export function toPublicVariantDto(
       row.stock_on_hand,
       row.reserved_quantity,
       row.low_stock_threshold,
+      inventoryInitialized,
     ),
+    inventoryInitialized,
   } satisfies PublicVariantDto;
 }
 
-export function toStaffVariantDto(row: VariantRow) {
+export function toStaffVariantDto(row: VariantRow & { inventory_initialized_at?: string | null }) {
   return {
     ...toPublicVariantDto(row),
     productId: row.product_id,
@@ -74,6 +78,7 @@ export function toStaffVariantDto(row: VariantRow) {
     reservedQuantity: row.reserved_quantity,
     lowStockThreshold: row.low_stock_threshold,
     costPriceXof: row.cost_price_xof,
+    inventoryInitializedAt: row.inventory_initialized_at ?? null,
   } satisfies StaffVariantDto;
 }
 

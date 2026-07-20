@@ -1,13 +1,26 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { VariantEditor } from "@/components/admin/catalogue/variant-editor";
+import {
+  inventoryStateLabel,
+  variantStateLabel,
+  VariantEditor,
+} from "@/components/admin/catalogue/variant-editor";
 import type { AdminProduct, AdminVariant, PaginatedResult } from "@/lib/catalogue/admin";
+
+const refresh = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh }),
+}));
 
 vi.mock("@/app/admin/catalogue-actions", () => ({
   createVariantFromForm: vi.fn(),
+  initializeVariantInventoryFromForm: vi.fn(),
   updateVariantFromForm: vi.fn(),
 }));
+
+const { updateVariantFromForm } = await import("@/app/admin/catalogue-actions");
 
 const product: AdminProduct = {
   id: "product-id",
@@ -49,6 +62,7 @@ const variants: AdminVariant[] = [
     lowStockThreshold: 3,
     availabilityStatus: "IN_STOCK",
     active: true,
+    inventoryInitialized: true,
   },
   {
     id: "variant-2",
@@ -65,6 +79,24 @@ const variants: AdminVariant[] = [
     lowStockThreshold: 2,
     availabilityStatus: "OUT_OF_STOCK",
     active: true,
+    inventoryInitialized: true,
+  },
+  {
+    id: "variant-3",
+    productId: "product-id",
+    sku: "SKU-003",
+    sizeMl: 30,
+    concentration: "EDP",
+    priceXof: 15000,
+    compareAtPriceXof: null,
+    costPriceXof: null,
+    stockOnHand: 0,
+    reservedQuantity: 0,
+    availableQuantity: 0,
+    lowStockThreshold: 2,
+    availabilityStatus: "UNCONFIGURED",
+    active: false,
+    inventoryInitialized: false,
   },
 ];
 
@@ -79,6 +111,21 @@ function result(items = variants): PaginatedResult<AdminVariant> {
 }
 
 describe("VariantEditor", () => {
+  beforeEach(() => {
+    refresh.mockClear();
+    vi.mocked(updateVariantFromForm).mockReset();
+  });
+
+  it("keeps variant state separate from inventory state", () => {
+    expect(variantStateLabel({ active: false })).toBe("Inactive");
+    expect(inventoryStateLabel({ availabilityStatus: "UNCONFIGURED", inventoryInitialized: false })).toBe(
+      "Stock non configuré",
+    );
+    expect(inventoryStateLabel({ availabilityStatus: "OUT_OF_STOCK", inventoryInitialized: true })).toBe(
+      "Rupture de stock",
+    );
+  });
+
   it("shows inventory-manager stock summaries as read-only without a broken stock link", () => {
     render(
       <VariantEditor
@@ -95,6 +142,10 @@ describe("VariantEditor", () => {
     expect(screen.getAllByText("Stock physique").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Réservé").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Disponible").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Statut variante").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("État du stock").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Inactive").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Stock non configuré").length).toBeGreaterThan(0);
     expect(screen.queryByText("Coût")).toBeNull();
     expect(screen.queryByRole("link", { name: /gérer le stock/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /ajouter une variante/i })).toBeNull();
@@ -121,5 +172,47 @@ describe("VariantEditor", () => {
     expect(screen.getByLabelText("SKU")).toBeDefined();
     expect(screen.getByDisplayValue("SKU-001")).toBeDefined();
     expect(screen.getByLabelText("Coût XOF")).toBeDefined();
+  });
+
+  it("refreshes server-rendered variant data after a successful update without losing pagination params", async () => {
+    vi.mocked(updateVariantFromForm).mockResolvedValue({
+      ok: true,
+      data: {
+        id: "variant-1",
+        sku: "SKU-001",
+        sizeMl: 50,
+        concentration: "EDP",
+        priceXof: 25000,
+        compareAtPriceXof: null,
+        availableQuantity: 5,
+        availabilityStatus: "IN_STOCK",
+        inventoryInitialized: true,
+      },
+    });
+
+    render(
+      <VariantEditor
+        product={product}
+        variants={{ ...result(), page: 2, totalPages: 3 }}
+        canMutate
+        canViewCostPrice
+        searchParams={{ variantQ: "SKU", variantPage: "2", unrelated: "ignored" }}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Précédent" }).getAttribute("href")).toContain(
+      "variantQ=SKU",
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Modifier" })[0]);
+    const form = screen.getByLabelText("SKU").closest("form");
+    expect(form).toBeTruthy();
+    fireEvent.submit(form!);
+
+    await waitFor(() =>
+      expect(updateVariantFromForm).toHaveBeenCalledWith("variant-1", "product-id", expect.any(FormData)),
+    );
+    await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });

@@ -8,18 +8,13 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { ProductCard } from "@/components/storefront/product-card";
 import { listActiveProductsPage, listPublicFacets } from "@/lib/catalogue/products";
 import { pageWindow } from "@/lib/catalogue/pagination";
-import { targetAudienceOptions } from "@/lib/catalogue/validation";
+import { normalizePublicCatalogueQuery, targetAudienceOptions } from "@/lib/catalogue/validation";
 
 export const metadata: Metadata = {
   title: "Catalogue",
   description: "Découvrez les parfums disponibles en Côte d'Ivoire.",
   alternates: { canonical: "/catalogue" },
 };
-
-function parsePage(value: string | undefined) {
-  const page = value ? Number.parseInt(value, 10) : 1;
-  return Number.isFinite(page) && page > 0 ? page : 1;
-}
 
 function buildHref(params: Record<string, string | undefined>, patch: Record<string, string | undefined>) {
   const next = new URLSearchParams();
@@ -30,31 +25,32 @@ function buildHref(params: Record<string, string | undefined>, patch: Record<str
   return query ? `/catalogue?${query}` : "/catalogue";
 }
 
+function normalizedHrefParams(filters: ReturnType<typeof normalizePublicCatalogueQuery>) {
+  return {
+    page: String(filters.page),
+    q: filters.search,
+    brand: filters.brandSlug,
+    category: filters.categorySlug,
+    fragranceFamily: filters.fragranceFamily,
+    genderCategory: filters.genderCategory,
+    concentration: filters.concentration,
+    sizeMl: filters.sizeMl ? String(filters.sizeMl) : undefined,
+    availability: filters.availability,
+    sort: filters.sort === "newest" ? undefined : filters.sort,
+  };
+}
+
 export default async function CataloguePage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const page = parsePage(params.page);
-  const filters = {
-    page,
-    pageSize: 12,
-    search: params.q,
-    brandSlug: params.brand,
-    categorySlug: params.category,
-    fragranceFamily: params.fragranceFamily,
-    genderCategory: targetAudienceOptions.includes(params.genderCategory as never)
-      ? (params.genderCategory as (typeof targetAudienceOptions)[number])
-      : undefined,
-    concentration: params.concentration,
-    sizeMl: params.sizeMl ? Number.parseInt(params.sizeMl, 10) : undefined,
-    availability: params.availability as "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | undefined,
-    sort: (params.sort as "newest" | "price_asc" | "price_desc" | undefined) ?? "newest",
-  };
+  const filters = normalizePublicCatalogueQuery(params);
   const [result, facets] = await Promise.all([listActiveProductsPage(filters), listPublicFacets()]);
   const products = result.products;
   const pages = pageWindow(result.page, result.totalPages);
+  const hrefParams = normalizedHrefParams(filters);
 
   return (
     <PageContainer className="py-12">
@@ -68,11 +64,11 @@ export default async function CataloguePage({
           <form className="grid gap-4" action="/catalogue">
             <label className="grid gap-1 text-sm">
               Recherche
-              <input name="q" defaultValue={params.q} className="h-10 rounded-lg border border-input bg-background px-3" />
+              <input name="q" defaultValue={filters.search ?? ""} className="h-10 rounded-lg border border-input bg-background px-3" />
             </label>
             <label className="grid gap-1 text-sm">
               Marque
-              <select name="brand" defaultValue={params.brand ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
+              <select name="brand" defaultValue={filters.brandSlug ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
                 <option value="">Toutes</option>
                 {facets.brands.map((brand) => (
                   <option key={brand.slug} value={brand.slug}>{brand.name}</option>
@@ -81,7 +77,7 @@ export default async function CataloguePage({
             </label>
             <label className="grid gap-1 text-sm">
               Catégorie
-              <select name="category" defaultValue={params.category ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
+              <select name="category" defaultValue={filters.categorySlug ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
                 <option value="">Toutes</option>
                 {facets.categories.map((category) => (
                   <option key={category.slug} value={category.slug}>{category.name}</option>
@@ -90,7 +86,7 @@ export default async function CataloguePage({
             </label>
             <label className="grid gap-1 text-sm">
               Public cible
-              <select name="genderCategory" defaultValue={params.genderCategory ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
+              <select name="genderCategory" defaultValue={filters.genderCategory ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
                 <option value="">Tous</option>
                 {targetAudienceOptions.map((option) => (
                   <option key={option} value={option}>{option}</option>
@@ -99,7 +95,7 @@ export default async function CataloguePage({
             </label>
             <label className="grid gap-1 text-sm">
               Famille olfactive
-              <select name="fragranceFamily" defaultValue={params.fragranceFamily ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
+              <select name="fragranceFamily" defaultValue={filters.fragranceFamily ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
                 <option value="">Toutes</option>
                 {facets.fragranceFamilies.map((family) => (
                   <option key={family} value={family}>{family}</option>
@@ -108,12 +104,13 @@ export default async function CataloguePage({
             </label>
             <label className="grid gap-1 text-sm">
               Tri
-              <select name="sort" defaultValue={params.sort ?? "newest"} className="h-10 rounded-lg border border-input bg-background px-3">
+              <select name="sort" defaultValue={filters.sort} className="h-10 rounded-lg border border-input bg-background px-3">
                 <option value="newest">Nouveautés</option>
                 <option value="price_asc">Prix croissant</option>
                 <option value="price_desc">Prix décroissant</option>
               </select>
             </label>
+            <input type="hidden" name="page" value="1" />
             <Button type="submit">Appliquer</Button>
             <Link href="/catalogue" className={buttonVariants({ variant: "outline" })}>Effacer les filtres</Link>
           </form>
@@ -133,7 +130,7 @@ export default async function CataloguePage({
           )}
           <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Pagination catalogue">
             <Link
-              href={buildHref(params, { page: String(Math.max(result.page - 1, 1)) })}
+              href={buildHref(hrefParams, { page: String(Math.max(result.page - 1, 1)) })}
               className={buttonVariants({ variant: "outline" })}
               aria-disabled={result.page <= 1}
             >
@@ -143,7 +140,7 @@ export default async function CataloguePage({
               {pages.map((pageNumber) => (
                 <Link
                   key={pageNumber}
-                  href={buildHref(params, { page: String(pageNumber) })}
+                  href={buildHref(hrefParams, { page: String(pageNumber) })}
                   className={buttonVariants({
                     variant: pageNumber === result.page ? "default" : "outline",
                     size: "sm",
@@ -155,7 +152,7 @@ export default async function CataloguePage({
               ))}
             </div>
             <Link
-              href={buildHref(params, { page: String(Math.min(result.page + 1, result.totalPages)) })}
+              href={buildHref(hrefParams, { page: String(Math.min(result.page + 1, result.totalPages)) })}
               className={buttonVariants({ variant: "outline" })}
               aria-disabled={result.page >= result.totalPages}
             >

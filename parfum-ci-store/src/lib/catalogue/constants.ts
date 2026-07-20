@@ -12,5 +12,5 @@ export const PRODUCT_IMAGE_EXTENSIONS: Record<ProductImageMimeType, "jpg" | "png
   "image/webp": "webp",
 };
 
-export const MAX_CATALOGUE_PAGE_SIZE = 48;
-export const DEFAULT_CATALOGUE_PAGE_SIZE = 24;
+export const MAX_CATALOGUE_PAGE_SIZE = 32;
+export const DEFAULT_CATALOGUE_PAGE_SIZE = 8;

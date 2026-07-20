@@ -17,7 +17,7 @@ export type ProductImageRow = Database["public"]["Tables"]["product_images"]["Ro
   created_by?: string | null;
 };
 
-export type AvailabilityStatus = "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+export type AvailabilityStatus = "UNCONFIGURED" | "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
 
 export type PublicBrandDto = {
   id: string;
@@ -39,6 +39,7 @@ export type PublicVariantDto = {
   compareAtPriceXof: number | null;
   availableQuantity: number;
   availabilityStatus: AvailabilityStatus;
+  inventoryInitialized?: boolean;
 };
 
 export type PublicProductImageDto = {
@@ -79,6 +80,7 @@ export type StaffVariantDto = PublicVariantDto & {
   reservedQuantity: number;
   lowStockThreshold: number;
   costPriceXof: number | null;
+  inventoryInitializedAt: string | null;
 };
 
 export type StaffProductDto = Omit<PublicProductDto, "variants"> & {

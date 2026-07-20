@@ -4,8 +4,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { auditCatalogueEvent } from "@/lib/audit/catalogue";
 import { requireCatalogueManager } from "@/lib/catalogue/authorization";
 import {
-  catalogueQuerySchema,
   createProductSchema,
+  normalizePublicCatalogueQuery,
   updateProductSchema,
   type CatalogueQueryInput,
   type CreateProductInput,
@@ -16,6 +16,7 @@ import { generateProductSlug, isUniqueViolation, resolveSlugCollision } from "@/
 import type { Database } from "@/types/database.types";
 import { getPublicProductImageUrl } from "@/lib/catalogue/public-images";
 import { getPublicCataloguePagination } from "@/lib/catalogue/pagination";
+import { aggregateFragranceFamilyFacets } from "@/lib/catalogue/fragrance-family-facets";
 
 const PRODUCT_PUBLIC_COLUMNS = `
   id,
@@ -37,7 +38,9 @@ const PRODUCT_PUBLIC_COLUMNS = `
 ` as const;
 
 type PublicProductViewRow = Database["public"]["Views"]["public_catalogue_products"]["Row"];
-type PublicVariantViewRow = Database["public"]["Views"]["public_catalogue_variants"]["Row"];
+type PublicVariantViewRow = Database["public"]["Views"]["public_catalogue_variants"]["Row"] & {
+  inventory_initialized_at?: string | null;
+};
 type PublicImageViewRow = Database["public"]["Views"]["public_catalogue_images"]["Row"];
 
 function mapPublicViewProduct(
@@ -89,10 +92,12 @@ function mapPublicViewProduct(
         compareAtPriceXof: variant.compare_at_price_xof,
         availableQuantity: variant.available_quantity ?? 0,
         availabilityStatus:
+          variant.availability_status === "UNCONFIGURED" ||
           variant.availability_status === "LOW_STOCK" ||
           variant.availability_status === "OUT_OF_STOCK"
             ? variant.availability_status
             : "IN_STOCK",
+        inventoryInitialized: variant.availability_status !== "UNCONFIGURED",
       })),
     images: images
       .filter((image) => image.id && image.product_id && image.object_path)
@@ -166,7 +171,7 @@ export type PublicCataloguePage = {
 };
 
 export async function listActiveProductsPage(input: Partial<CatalogueQueryInput> = {}): Promise<PublicCataloguePage> {
-  const filters = catalogueQuerySchema.parse(input);
+  const filters = normalizePublicCatalogueQuery(input);
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("public_catalogue_products")
@@ -259,9 +264,14 @@ export async function listActiveProductsPage(input: Partial<CatalogueQueryInput>
 }
 
 export async function listFeaturedProducts(limit = 8) {
-  return listActiveProducts({ page: 1, pageSize: Math.min(limit, 12), sort: "newest" }).then((products) =>
+  return listActiveProducts({ page: 1, pageSize: Math.min(limit, 8), sort: "newest" }).then((products) =>
     products.filter((product) => product.featured),
   );
+}
+
+export async function listHomeFragranceFamilyFacets(limit = 6) {
+  const products = await listActiveProducts({ page: 1, pageSize: 32, sort: "newest" });
+  return aggregateFragranceFamilyFacets(products, limit);
 }
 
 export async function getActiveProductBySlug(slug: string) {
@@ -290,7 +300,7 @@ export async function getActiveProductBySlug(slug: string) {
 }
 
 export async function listPublicFacets() {
-  const products = await listActiveProducts({ page: 1, pageSize: 48 });
+  const products = await listActiveProducts({ page: 1, pageSize: 32 });
   const brands = new Map<string, NonNullable<PublicProductDto["brand"]>>();
   const categories = new Map<string, NonNullable<PublicProductDto["category"]>>();
   const fragranceFamilies = new Set<string>();
@@ -322,7 +332,7 @@ export async function listPublicFacets() {
 export async function listRelatedProducts(product: PublicProductDto, limit = 4) {
   const related = await listActiveProducts({
     page: 1,
-    pageSize: 12,
+    pageSize: 8,
     fragranceFamily: product.fragranceFamily ?? undefined,
   });
 

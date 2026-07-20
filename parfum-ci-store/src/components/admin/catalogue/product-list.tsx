@@ -13,8 +13,9 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { formatXof } from "@/lib/catalogue/format";
-import type { AdminBrand, AdminCategory, AdminProduct } from "@/lib/catalogue/admin";
+import type { AdminBrand, AdminCategory, AdminProduct, SafeCatalogueError } from "@/lib/catalogue/admin";
 import { getAdminAvailabilitySummary } from "@/lib/catalogue/product-availability";
+import { fragranceFamilyOptions } from "@/lib/catalogue/validation";
 
 function statusLabel(status: AdminProduct["status"]) {
   return {
@@ -52,58 +53,78 @@ export function ProductFilters({
   searchParams: Record<string, string | undefined>;
 }) {
   return (
-    <form className="grid gap-3 rounded-lg border bg-surface p-4 md:grid-cols-5" action="/admin/produits">
-      <label className="grid gap-1 text-sm">
-        Recherche
-        <input
-          name="q"
-          defaultValue={searchParams.q}
-          className="h-10 rounded-lg border border-input bg-background px-3"
-          placeholder="Nom, SKU, slug"
-        />
-      </label>
-      <label className="grid gap-1 text-sm">
-        Statut
-        <select name="status" defaultValue={searchParams.status ?? "ALL"} className="h-10 rounded-lg border border-input bg-background px-3">
-          <option value="ALL">Tous</option>
-          <option value="DRAFT">Brouillon</option>
-          <option value="ACTIVE">Actif</option>
-          <option value="ARCHIVED">Archivé</option>
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm">
-        Marque
-        <select name="brandId" defaultValue={searchParams.brandId ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
-          <option value="">Toutes</option>
-          {brands.map((brand) => (
-            <option key={brand.id} value={brand.id}>
-              {brand.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="grid gap-1 text-sm">
-        Catégorie
-        <select name="categoryId" defaultValue={searchParams.categoryId ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
-          <option value="">Toutes</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="flex items-end gap-2">
-        <Button type="submit" variant="outline">
-          Filtrer
-        </Button>
-        {canMutate ? (
-          <Link href="/admin/produits/nouveau" className={buttonVariants()}>
-            Nouveau
-          </Link>
-        ) : null}
-      </div>
-    </form>
+    <>
+      <form className="grid gap-3 rounded-lg border bg-surface p-4 md:grid-cols-6" action="/admin/produits">
+        <label className="grid gap-1 text-sm">
+          Recherche
+          <input
+            name="q"
+            defaultValue={searchParams.q}
+            className="h-10 rounded-lg border border-input bg-background px-3"
+            placeholder="Nom, SKU, slug"
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          Statut
+          <select name="status" defaultValue={searchParams.status ?? "ALL"} className="h-10 rounded-lg border border-input bg-background px-3">
+            <option value="ALL">Tous</option>
+            <option value="DRAFT">Brouillon</option>
+            <option value="ACTIVE">Actif</option>
+            <option value="ARCHIVED">Archivé</option>
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm">
+          Marque
+          <select name="brandId" defaultValue={searchParams.brandId ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
+            <option value="">Toutes</option>
+            {brands.map((brand) => (
+              <option key={brand.id} value={brand.id}>
+                {brand.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm">
+          Catégorie
+          <select name="categoryId" defaultValue={searchParams.categoryId ?? ""} className="h-10 rounded-lg border border-input bg-background px-3">
+            <option value="">Toutes</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="grid gap-1 text-sm">
+          Famille olfactive
+          <select
+            name="fragranceFamily"
+            defaultValue={searchParams.fragranceFamily ?? ""}
+            className="h-10 rounded-lg border border-input bg-background px-3"
+          >
+            <option value="">Toutes</option>
+            {fragranceFamilyOptions.map((family) => (
+              <option key={family} value={family}>
+                {family}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex items-end gap-2">
+          <Button type="submit" variant="outline">
+            Filtrer
+          </Button>
+          {canMutate ? (
+            <Link href="/admin/produits/nouveau" className={buttonVariants()}>
+              Nouveau
+            </Link>
+          ) : null}
+        </div>
+      </form>
+      <p className="mt-2 text-sm text-muted-foreground">
+        La catégorie organise le catalogue. La famille olfactive décrit le caractère du parfum.
+      </p>
+    </>
   );
 }
 
@@ -113,13 +134,19 @@ export function ProductList({
   totalPages,
   queryString,
   returnPath = "/admin/produits",
+  error,
 }: {
   products: AdminProduct[];
   page: number;
   totalPages: number;
   queryString?: (page: number) => string;
   returnPath?: string;
+  error?: SafeCatalogueError;
 }) {
+  if (error) {
+    return <EmptyState title="Recherche indisponible" description={error.message} />;
+  }
+
   if (products.length === 0) {
     return (
       <EmptyState

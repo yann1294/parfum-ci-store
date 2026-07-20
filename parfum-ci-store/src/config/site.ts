@@ -74,7 +74,6 @@ export const siteConfig = {
     { label: "À propos", href: "/a-propos" },
     { label: "Livraison", href: "/livraison" },
     { label: "Contact", href: "/contact" },
-    { label: "Panier", href: "/panier" },
   ] satisfies NavigationItem[],
   socialLinks: buildSocialLinks({
     instagramUrl: publicEnv.NEXT_PUBLIC_INSTAGRAM_URL,

@@ -16,7 +16,9 @@ import {
   updateVariantAction,
 } from "@/lib/catalogue/actions";
 import { parseNotes, parseXofInput } from "@/lib/catalogue/format";
+import { isCatalogueError } from "@/lib/catalogue/errors";
 import { fragranceFamilyOptions, targetAudienceOptions } from "@/lib/catalogue/validation";
+import { initializeVariantInventory } from "@/lib/inventory/initialization";
 
 type ActionResult<T = unknown> =
   | { ok: true; data: T }
@@ -36,6 +38,11 @@ function revalidatePublicProduct(slug?: string | null) {
   if (slug) {
     revalidatePath(`/parfums/${slug}`);
   }
+}
+
+function integer(formData: FormData, key: string) {
+  const value = text(formData, key);
+  return value ? Number.parseInt(value, 10) : undefined;
 }
 
 function text(formData: FormData, key: string) {
@@ -175,6 +182,36 @@ export async function updateVariantFromForm(variantId: string, productId: string
   }
 
   return result;
+}
+
+export async function initializeVariantInventoryFromForm(
+  variantId: string,
+  productId: string,
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    await initializeVariantInventory({
+      variantId,
+      initialStock: integer(formData, "initialStock") ?? -1,
+      reason: text(formData, "reason") ?? "Stock initial à la création de la variante",
+    });
+  } catch (error) {
+    if (isCatalogueError(error)) {
+      return { ok: false, code: error.code, message: error.message };
+    }
+
+    return {
+      ok: false,
+      code: "INVENTORY_INITIALIZATION_FAILED",
+      message: "Le stock initial n'a pas pu être enregistré.",
+    };
+  }
+
+  revalidatePath(`/admin/produits/${productId}`);
+  revalidatePath("/admin/produits");
+  revalidatePublicProduct();
+
+  return { ok: true, data: null };
 }
 
 export async function createBrandFromForm(formData: FormData) {

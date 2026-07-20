@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -24,7 +25,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { NativeSelectField, TextField } from "@/components/admin/catalogue/catalogue-form-fields";
-import { createVariantFromForm, updateVariantFromForm } from "@/app/admin/catalogue-actions";
+import {
+  createVariantFromForm,
+  initializeVariantInventoryFromForm,
+  updateVariantFromForm,
+} from "@/app/admin/catalogue-actions";
 import { formatXof } from "@/lib/catalogue/format";
 import type { AdminProduct, AdminVariant, PaginatedResult } from "@/lib/catalogue/admin";
 
@@ -33,19 +38,47 @@ type VariantEditorProps = {
   variants: PaginatedResult<AdminVariant>;
   canMutate: boolean;
   canViewCostPrice: boolean;
+  canInitializeInventory?: boolean;
   searchParams: Record<string, string | undefined>;
 };
 
-function stockBadge(variant: AdminVariant) {
+export function variantStateLabel(variant: Pick<AdminVariant, "active">) {
+  return variant.active ? "Active" : "Inactive";
+}
+
+export function inventoryStateLabel(
+  variant: Pick<AdminVariant, "availabilityStatus" | "inventoryInitialized">,
+) {
+  if (!variant.inventoryInitialized || variant.availabilityStatus === "UNCONFIGURED") {
+    return "Stock non configuré";
+  }
+
   if (variant.availabilityStatus === "OUT_OF_STOCK") {
-    return <Badge variant="destructive">Rupture</Badge>;
+    return "Rupture de stock";
   }
 
   if (variant.availabilityStatus === "LOW_STOCK") {
-    return <Badge variant="secondary">Stock bas</Badge>;
+    return "Stock faible";
   }
 
-  return <Badge>En stock</Badge>;
+  return "En stock";
+}
+
+function variantStateBadge(variant: AdminVariant) {
+  return <Badge variant={variant.active ? "default" : "secondary"}>{variantStateLabel(variant)}</Badge>;
+}
+
+function inventoryBadge(variant: AdminVariant) {
+  const label = inventoryStateLabel(variant);
+  if (label === "Rupture de stock") {
+    return <Badge variant="destructive">{label}</Badge>;
+  }
+
+  if (label === "Stock faible" || label === "Stock non configuré") {
+    return <Badge variant="secondary">{label}</Badge>;
+  }
+
+  return <Badge>{label}</Badge>;
 }
 
 function buildPageHref(productId: string, searchParams: Record<string, string | undefined>, page: number) {
@@ -66,12 +99,16 @@ export function VariantEditor({
   variants,
   canMutate,
   canViewCostPrice,
+  canInitializeInventory = false,
   searchParams,
 }: VariantEditorProps) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [initializingId, setInitializingId] = useState<string | null>(null);
   const editingVariant = variants.items.find((variant) => variant.id === editingId) ?? null;
+  const initializingVariant = variants.items.find((variant) => variant.id === initializingId) ?? null;
 
   function submitCreate(formData: FormData) {
     startTransition(async () => {
@@ -79,6 +116,7 @@ export function VariantEditor({
       if (result.ok) {
         toast.success("Variante créée");
         setCreating(false);
+        router.refresh();
       } else {
         toast.error(result.message);
       }
@@ -91,6 +129,20 @@ export function VariantEditor({
       if (result.ok) {
         toast.success("Variante mise à jour");
         setEditingId(null);
+        router.refresh();
+      } else {
+        toast.error(result.message);
+      }
+    });
+  }
+
+  function submitInitialize(variantId: string, formData: FormData) {
+    startTransition(async () => {
+      const result = await initializeVariantInventoryFromForm(variantId, product.id, formData);
+      if (result.ok) {
+        toast.success("Stock initialisé");
+        setInitializingId(null);
+        router.refresh();
       } else {
         toast.error(result.message);
       }
@@ -194,8 +246,10 @@ export function VariantEditor({
                       <TableHead>Réservé</TableHead>
                       <TableHead>Disponible</TableHead>
                       <TableHead>Seuil</TableHead>
-                      <TableHead>État</TableHead>
+                      <TableHead>Statut variante</TableHead>
+                      <TableHead>État du stock</TableHead>
                       {canMutate ? <TableHead className="text-right">Action</TableHead> : null}
+                      {!canMutate && canInitializeInventory ? <TableHead className="text-right">Inventaire</TableHead> : null}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -214,17 +268,32 @@ export function VariantEditor({
                         <TableCell>{variant.reservedQuantity}</TableCell>
                         <TableCell>{variant.availableQuantity}</TableCell>
                         <TableCell>{variant.lowStockThreshold}</TableCell>
-                        <TableCell>{stockBadge(variant)}</TableCell>
-                        {canMutate ? (
+                        <TableCell>{variantStateBadge(variant)}</TableCell>
+                        <TableCell>{inventoryBadge(variant)}</TableCell>
+                        {canMutate || canInitializeInventory ? (
                           <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setEditingId(variant.id)}
-                            >
-                              Modifier
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                              {canMutate ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setEditingId(variant.id)}
+                                >
+                                  Modifier
+                                </Button>
+                              ) : null}
+                              {canInitializeInventory && !variant.inventoryInitialized ? (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setInitializingId(variant.id)}
+                                >
+                                  Initialiser le stock
+                                </Button>
+                              ) : null}
+                            </div>
                           </TableCell>
                         ) : null}
                       </TableRow>
@@ -243,7 +312,10 @@ export function VariantEditor({
                           {variant.sizeMl} ml · {variant.concentration ?? "Non renseignée"}
                         </p>
                       </div>
-                      {stockBadge(variant)}
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {variantStateBadge(variant)}
+                        {inventoryBadge(variant)}
+                      </div>
                     </div>
                     <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
                       <div>
@@ -274,13 +346,18 @@ export function VariantEditor({
                       </div>
                     </dl>
                     {canMutate ? (
+                      <Button type="button" variant="outline" className="mt-4" onClick={() => setEditingId(variant.id)}>
+                        Modifier
+                      </Button>
+                    ) : null}
+                    {canInitializeInventory && !variant.inventoryInitialized ? (
                       <Button
                         type="button"
                         variant="outline"
-                        className="mt-4"
-                        onClick={() => setEditingId(variant.id)}
+                        className="mt-2"
+                        onClick={() => setInitializingId(variant.id)}
                       >
-                        Modifier
+                        Initialiser le stock
                       </Button>
                     ) : null}
                   </div>
@@ -331,6 +408,36 @@ export function VariantEditor({
               submitLabel="Enregistrer"
               onSubmit={(formData) => submitUpdate(editingVariant.id, formData)}
             />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(initializingVariant)} onOpenChange={(open) => !open && setInitializingId(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Initialiser le stock</DialogTitle>
+            <DialogDescription>
+              Cette opération crée un mouvement d&apos;inventaire et configure le stock initial.
+            </DialogDescription>
+          </DialogHeader>
+          {initializingVariant ? (
+            <form
+              action={(formData) => submitInitialize(initializingVariant.id, formData)}
+              className="grid gap-4"
+            >
+              <TextField label="Stock initial" name="initialStock" type="number" min={0} required />
+              <TextField
+                label="Motif"
+                name="reason"
+                defaultValue="Stock initial à la création de la variante"
+                required
+              />
+              <div className="flex justify-end">
+                <Button type="submit" disabled={pending}>
+                  {pending ? "Initialisation..." : "Initialiser"}
+                </Button>
+              </div>
+            </form>
           ) : null}
         </DialogContent>
       </Dialog>

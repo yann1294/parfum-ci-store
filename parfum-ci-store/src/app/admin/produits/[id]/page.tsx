@@ -72,6 +72,7 @@ export default async function ProductEditorPage({
             variants={variants}
             canMutate={permissions.canMutate}
             canViewCostPrice={permissions.canViewCostPrice}
+            canInitializeInventory={permissions.canInitializeInventory}
             searchParams={search}
           />
         </TabsContent>

@@ -181,7 +181,7 @@ erDiagram
 - Order delivery country is fixed to `CI`.
 - Order totals must satisfy `total_xof = subtotal_xof + delivery_fee_xof - discount_xof`.
 - Order item totals must satisfy `total_price_xof = unit_price_xof * quantity`.
-- Inventory transactions require a non-zero signed `quantity_delta`, stock/reserved snapshots, reason, and optional order/actor references.
+- Inventory transactions require a non-zero signed `quantity_delta`, stock/reserved snapshots, reason, and optional order/actor references. Phase 6.5 permits a zero-delta transaction only for the explicit initial-stock operation when metadata marks `operation = INITIAL_STOCK`.
 - Contact messages require a customer name, body, and at least one contact method.
 - `store_settings` is a singleton table with `id = true`.
 - `updated_at` is maintained by `public.set_updated_at()` on mutable tables.
@@ -227,6 +227,23 @@ Phase 6.5 adds `public.store_content` as a forward-only content-management table
 - RLS is enabled. Anonymous and authenticated visitors may read rows where `public_readable is true`; authenticated active OWNER and ADMIN staff may insert/update content.
 
 This table stores public copy and social/contact values only. It must not store secrets, arbitrary HTML, customer data, tokens, signed URLs, or private settings.
+
+## Inventory Initialization
+
+Phase 6.5 adds `product_variants.inventory_initialized_at` in migration `20260718141514_variant_inventory_initialization.sql`.
+
+- `null` means stock has never been initialized for the variant.
+- A non-null timestamp means `stock_on_hand` and `reserved_quantity` represent configured inventory.
+- Availability remains derived from `stock_on_hand - reserved_quantity`; no editable availability column or status is stored.
+- The public catalogue variant view exposes `UNCONFIGURED` when inventory is not initialized and otherwise derives `IN_STOCK`, `LOW_STOCK`, or `OUT_OF_STOCK`.
+- `public.initialize_variant_inventory(target_variant_id, initial_stock, movement_reason)` is a `SECURITY DEFINER` RPC. It locks the variant row, rejects negative stock, rejects already-initialized variants, updates inventory fields, stamps `inventory_initialized_at`, and inserts an `inventory_transactions` row with actor and reason.
+- Execute permission is granted only to authenticated users; the function itself restricts execution to active `OWNER`, `ADMIN`, and `INVENTORY_MANAGER` staff.
+
+After applying this migration to a linked Supabase project, regenerate generated types with:
+
+```bash
+pnpm exec supabase gen types typescript --linked > src/types/database.types.ts
+```
 
 ## Local Reset, Seed, and Verification
 

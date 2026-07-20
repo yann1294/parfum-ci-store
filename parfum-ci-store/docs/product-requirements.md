@@ -47,7 +47,7 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 
 ## Phase 6.5 Corrections
 
-- Public catalogue pagination is server-side with default page size 12 and maximum page size 48.
+- Public catalogue pagination is server-side with default page size 8 and maximum page size 32.
 - Publication status is separate from stock status. Draft products display as `Brouillon` in admin and are hidden publicly; archived products display as `Archivé` in admin and are hidden publicly.
 - Public Contact and Delivery pages use managed structured content when configured.
 - The cart remains pre-checkout discovery state. `Commander via WhatsApp` opens a manual enquiry and does not create orders, reserve stock, decrement inventory, or confirm payment.

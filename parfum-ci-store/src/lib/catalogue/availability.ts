@@ -8,7 +8,12 @@ export function getAvailabilityStatus(
   stockOnHand: number,
   reservedQuantity: number,
   lowStockThreshold: number,
+  inventoryInitialized = true,
 ): AvailabilityStatus {
+  if (!inventoryInitialized) {
+    return "UNCONFIGURED";
+  }
+
   const availableQuantity = getAvailableQuantity(stockOnHand, reservedQuantity);
 
   if (availableQuantity === 0) {

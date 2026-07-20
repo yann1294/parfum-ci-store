@@ -149,14 +149,21 @@ SEO checks should cover canonical URLs, hidden-product not-found behaviour, Prod
 
 Unit and integration coverage should include:
 
-- public catalogue default page size 12 and maximum page size 48;
+- public catalogue default page size 8 and maximum page size 32;
 - at least 100 mocked or seeded active products proving only the requested page is returned/rendered;
 - filter/search/sort URL preservation and page reset when filters change;
-- admin availability labels for draft, archived, no variants, inactive variants, zero available quantity, low stock, and in-stock;
+- invalid public URL filters are normalized with `safeParse` and must not throw Zod errors into the page;
+- admin search handles names, brands, SKUs, accented text, apostrophes, `%`, comma, and no-result queries without rendering raw Supabase errors;
+- admin availability labels for draft, archived, no variants, inactive variants, uninitialized inventory, initialized zero quantity, low stock, and in-stock;
+- publication readiness separates image, description, active-variant, and valid-price blockers; image plus inactive-only variants remains non-publishable;
+- initial stock operations create inventory transactions and deny unauthorized roles;
 - OWNER/ADMIN content edit permission and unauthorized-role denial;
 - structured content validation limits for repeatable items;
 - public Contact and Delivery pages hiding absent optional fields;
 - cart `Continuer mes achats` target `/catalogue`;
+- storefront header presents exactly one cart action per navigation context;
+- home fragrance-family links use `fragranceFamily`, not `categorySlug`;
+- catalogue cards do not render Product JSON-LD script tags; Product JSON-LD remains on active product detail pages;
 - absence of public implementation-phase wording;
 - WhatsApp cart message encoding and no inventory reservation/decrement.
 

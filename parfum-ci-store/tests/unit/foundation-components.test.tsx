@@ -39,4 +39,9 @@ describe("foundation components", () => {
     expect(siteConfig.socialLinks.every((link) => link.label && link.href)).toBe(true);
     expect(siteConfig.socialLinks.every((link) => link.href.startsWith("https://"))).toBe(true);
   });
+
+  it("does not duplicate the cart entry in the textual storefront navigation", () => {
+    expect(siteConfig.navigation.filter((item) => item.href === "/panier")).toHaveLength(0);
+    expect(siteConfig.navigation.filter((item) => item.label === "Panier")).toHaveLength(0);
+  });
 });

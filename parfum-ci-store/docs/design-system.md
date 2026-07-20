@@ -117,7 +117,7 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - Product image upload surfaces distinguish temporary pending cards from persisted image cards. Successful pending cards are removed after finalization and refresh; failed pending cards remain retryable.
 - Storefront product cards use stable image aspect ratios, `next/image`, French XOF prices, and availability labels. They must not show cost price, physical stock, or reserved stock.
 - Public catalogue filters are URL-backed and accessible on mobile and desktop. Filtered URLs may be shareable, but canonical SEO must avoid indexing arbitrary UTM or heavy filter combinations.
-- Public catalogue pagination uses a compact, mobile-friendly control with previous/next and nearby page numbers. The result summary should read like `Produits 1-12 sur 100`.
+- Public catalogue pagination uses a compact, mobile-friendly control with previous/next and nearby page numbers. The result summary should read like `Produits 1-8 sur 100`.
 - Public Contact and Delivery pages use action cards, simple sections, and configured content only. Empty optional content is hidden instead of replaced with fake claims.
 - The admin content editor uses section navigation, restrained cards, visible labels, field help text, and save feedback consistent with other back-office forms.
 - Use `ThemeToggle` only in app shells or settings surfaces.
@@ -127,11 +127,13 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 
 ## Catalogue Terminology
 
-- `Famille olfactive` describes the dominant scent family. Use concise help text near the control.
+- `Famille olfactive` describes the dominant scent family. Use concise help text near the control: `La catégorie organise le catalogue. La famille olfactive décrit le caractère du parfum.`
 - `Public cible` is used for Homme, Femme, Unisexe, and Enfant positioning.
 - Do not use the English label `Postponement`.
-- Use compact status badges for inventory states such as `En stock`, `Stock bas`, and `Rupture`; color must not be the only signal.
+- Use compact status badges for variant state (`Active`, `Inactive`) and separate compact badges for inventory states (`Stock non configuré`, `En stock`, `Stock faible`, `Rupture de stock`); color must not be the only signal.
 - In admin catalogue lists, publication status has priority over stock status. Draft products should read `Brouillon`, not `Rupture de stock`.
+- The storefront header must expose one cart action per navigation context. Keep the cart icon with an accessible label and count badge; do not also render a duplicate textual `Panier` item beside it.
+- The home fragrance-family section, when present, is headed `Découvrir par famille olfactive`, shows only families from ACTIVE products, and links with `fragranceFamily`, never `categorySlug`.
 
 ## Prohibited Color Usage
 

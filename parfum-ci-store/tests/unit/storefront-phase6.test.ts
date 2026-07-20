@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 
-import { catalogueQuerySchema } from "@/lib/catalogue/validation";
+import { catalogueQuerySchema, normalizePublicCatalogueQuery } from "@/lib/catalogue/validation";
 import { addCartLine, clearCartForTests, readCart } from "@/lib/storefront/cart";
 import {
   captureFirstTouch,
@@ -22,11 +22,16 @@ describe("Phase 6 storefront foundations", () => {
 
   it("bounds public catalogue page size and validates filters", () => {
     expect(() => catalogueQuerySchema.parse({ pageSize: 500 })).toThrow();
-    expect(catalogueQuerySchema.parse({ genderCategory: "Unisexe", pageSize: 12 })).toMatchObject({
+    expect(catalogueQuerySchema.parse({ genderCategory: "Unisexe", pageSize: 8 })).toMatchObject({
       genderCategory: "Unisexe",
-      pageSize: 12,
+      pageSize: 8,
     });
     expect(() => catalogueQuerySchema.parse({ genderCategory: "Postponement" })).toThrow();
+    expect(normalizePublicCatalogueQuery({ category: "Homme", brand: "dior" })).toMatchObject({
+      categorySlug: undefined,
+      brandSlug: "dior",
+      pageSize: 8,
+    });
   });
 
   it("encodes WhatsApp messages when a number is configured", async () => {

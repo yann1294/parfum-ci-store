@@ -14,6 +14,7 @@ describe("catalogue DTO mapping", () => {
       stock_on_hand: 5,
       reserved_quantity: 1,
       low_stock_threshold: 2,
+      inventory_initialized_at: "2026-01-01T00:00:00.000Z",
     });
 
     expect(dto).toEqual({
@@ -25,6 +26,7 @@ describe("catalogue DTO mapping", () => {
       compareAtPriceXof: null,
       availableQuantity: 4,
       availabilityStatus: "IN_STOCK",
+      inventoryInitialized: true,
     });
     expect("costPriceXof" in dto).toBe(false);
   });

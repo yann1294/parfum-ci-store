@@ -16,6 +16,8 @@ export type AdminVariantListFilters = {
   pageSize?: number;
 };
 
+export const ADMIN_SEARCH_MAX_LENGTH = 120;
+
 export const ADMIN_ENTITY_DEFAULT_PAGE_SIZE = 20;
 export const ADMIN_VARIANT_DEFAULT_PAGE_SIZE = 10;
 export const ADMIN_MAX_PAGE_SIZE = 100;
@@ -31,6 +33,14 @@ function parsePositiveInteger(value: string | number | undefined) {
 
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+export function normalizeAdminSearch(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  if (!trimmed) return undefined;
+  if (/[\u0000-\u001F\u007F]/.test(trimmed)) return undefined;
+  return trimmed.slice(0, ADMIN_SEARCH_MAX_LENGTH);
 }
 
 export function normalizeAdminEntityListFilters(
@@ -49,7 +59,7 @@ export function normalizeAdminEntityListFilters(
   );
 
   return {
-    q: typeof input.q === "string" && input.q.trim() ? input.q.trim() : undefined,
+    q: normalizeAdminSearch(input.q),
     status,
     sort,
     page,
@@ -79,7 +89,7 @@ export function normalizeAdminVariantListFilters(
   const sizeMl = parsePositiveInteger(input.sizeMl);
 
   return {
-    q: typeof input.q === "string" && input.q.trim() ? input.q.trim() : undefined,
+    q: normalizeAdminSearch(input.q),
     active,
     concentration:
       typeof input.concentration === "string" && input.concentration.trim()

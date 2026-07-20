@@ -57,6 +57,8 @@
 - Product images are stored in a public bucket and are not confidential if the URL is known.
 - Storefront content editing is restricted to active OWNER and ADMIN staff through `/admin/contenu` and the `store_content` RLS policies. Public reads are limited to rows explicitly marked `public_readable`.
 - Storefront content schemas accept structured text fields and repeatable items only. They do not render arbitrary HTML and must never store scripts, secrets, tokens, signed URLs, customer data, or private settings.
+- Inventory initialization is a server-side staff operation. `OWNER`, `ADMIN`, and `INVENTORY_MANAGER` may call the `initialize_variant_inventory` RPC; other roles are denied server-side. Product and variant forms must not directly update `stock_on_hand` or `reserved_quantity`.
+- Public catalogue DTOs and pages must never expose `cost_price_xof`, physical stock, reserved stock, SQL/PostgREST diagnostics, or raw Supabase error objects.
 - Login rate limiting uses a development-safe in-memory adapter behind an interface. The adapter normalizes by caller/email at the action boundary, expires entries, and caps stored keys, but it is process-local and not distributed across serverless instances.
 - Supabase Auth also applies provider-level authentication rate limits. Configure those limits in the Supabase dashboard for production alongside application-level controls.
 - Production can upgrade the adapter to a durable store such as Supabase, Redis, Upstash free-tier/low-cost Redis, Vercel KV, Cloudflare Turnstile plus WAF rules, or another inexpensive edge rate-limit provider without changing login action call sites.
@@ -75,7 +77,7 @@ Sensitive operations must be server-side and audited:
 - Admin role changes
 - Product, variant, price, and status updates
 - Product image finalization, replacement, and deletion
-- Inventory adjustments
+- Inventory adjustments and initial stock initialization
 - Order status transitions
 - Payment verification
 - Settings changes

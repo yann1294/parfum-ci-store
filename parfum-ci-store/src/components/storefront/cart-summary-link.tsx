@@ -24,7 +24,7 @@ export function CartSummaryLink() {
     <Link
       href="/panier"
       className="inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm focus-visible:ring-3 focus-visible:ring-ring/50"
-      aria-label={`Panier, ${count} article(s)`}
+      aria-label={`Ouvrir le panier, ${count} article(s)`}
     >
       <ShoppingBag className="size-4" aria-hidden="true" />
       <span>{count}</span>

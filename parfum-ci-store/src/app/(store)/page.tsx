@@ -7,7 +7,7 @@ import { SectionHeading } from "@/components/shared/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { ProductCard } from "@/components/storefront/product-card";
-import { listFeaturedProducts, listPublicFacets } from "@/lib/catalogue/products";
+import { listFeaturedProducts, listHomeFragranceFamilyFacets } from "@/lib/catalogue/products";
 import { buildWhatsAppUrlForNumber, normalizeWhatsAppNumber, siteConfig } from "@/config/site";
 import { getStorefrontContent } from "@/lib/storefront/content";
 
@@ -21,9 +21,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [featured, facets, content] = await Promise.all([
+  const [featured, familyFacets, content] = await Promise.all([
     listFeaturedProducts(4),
-    listPublicFacets(),
+    listHomeFragranceFamilyFacets(6),
     getStorefrontContent(),
   ]);
   const whatsappUrl = buildWhatsAppUrlForNumber(
@@ -71,18 +71,24 @@ export default async function HomePage() {
         )}
       </section>
 
-      <section className="mt-16 grid gap-8 md:grid-cols-3">
-        <div className="md:col-span-1">
-          <SectionHeading eyebrow="Découvrir" title="Explorer par famille" />
-        </div>
-        <div className="flex flex-wrap gap-2 md:col-span-2">
-          {facets.fragranceFamilies.slice(0, 10).map((family) => (
-            <Link key={family} href={`/catalogue?fragranceFamily=${encodeURIComponent(family)}`} className={buttonVariants({ variant: "outline" })}>
-              {family}
-            </Link>
-          ))}
-        </div>
-      </section>
+      {familyFacets.length >= 3 ? (
+        <section className="mt-16 grid gap-8 md:grid-cols-3">
+          <div className="md:col-span-1">
+            <SectionHeading
+              eyebrow="Découvrir"
+              title="Découvrir par famille olfactive"
+              description="La catégorie organise le catalogue. La famille olfactive décrit le caractère du parfum."
+            />
+          </div>
+          <div className="flex flex-wrap gap-2 md:col-span-2">
+            {familyFacets.map((facet) => (
+              <Link key={facet.family} href={facet.href} className={buttonVariants({ variant: "outline" })}>
+                {facet.family} · {facet.count}
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-16 grid gap-5 md:grid-cols-3">
         {content.home.trustPoints.map((point) => (

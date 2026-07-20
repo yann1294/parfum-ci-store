@@ -107,7 +107,7 @@ Featured test products:
 - `Khamrah`
 - `By the Fireplace`
 
-Activation-intended products are the first 15 supplied products. Upload finalized images and activate at least 13 products to test page 2 when public page size is 12. Activate all 25 supplied products to test three public pages. Keep the two special availability products as `DRAFT`.
+Activation-intended products are the first 15 supplied products. Upload finalized images and activate at least 9 products to test page 2 when public page size is 8. Activate all 25 supplied products to test four public pages. Keep the two special availability products as `DRAFT`.
 
 - [ ] Upload a real image for at least one product through the signed-upload UI.
   Expected: Temporary card disappears without manual refresh; persisted image survives refresh.

@@ -23,6 +23,7 @@ export default async function AdminProductsPage({
     brandId: params.brandId,
     categoryId: params.categoryId,
     availability: params.availability as AdminProductListFilters["availability"],
+    fragranceFamily: params.fragranceFamily,
     page: params.page ? Number.parseInt(params.page, 10) : 1,
   };
   const result = await listAdminProducts(filters, permissions);
@@ -56,6 +57,7 @@ export default async function AdminProductsPage({
           products={result.products}
           page={result.page}
           totalPages={result.totalPages}
+          error={result.error}
           queryString={queryString}
           returnPath={currentListPath}
         />

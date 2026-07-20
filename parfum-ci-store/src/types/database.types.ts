@@ -839,6 +839,7 @@ export type Database = {
           cost_price_xof: number | null
           created_at: string
           id: string
+          inventory_initialized_at: string | null
           low_stock_threshold: number
           price_xof: number
           product_id: string
@@ -855,6 +856,7 @@ export type Database = {
           cost_price_xof?: number | null
           created_at?: string
           id?: string
+          inventory_initialized_at?: string | null
           low_stock_threshold?: number
           price_xof?: number
           product_id: string
@@ -871,6 +873,7 @@ export type Database = {
           cost_price_xof?: number | null
           created_at?: string
           id?: string
+          inventory_initialized_at?: string | null
           low_stock_threshold?: number
           price_xof?: number
           product_id?: string
@@ -1015,6 +1018,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      store_content: {
+        Row: {
+          content: Json
+          created_at: string
+          page_key: string
+          public_readable: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          page_key: string
+          public_readable?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          page_key?: string
+          public_readable?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_content_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       store_settings: {
         Row: {
@@ -1170,7 +1208,14 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      initialize_variant_inventory: {
+        Args: {
+          initial_stock: number
+          movement_reason?: string
+          target_variant_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:

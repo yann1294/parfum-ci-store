@@ -32,7 +32,7 @@ PASS/FAIL:
 
 ## Public Navigation
 
-Expected: Accueil, Catalogue, À propos, Livraison, Contact and Panier links work; optional social links appear only when configured.
+Expected: Accueil, Catalogue, À propos, Livraison and Contact links work. The cart appears once per navigation context as the cart icon with an accessible label and count badge; optional social links appear only when configured.
 Actual:
 PASS/FAIL:
 
@@ -40,7 +40,7 @@ PASS/FAIL:
 
 Verify search, brand, category, Public cible, Famille olfactive, sort and pagination.
 
-Expected: Filters update URL parameters, persist after refresh, and can be cleared. Results are bounded to 12 per page by default, show a summary such as `Produits 1-12 sur 100`, and no draft or archived products appear.
+Expected: Filters update URL parameters, persist after refresh, reset to page 1 when changed, and can be cleared. Results are bounded to 8 per page by default, show a summary such as `Produits 1-8 sur 100`, and no draft or archived products appear. Invalid optional filters do not trigger a Zod/runtime error.
 Actual:
 PASS/FAIL:
 

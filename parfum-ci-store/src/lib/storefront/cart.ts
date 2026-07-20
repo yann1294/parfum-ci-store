@@ -1,6 +1,7 @@
 "use client";
 
 import type { AttributionDto } from "@/lib/storefront/attribution";
+import type { AvailabilityStatus } from "@/lib/catalogue/types";
 
 export type CartLine = {
   variantId: string;
@@ -11,7 +12,7 @@ export type CartLine = {
   sizeMl: number;
   concentration: string | null;
   unitPriceXof: number;
-  availabilityStatus?: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+  availabilityStatus?: AvailabilityStatus;
   quantity: number;
 };
 

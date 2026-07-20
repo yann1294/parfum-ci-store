@@ -91,7 +91,7 @@ PASS/FAIL:
 6. Add SKU, size, concentration, selling price, optional compare-at price, optional cost price if authorized, low-stock threshold, active state.
 7. Edit one existing variant through the dialog.
 
-Expected: XOF values display as French-formatted amounts in read areas; `stock_on_hand` and `reserved_quantity` are not editable; variant search and pagination preserve URL parameters.
+Expected: XOF values display as French-formatted amounts in read areas; `stock_on_hand` and `reserved_quantity` are not editable; newly created variants show `Stock non configuré` until inventory is initialized through the inventory operation; variant search and pagination preserve URL parameters; editing `Active`/`Inactive` refreshes the row badge without a full browser reload.
 Actual:
 PASS/FAIL:PASS
 
@@ -185,10 +185,10 @@ PASS/FAIL:PASS
 2. Open `/admin/produits`, `/admin/marques`, `/admin/categories`.
 3. Open a product editor.
 4. Select `Variantes`.
-5. Confirm each variant shows SKU, size, concentration, selling price, physical stock, reserved stock, available stock, low-stock threshold, and stock-status badge.
+5. Confirm each variant shows SKU, size, concentration, selling price, physical stock, reserved stock, available stock, low-stock threshold, a variant-state badge, and a separate stock-state badge.
 6. Confirm the text `Les quantités sont gérées depuis le module Inventaire.` is visible.
 
-Expected: Read-only data is visible; create/edit/upload/activation/archive controls are absent; cost price is not visible; no broken `Gérer le stock` link is shown unless a real authorized inventory route exists.
+Expected: Read-only catalogue data is visible; inventory initialization is available only through the inventory operation when permitted; create/edit/upload/activation/archive controls are absent; cost price is not visible; no broken `Gérer le stock` link is shown unless a real authorized inventory route exists.
 Actual:
 PASS/FAIL:PASS
 

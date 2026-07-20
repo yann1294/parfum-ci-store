@@ -4,6 +4,7 @@ import {
   ADMIN_ENTITY_DEFAULT_PAGE_SIZE,
   ADMIN_MAX_PAGE_SIZE,
   ADMIN_VARIANT_DEFAULT_PAGE_SIZE,
+  normalizeAdminSearch,
   normalizeAdminEntityListFilters,
   normalizeAdminVariantListFilters,
 } from "@/lib/catalogue/admin-filters";
@@ -17,6 +18,16 @@ describe("admin catalogue filter parsing", () => {
       page: 2,
       pageSize: ADMIN_MAX_PAGE_SIZE,
     });
+  });
+
+  it("normalizes admin product search without raw PostgREST expression hazards", () => {
+    expect(normalizeAdminSearch("  Dior Homme  ")).toBe("Dior Homme");
+    expect(normalizeAdminSearch("L'Eau d'Ivoire")).toBe("L'Eau d'Ivoire");
+    expect(normalizeAdminSearch("Boisée")).toBe("Boisée");
+    expect(normalizeAdminSearch("%,()\"_")).toBe("%,()\"_");
+    expect(normalizeAdminSearch("abc\u0000def")).toBeUndefined();
+    expect(normalizeAdminSearch("   ")).toBeUndefined();
+    expect(normalizeAdminSearch("x".repeat(140))).toHaveLength(120);
   });
 
   it("falls back to deterministic entity defaults for unsupported URL values", () => {

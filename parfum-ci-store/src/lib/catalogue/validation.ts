@@ -147,10 +147,70 @@ export const catalogueQuerySchema = z
     sizeMl: z.number().int().positive().optional(),
     fragranceFamily: trimmedString.max(80).optional(),
     genderCategory: z.enum(targetAudienceOptions).optional(),
-    availability: z.enum(["IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"]).optional(),
+    availability: z.enum(["UNCONFIGURED", "IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK"]).optional(),
     sort: z.enum(["newest", "price_asc", "price_desc"]).default("newest"),
   })
   .strict();
+
+type PublicQueryRecord = Record<string, unknown>;
+
+function firstScalar(value: unknown) {
+  if (Array.isArray(value)) return typeof value[0] === "string" ? value[0] : undefined;
+  return typeof value === "string" || typeof value === "number" ? String(value) : undefined;
+}
+
+function normalizedOptionalText(value: unknown, maxLength: number) {
+  const scalar = firstScalar(value);
+  if (!scalar) return undefined;
+  const trimmed = scalar.trim().replace(/\s+/g, " ");
+  if (!trimmed || /[\u0000-\u001F\u007F]/.test(trimmed)) return undefined;
+  return trimmed.slice(0, maxLength);
+}
+
+function normalizedStrictSlug(value: unknown) {
+  const text = normalizedOptionalText(value, 120);
+  return text && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text) ? text : undefined;
+}
+
+function normalizedPositiveInteger(value: unknown) {
+  const scalar = firstScalar(value);
+  const parsed = scalar ? Number.parseInt(scalar, 10) : undefined;
+  return parsed && Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+export function normalizePublicCatalogueQuery(input: PublicQueryRecord = {}): CatalogueQueryInput {
+  const candidate = {
+    page: normalizedPositiveInteger(input.page) ?? 1,
+    pageSize: normalizedPositiveInteger(input.pageSize) ?? DEFAULT_CATALOGUE_PAGE_SIZE,
+    search: normalizedOptionalText(input.search ?? input.q, 120),
+    brandSlug: normalizedStrictSlug(input.brandSlug ?? input.brand),
+    categorySlug: normalizedStrictSlug(input.categorySlug ?? input.category),
+    concentration: normalizedOptionalText(input.concentration, 80),
+    sizeMl: normalizedPositiveInteger(input.sizeMl),
+    fragranceFamily: normalizedOptionalText(input.fragranceFamily, 80),
+    genderCategory: targetAudienceOptions.includes(firstScalar(input.genderCategory) as never)
+      ? (firstScalar(input.genderCategory) as (typeof targetAudienceOptions)[number])
+      : undefined,
+    availability: ["IN_STOCK", "LOW_STOCK", "OUT_OF_STOCK", "UNCONFIGURED"].includes(
+      firstScalar(input.availability) ?? "",
+    )
+      ? (firstScalar(input.availability) as CatalogueQueryInput["availability"])
+      : undefined,
+    sort: ["newest", "price_asc", "price_desc"].includes(firstScalar(input.sort) ?? "")
+      ? (firstScalar(input.sort) as CatalogueQueryInput["sort"])
+      : "newest",
+  };
+
+  const parsed = catalogueQuerySchema.safeParse(candidate);
+  if (parsed.success) return parsed.data;
+
+  return catalogueQuerySchema.parse({
+    page: candidate.page,
+    pageSize: DEFAULT_CATALOGUE_PAGE_SIZE,
+    search: candidate.search,
+    sort: candidate.sort,
+  });
+}
 
 export type CreateBrandInput = z.infer<typeof createBrandSchema>;
 export type UpdateBrandInput = z.infer<typeof updateBrandSchema>;
