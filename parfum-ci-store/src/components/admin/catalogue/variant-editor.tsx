@@ -151,7 +151,7 @@ export function VariantEditor({
 
   return (
     <div className="grid gap-4">
-      <Card>
+      <Card className="min-w-0">
         <CardHeader className="gap-4 md:flex md:flex-row md:items-start md:justify-between">
           <div>
             <CardTitle>Variantes</CardTitle>
@@ -162,7 +162,7 @@ export function VariantEditor({
           {canMutate ? (
             <Dialog open={creating} onOpenChange={setCreating}>
               <DialogTrigger render={<Button type="button" />}>Ajouter une variante</DialogTrigger>
-              <DialogContent className="sm:max-w-3xl">
+              <DialogContent className="max-h-[min(42rem,calc(100dvh-2rem))] overflow-y-auto sm:max-w-3xl">
                 <DialogHeader>
                   <DialogTitle>Ajouter une variante</DialogTitle>
                   <DialogDescription>
@@ -233,8 +233,11 @@ export function VariantEditor({
             </div>
           ) : (
             <>
-              <div className="hidden md:block">
-                <Table>
+              <div className="hidden min-w-0 xl:block" data-testid="variant-wide-table">
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Faites défiler horizontalement le tableau si toutes les colonnes ne sont pas visibles.
+                </p>
+                <Table className="min-w-[72rem]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>SKU</TableHead>
@@ -255,7 +258,9 @@ export function VariantEditor({
                   <TableBody>
                     {variants.items.map((variant) => (
                       <TableRow key={variant.id}>
-                        <TableCell className="font-medium">{variant.sku}</TableCell>
+                        <TableCell className="max-w-48 whitespace-normal break-all font-medium" title={variant.sku}>
+                          {variant.sku}
+                        </TableCell>
                         <TableCell>{variant.sizeMl} ml</TableCell>
                         <TableCell>{variant.concentration ?? "Non renseignée"}</TableCell>
                         <TableCell>{formatXof(variant.priceXof)}</TableCell>
@@ -302,17 +307,17 @@ export function VariantEditor({
                 </Table>
               </div>
 
-              <div className="grid gap-3 md:hidden">
+              <div className="grid gap-3 xl:hidden" data-testid="variant-responsive-cards">
                 {variants.items.map((variant) => (
-                  <div key={variant.id} className="rounded-lg border bg-card p-4">
+                  <div key={variant.id} className="min-w-0 rounded-lg border bg-card p-4">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium">{variant.sku}</p>
+                      <div className="min-w-0">
+                        <p className="break-all font-medium" title={variant.sku}>{variant.sku}</p>
                         <p className="text-sm text-muted-foreground">
                           {variant.sizeMl} ml · {variant.concentration ?? "Non renseignée"}
                         </p>
                       </div>
-                      <div className="flex flex-wrap justify-end gap-2">
+                      <div className="flex shrink-0 flex-wrap justify-end gap-2">
                         {variantStateBadge(variant)}
                         {inventoryBadge(variant)}
                       </div>
@@ -393,7 +398,7 @@ export function VariantEditor({
       </Card>
 
       <Dialog open={Boolean(editingVariant)} onOpenChange={(open) => !open && setEditingId(null)}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="max-h-[min(42rem,calc(100dvh-2rem))] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Modifier la variante</DialogTitle>
             <DialogDescription>
@@ -413,7 +418,7 @@ export function VariantEditor({
       </Dialog>
 
       <Dialog open={Boolean(initializingVariant)} onOpenChange={(open) => !open && setInitializingId(null)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[min(38rem,calc(100dvh-2rem))] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Initialiser le stock</DialogTitle>
             <DialogDescription>

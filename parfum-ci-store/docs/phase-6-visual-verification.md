@@ -40,7 +40,7 @@ PASS/FAIL:
 
 Verify search, brand, category, Public cible, Famille olfactive, sort and pagination.
 
-Expected: Filters update URL parameters, persist after refresh, reset to page 1 when changed, and can be cleared. Results are bounded to 8 per page by default, show a summary such as `Produits 1-8 sur 100`, and no draft or archived products appear. Invalid optional filters do not trigger a Zod/runtime error.
+Expected: Filters update URL parameters, persist after refresh, reset to page 1 when changed, and can be cleared. `Effacer les filtres` clears search, brand, category, Public cible, Famille olfactive, concentration, size, availability, sorting, page, active chips, desktop controls, and mobile sheet draft state, then navigates to `/catalogue`. Removing one active chip clears only that filter and preserves the others. Results are bounded to 8 per page by default, show a summary such as `Produits 1-8 sur 100`, and no draft or archived products appear. Invalid optional filters do not trigger a Zod/runtime error.
 Actual:
 PASS/FAIL:
 

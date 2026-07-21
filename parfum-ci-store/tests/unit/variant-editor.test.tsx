@@ -84,7 +84,7 @@ const variants: AdminVariant[] = [
   {
     id: "variant-3",
     productId: "product-id",
-    sku: "SKU-003",
+    sku: "SKU-003-WITH-A-VERY-LONG-MANUAL-TEST-IDENTIFIER-THAT-MUST-REMAIN-READABLE",
     sizeMl: 30,
     concentration: "EDP",
     priceXof: 15000,
@@ -146,10 +146,31 @@ describe("VariantEditor", () => {
     expect(screen.getAllByText("État du stock").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Inactive").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Stock non configuré").length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId("variant-responsive-cards").length).toBeGreaterThan(0);
     expect(screen.queryByText("Coût")).toBeNull();
     expect(screen.queryByRole("link", { name: /gérer le stock/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /ajouter une variante/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /modifier/i })).toBeNull();
+  });
+
+  it("renders a wide-table surface and a narrow-container card fallback with critical values", () => {
+    render(
+      <VariantEditor
+        product={product}
+        variants={result()}
+        canMutate
+        canViewCostPrice
+        searchParams={{}}
+      />,
+    );
+
+    expect(screen.getByTestId("variant-wide-table")).toBeDefined();
+    expect(screen.getByTestId("variant-responsive-cards")).toBeDefined();
+    expect(screen.getByText(/Faites défiler horizontalement/)).toBeDefined();
+    expect(screen.getAllByTitle("SKU-003-WITH-A-VERY-LONG-MANUAL-TEST-IDENTIFIER-THAT-MUST-REMAIN-READABLE").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/25.000 F CFA/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Disponible").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("button", { name: "Modifier" }).length).toBeGreaterThanOrEqual(3);
   });
 
   it("does not render edit forms for all variants until a dialog is opened", async () => {

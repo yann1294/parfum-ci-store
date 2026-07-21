@@ -117,7 +117,11 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - Product image upload surfaces distinguish temporary pending cards from persisted image cards. Successful pending cards are removed after finalization and refresh; failed pending cards remain retryable.
 - Storefront product cards use stable image aspect ratios, `next/image`, French XOF prices, and availability labels. They must not show cost price, physical stock, or reserved stock.
 - Public catalogue filters are URL-backed and accessible on mobile and desktop. Filtered URLs may be shareable, but canonical SEO must avoid indexing arbitrary UTM or heavy filter combinations.
+- The canonical public catalogue reset destination is `/catalogue`. Reset clears search, brand, category, `Public cible`, `Famille olfactive`, concentration, size, availability, page, and returns sorting to `Nouveautés`.
 - Public catalogue pagination uses a compact, mobile-friendly control with previous/next and nearby page numbers. The result summary should read like `Produits 1-8 sur 100`.
+- Public catalogue active-filter chips remove one filter at a time, reset page to 1, and preserve the other normalized filters.
+- Admin variant lists use a wide table only when the content area can support it. Narrow desktop, tablet, and mobile layouts use stacked variant cards with the same critical information: SKU, size, concentration, selling price, variant state, inventory state, and authorized actions.
+- Variant tables must keep horizontal scrolling inside the component, use intentional minimum widths, and preserve long SKU access through wrapping/truncation plus full text in the element title.
 - Public Contact and Delivery pages use action cards, simple sections, and configured content only. Empty optional content is hidden instead of replaced with fake claims.
 - The admin content editor uses section navigation, restrained cards, visible labels, field help text, and save feedback consistent with other back-office forms.
 - Use `ThemeToggle` only in app shells or settings surfaces.

@@ -152,9 +152,12 @@ Unit and integration coverage should include:
 - public catalogue default page size 8 and maximum page size 32;
 - at least 100 mocked or seeded active products proving only the requested page is returned/rendered;
 - filter/search/sort URL preservation and page reset when filters change;
+- `Effacer les filtres` resets every catalogue filter, controlled desktop field, mobile sheet draft field, active chip, sort value, page value, and the URL to `/catalogue`;
+- individual active-filter chip removal removes only that filter, preserves the others, and resets page to 1;
 - invalid public URL filters are normalized with `safeParse` and must not throw Zod errors into the page;
 - admin search handles names, brands, SKUs, accented text, apostrophes, `%`, comma, and no-result queries without rendering raw Supabase errors;
 - admin availability labels for draft, archived, no variants, inactive variants, uninitialized inventory, initialized zero quantity, low stock, and in-stock;
+- admin variant lists render a wide table with internal horizontal scroll and a narrow-container/mobile card fallback with equivalent critical values;
 - publication readiness separates image, description, active-variant, and valid-price blockers; image plus inactive-only variants remains non-publishable;
 - initial stock operations create inventory transactions and deny unauthorized roles;
 - OWNER/ADMIN content edit permission and unauthorized-role denial;

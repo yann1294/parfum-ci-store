@@ -91,7 +91,7 @@ PASS/FAIL:
 6. Add SKU, size, concentration, selling price, optional compare-at price, optional cost price if authorized, low-stock threshold, active state.
 7. Edit one existing variant through the dialog.
 
-Expected: XOF values display as French-formatted amounts in read areas; `stock_on_hand` and `reserved_quantity` are not editable; newly created variants show `Stock non configuré` until inventory is initialized through the inventory operation; variant search and pagination preserve URL parameters; editing `Active`/`Inactive` refreshes the row badge without a full browser reload.
+Expected: XOF values display as French-formatted amounts in read areas; `stock_on_hand` and `reserved_quantity` are not editable; newly created variants show `Stock non configuré` until inventory is initialized through the inventory operation; variant search and pagination preserve URL parameters; editing `Active`/`Inactive` refreshes the row badge without a full browser reload. In narrow desktop, tablet, split-view, and mobile layouts, critical variant values remain reachable through stacked cards or component-level horizontal scrolling without body-level clipping.
 Actual:
 PASS/FAIL:PASS
 
