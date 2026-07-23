@@ -8,13 +8,18 @@ import type { CatalogueAuditAction } from "@/lib/audit/catalogue";
 import { requireRole } from "@/lib/auth/server";
 import {
   storeContentPageKeys,
+  storeContentSchemas,
   type StoreContentPageKey,
+  type StorefrontContent,
 } from "@/lib/storefront/content-schemas";
 import { updateStorefrontContent } from "@/lib/storefront/content";
 
 export type ContentActionState = {
   ok: boolean;
   message: string;
+  pageKey?: StoreContentPageKey;
+  value?: StorefrontContent[StoreContentPageKey];
+  updatedAt?: string | null;
 };
 
 const pageKeySchema = z.enum(storeContentPageKeys);
@@ -151,7 +156,8 @@ export async function updateContentSection(
 
   try {
     const value = valueForPage(parsedPageKey.data, formData);
-    await updateStorefrontContent(parsedPageKey.data, value, staff.id);
+    const saved = await updateStorefrontContent(parsedPageKey.data, value, staff.id);
+    const savedValue = storeContentSchemas[parsedPageKey.data].parse(saved.content);
     await auditCatalogueEvent({
       actorId: staff.id,
       action: auditAction(parsedPageKey.data),
@@ -159,7 +165,13 @@ export async function updateContentSection(
       metadata: { page_key: parsedPageKey.data },
     });
     revalidateContent(parsedPageKey.data);
-    return { ok: true, message: "Contenu enregistré." };
+    return {
+      ok: true,
+      message: "Contenu enregistré.",
+      pageKey: parsedPageKey.data,
+      value: savedValue,
+      updatedAt: saved.updated_at,
+    };
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { ok: false, message: "Vérifiez les champs de cette section." };

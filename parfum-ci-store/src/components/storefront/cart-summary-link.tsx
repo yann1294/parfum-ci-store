@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ShoppingBag } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -30,7 +31,13 @@ async function reconcileDrawerCart(cart: CartState) {
   return payload as ReconciledCart;
 }
 
+function releaseDrawerSideEffects() {
+  document.body.style.removeProperty("overflow");
+  document.body.style.removeProperty("padding-right");
+}
+
 export function CartSummaryLink() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [cart, setCart] = useState<CartState | null>(null);
   const [snapshot, setSnapshot] = useState<ReconciledCart | null>(null);
@@ -73,12 +80,19 @@ export function CartSummaryLink() {
 
   const count = cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
+  function handleViewCart() {
+    setOpen(false);
+    releaseDrawerSideEffects();
+    router.push("/panier");
+  }
+
   return (
     <Sheet
       open={open}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
         if (nextOpen) void validate();
+        if (!nextOpen) releaseDrawerSideEffects();
       }}
     >
       <SheetTrigger render={<Button type="button" variant="outline" size="sm" />}>
@@ -125,10 +139,17 @@ export function CartSummaryLink() {
             <span>Sous-total</span>
             <span>{formatXof(snapshot?.subtotalXof ?? 0)}</span>
           </div>
-          <Link href="/panier" className={buttonVariants({ className: "w-full" })}>
+          <Button type="button" className="w-full" onClick={handleViewCart}>
             Voir le panier
-          </Link>
-          <Link href="/catalogue" className={buttonVariants({ variant: "outline", className: "w-full" })}>
+          </Button>
+          <Link
+            href="/catalogue"
+            onClick={() => {
+              setOpen(false);
+              releaseDrawerSideEffects();
+            }}
+            className={buttonVariants({ variant: "outline", className: "w-full" })}
+          >
             Continuer mes achats
           </Link>
         </SheetFooter>

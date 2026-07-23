@@ -186,9 +186,11 @@ Cart tests should cover:
 - integer XOF line totals and subtotal;
 - WhatsApp message generation from reconciled data only;
 - validation failure preserving local intent;
-- drawer open validation and `/panier` validation;
+- drawer open validation, `/panier` validation, and `Voir le panier` navigation closing the drawer, overlay, focus trap and scroll lock without changing cart contents;
 - localStorage write failure fallback;
 - cross-tab update handling through storage events.
+
+Post-Phase-7 UI regression tests also cover the admin content editor controlled-field lifecycle: initial values render from server content, edits update controlled draft state, successful saves keep the saved value visible and clear dirty state, failed saves preserve input, section switches reset intentionally, dirty forms are not overwritten by external prop refreshes, and console-error spies fail on Base UI changed-`defaultValue` FieldControl warnings.
 
 Playwright content-management tests require staff credentials from ignored environment variables and a migrated Supabase project with `store_content` applied. If those are unavailable, mark live persistence and browser content-edit tests `NOT VERIFIED`.
 

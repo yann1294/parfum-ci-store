@@ -6,13 +6,13 @@ Phase 7 keeps the guest cart as pre-checkout discovery state. It must not create
 
 ## Cart Drawer Desktop
 
-Expected: Cart icon opens an accessible drawer with title, close action, count, item preview, subtotal, `/panier` link, and `Continuer mes achats`.
+Expected: Cart icon opens an accessible drawer with title, close action, count, item preview, subtotal, `Voir le panier`, and `Continuer mes achats`. Clicking or keyboard-activating `Voir le panier` navigates to `/panier` without a full reload, closes the drawer, removes the overlay, releases focus trapping, removes body scroll lock, and keeps cart contents/count unchanged. Browser Back must not reopen the drawer.
 Actual:
 PASS/FAIL:
 
 ## Cart Drawer Mobile
 
-Expected: Drawer traps focus, closes with Escape/close action, and returns focus to the cart trigger.
+Expected: Drawer traps focus while open, closes with Escape/close action, returns focus to the cart trigger, and also closes cleanly when navigating to `/panier`.
 Actual:
 PASS/FAIL:
 
@@ -157,5 +157,11 @@ PASS/FAIL:
 ## No Stock Reservation
 
 Expected: Adding, validating, updating, removing, clearing, and WhatsApp ordering do not create orders, inventory reservations, or stock decrements.
+Actual:
+PASS/FAIL:
+
+## Content Editor Warning Regression
+
+Expected: OWNER or ADMIN can open `/admin/contenu`, edit `Titre principal`, save, see the saved value remain visible, navigate away and return with the persisted value, and observe no Base UI `FieldControl` changed-default-value warning in browser console output. Failed saves preserve current input. Switching content sections resets the visible fields intentionally.
 Actual:
 PASS/FAIL:

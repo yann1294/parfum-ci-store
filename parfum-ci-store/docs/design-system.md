@@ -117,7 +117,7 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - Product image upload surfaces distinguish temporary pending cards from persisted image cards. Successful pending cards are removed after finalization and refresh; failed pending cards remain retryable.
 - Storefront product cards use stable image aspect ratios, `next/image`, French XOF prices, and availability labels. They must not show cost price, physical stock, or reserved stock.
 - Storefront cart surfaces use the same authoritative reconciled line display: product image, name, variant label, quantity controls, availability notice, line total, subtotal, retry state, and customer-friendly manual-confirmation language.
-- The cart drawer is a compact sheet opened from the cart icon. It must have an accessible title, close affordance, item count context, a bounded item preview, links to `/panier` and `/catalogue`, and no internal roadmap wording.
+- The cart drawer is a compact sheet opened from the cart icon. It must have an accessible title, close affordance, item count context, a bounded item preview, actions for `/panier` and `/catalogue`, and no internal roadmap wording. Drawer navigation actions explicitly close the sheet, release focus trapping, and remove scroll lock before or as navigation starts.
 - Public catalogue filters are URL-backed and accessible on mobile and desktop. Filtered URLs may be shareable, but canonical SEO must avoid indexing arbitrary UTM or heavy filter combinations.
 - The canonical public catalogue reset destination is `/catalogue`. Reset clears search, brand, category, `Public cible`, `Famille olfactive`, concentration, size, availability, page, and returns sorting to `Nouveautés`.
 - Public catalogue pagination uses a compact, mobile-friendly control with previous/next and nearby page numbers. The result summary should read like `Produits 1-8 sur 100`.
@@ -125,7 +125,7 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - Admin variant lists use a wide table only when the content area can support it. Narrow desktop, tablet, and mobile layouts use stacked variant cards with the same critical information: SKU, size, concentration, selling price, variant state, inventory state, and authorized actions.
 - Variant tables must keep horizontal scrolling inside the component, use intentional minimum widths, and preserve long SKU access through wrapping/truncation plus full text in the element title.
 - Public Contact and Delivery pages use action cards, simple sections, and configured content only. Empty optional content is hidden instead of replaced with fake claims.
-- The admin content editor uses section navigation, restrained cards, visible labels, field help text, and save feedback consistent with other back-office forms.
+- The admin content editor uses section navigation, restrained cards, visible labels, field help text, and save feedback consistent with other back-office forms. Editable public-content fields are controlled inputs: server data initializes draft state, successful saves reset from the validated saved response, failed saves preserve edits, and changing `defaultValue` after mount is not used.
 - Use `ThemeToggle` only in app shells or settings surfaces.
 - Public header/footer social links must come from `src/config/site.ts` until database settings replace it.
 - Menus, sheets, dialogs, selects, tabs, and dropdowns must remain keyboard accessible.

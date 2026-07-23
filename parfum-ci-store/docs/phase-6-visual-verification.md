@@ -46,7 +46,7 @@ PASS/FAIL:
 
 ## Admin Content
 
-Expected: OWNER or ADMIN can open `/admin/contenu`, edit Contact and Delivery fields, save, and see public pages update without a redeploy. INVENTORY_MANAGER, ORDER_MANAGER, CUSTOMER_SUPPORT and inactive users cannot edit content.
+Expected: OWNER or ADMIN can open `/admin/contenu`, edit Contact and Delivery fields, save, and see public pages update without a redeploy. Editable fields stay controlled after save, saved values remain visible, failed saves preserve input, and browser console output contains no Base UI changed-default-value warning. INVENTORY_MANAGER, ORDER_MANAGER, CUSTOMER_SUPPORT and inactive users cannot edit content.
 Actual:
 PASS/FAIL:
 
