@@ -245,6 +245,20 @@ After applying this migration to a linked Supabase project, regenerate generated
 pnpm exec supabase gen types typescript --linked > src/types/database.types.ts
 ```
 
+## Phase 8 Guest Orders
+
+Phase 8 adds `supabase/migrations/20260723080100_phase8_guest_order_transaction.sql`.
+
+- `customers.normalized_phone` stores canonical Côte d'Ivoire phone numbers as `+225XXXXXXXXXX` and is unique when present.
+- `order_items` gains protected historical snapshot columns: `brand_name`, `product_slug`, `size_ml`, `concentration`, and fixed `currency = XOF`.
+- `notifications.idempotency_key` prevents duplicated outbox intents for idempotent order retries.
+- `store_settings.enabled_payment_methods` and `store_settings.enabled_delivery_methods` are the transaction-time enabled-method source.
+- `app_private.guest_order_idempotency` stores operation/key/fingerprint/order result state outside the exposed API.
+- `app_private.create_guest_order(request jsonb)` is the private transactional order engine.
+- `public.create_guest_order_server(request jsonb)` is a service-role-only wrapper because `app_private` is not exposed through Supabase REST.
+
+The transaction locks affected variants/products in deterministic variant-ID order, validates ACTIVE publication requirements, active variants, positive prices, initialized inventory and available quantity, creates the customer/order/items/history/audit/notification rows, increments `reserved_quantity`, and inserts `RESERVED` inventory ledger rows. `stock_on_hand` is not decremented.
+
 ## Local Reset, Seed, and Verification
 
 For local development only, run:

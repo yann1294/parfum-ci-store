@@ -39,6 +39,10 @@
 - Checkout input must be validated with Zod server-side.
 - Order totals are recalculated server-side from current product variant prices.
 - The client must not be trusted for price, stock, payment status, or order status.
+- Phase 8 order creation is all-or-nothing. If any line is hidden, inactive, uninitialized, out of stock, insufficient, mismatched, or invalid, no customer/order/item/reservation/ledger/history/audit/notification/idempotency completion may remain.
+- Order creation reserves inventory by increasing `reserved_quantity`; it never decrements `stock_on_hand`. The inventory ledger uses `RESERVED` with a positive `quantity_delta` and before/after stock/reserved snapshots.
+- Guest checkout idempotency keys are required. Exact replays return the original order; conflicting fingerprints are rejected and must not reserve stock twice.
+- Customer records are matched by normalized Côte d'Ivoire phone. Orders snapshot submitted customer information so older orders remain immutable if the reusable customer record later changes.
 - The Phase 6.5 cart WhatsApp CTA is a manual enquiry. It may include product names, variants, quantities, formatted line totals, subtotal, and canonical product URLs, but it must not claim an order is confirmed.
 - Phase 7 cart persistence stores customer intent only: schema version, product ID, variant ID, requested quantity, optional validated first-touch attribution, and timestamps. Product names, images, prices, publication state, and availability are authoritative only after public server reconciliation.
 - Cart lines are keyed by `variantId`. Adding the same variant merges quantities; adding a different variant of the same product creates a separate line.
@@ -67,8 +71,8 @@
 
 ## Orders
 
-- Order statuses: `draft`, `pending_payment`, `confirmed`, `preparing`, `ready`, `out_for_delivery`, `delivered`, `cancelled`.
-- Payment statuses: `unpaid`, `pending_verification`, `paid`, `failed`, `refunded`, `cancelled`.
+- Current order statuses are the database enum values: `PENDING_CONFIRMATION`, `CONFIRMED`, `PREPARING`, `READY_FOR_PICKUP`, `OUT_FOR_DELIVERY`, `DELIVERED`, `CANCELLED`, `RETURNED`.
+- Current payment statuses are the database enum values: `UNPAID`, `PENDING`, `PAID`, `FAILED`, `REFUNDED`, `PARTIALLY_REFUNDED`.
 - Invalid transitions must be rejected server-side and tested.
 - Customers see only redacted tracking information.
 

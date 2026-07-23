@@ -194,6 +194,20 @@ Post-Phase-7 UI regression tests also cover the admin content editor controlled-
 
 Playwright content-management tests require staff credentials from ignored environment variables and a migrated Supabase project with `store_content` applied. If those are unavailable, mark live persistence and browser content-edit tests `NOT VERIFIED`.
 
+## Phase 8 Guest Order Transactions
+
+Unit tests cover the strict `/api/orders` request contract, unexpected field rejection, honeypot rejection, phone and WhatsApp normalization, email normalization, duplicate variant-line merging, quantity and line-count bounds, stable request fingerprinting, rate-limit response mapping, safe success responses, safe expected error responses, and suppression of raw database diagnostics.
+
+After applying the Phase 8 migration to an isolated local or staging Supabase database, run:
+
+```bash
+psql "$DATABASE_URL" -f supabase/tests/phase8_guest_order_transaction.sql
+```
+
+That SQL test verifies successful order creation, authoritative integer totals, customer normalized-phone matching, immutable item snapshots, reservation without stock decrement, `RESERVED` inventory ledger rows, initial status history, sanitized audit records, pending notification intents, idempotent replay, conflicting idempotency payloads, insufficient-stock rollback, execute grants, and forced late rollback.
+
+Final-unit and opposite-lock-order concurrency must be verified with two real simultaneous database sessions or an equivalent integration harness before Phase 8 can be approved. Sequential SQL tests are not sufficient to mark overselling prevention as passed.
+
 ## Environment Diagnostics
 
 Run:

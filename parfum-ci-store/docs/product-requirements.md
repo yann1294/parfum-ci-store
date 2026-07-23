@@ -44,6 +44,7 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - Admins review orders, verify manual payments, update fulfillment states, and respond to messages.
 - Inventory adjustments are recorded through ledger entries, not direct stock edits.
 - Sensitive admin operations are audited.
+- Phase 8 adds the server-side guest-order transaction engine and `/api/orders` contract. It creates orders and atomically reserves inventory, but it does not add checkout UI, order-management UI, payment verification, shipment workflow, notification delivery workers, or reservation expiry.
 
 ## Phase 6.5 Corrections
 
@@ -52,6 +53,7 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - Public Contact and Delivery pages use managed structured content when configured.
 - The cart remains pre-checkout discovery state. `Commander via WhatsApp` opens a manual enquiry and does not create orders, reserve stock, decrement inventory, or confirm payment.
 - Phase 7 hardens the guest cart with versioned local intent storage and authoritative server reconciliation before display-sensitive ordering actions. It still does not create orders, reserve inventory, decrement stock, process payments, or persist anonymous carts server-side.
+- Phase 8 reuses the Phase 7 intent-only cart as input. Guest order creation revalidates every submitted line in a PostgreSQL transaction before order creation and reservation.
 
 ## Non-Goals for MVP
 

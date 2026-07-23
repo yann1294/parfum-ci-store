@@ -123,6 +123,16 @@ First-touch attribution accepts only normalized UTM fields and must never be use
 
 Content update audit events store the content section key only. They must not include complete page payloads, secrets, or customer data.
 
+## Phase 8 Guest Order Boundary
+
+`POST /api/orders` is the only public checkout write boundary in Phase 8. Anonymous browsers cannot directly insert customers, orders, order items, order history, inventory transactions, notifications, audit logs, or idempotency records.
+
+The route validates JSON content type, body size, strict request shape, honeypot, phone normalization, line bounds, and a checkout rate-limit interface before calling the database. The server-secret Supabase client calls only the service-role wrapper `public.create_guest_order_server(jsonb)`.
+
+The real order engine lives in `app_private.create_guest_order(jsonb)`. `app_private` is not in the Supabase exposed API schema list. The wrapper is revoked from `PUBLIC`, `anon`, and `authenticated`, and granted only to `service_role`.
+
+Guest-order audit metadata is bounded and excludes full request bodies, full addresses, customer notes beyond order snapshots, payment secrets, cost prices, SQL diagnostics, stack traces, and notification internals. Notification rows are pending intents only; no external delivery occurs in Phase 8.
+
 ## Test Users
 
 Create staff test users manually in Supabase Auth and then insert or update their `profiles` rows with current roles and `active` values. Do not add fake owner UUIDs to seed data and do not commit test credentials.
