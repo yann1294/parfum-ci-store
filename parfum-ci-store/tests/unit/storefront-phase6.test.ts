@@ -69,22 +69,18 @@ describe("Phase 6 storefront foundations", () => {
   it("cart stores variant snapshots without reservation fields", () => {
     addCartLine(
       {
-        variantId: "variant-id",
-        productSlug: "musc-royal",
-        productName: "Musc Royal",
-        imageUrl: null,
-        imageAlt: "Musc Royal",
-        sizeMl: 50,
-        concentration: "EDP",
-        unitPriceXof: 25000,
+        productId: "11111111-1111-4111-8111-111111111111",
+        variantId: "22222222-2222-4222-8222-222222222222",
         quantity: 2,
       },
       null,
     );
 
     const cart = readCart();
-    expect(cart.lines).toHaveLength(1);
+    expect(cart.items).toHaveLength(1);
     expect(JSON.stringify(cart)).not.toContain("stock_on_hand");
     expect(JSON.stringify(cart)).not.toContain("reserved_quantity");
+    expect(JSON.stringify(cart)).not.toContain("Musc Royal");
+    expect(JSON.stringify(cart)).not.toContain("25000");
   });
 });

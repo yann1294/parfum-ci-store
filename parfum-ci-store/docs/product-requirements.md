@@ -51,6 +51,7 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - Publication status is separate from stock status. Draft products display as `Brouillon` in admin and are hidden publicly; archived products display as `Archivé` in admin and are hidden publicly.
 - Public Contact and Delivery pages use managed structured content when configured.
 - The cart remains pre-checkout discovery state. `Commander via WhatsApp` opens a manual enquiry and does not create orders, reserve stock, decrement inventory, or confirm payment.
+- Phase 7 hardens the guest cart with versioned local intent storage and authoritative server reconciliation before display-sensitive ordering actions. It still does not create orders, reserve inventory, decrement stock, process payments, or persist anonymous carts server-side.
 
 ## Non-Goals for MVP
 

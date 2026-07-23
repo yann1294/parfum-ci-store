@@ -115,7 +115,9 @@ Phase 6 public catalogue pages read through the established public catalogue bou
 
 Public DTOs must not expose `cost_price_xof`, `stock_on_hand`, `reserved_quantity`, staff IDs, audit records, signed upload tokens, Storage write URLs, or internal notes. Public pages may display calculated availability states and public image URLs only.
 
-The Phase 6 cart is client-side discovery state. It does not create orders, process payments, or reserve inventory. Later checkout code must recalculate prices and availability server-side.
+The Phase 6/7 cart is client-side discovery state. It does not create orders, process payments, or reserve inventory. Phase 7 stores only product IDs, variant IDs, quantities, schema version, timestamp, and optional validated first-touch attribution in local storage. Product names, image URLs, prices, publication state, and availability are refreshed through the public cart reconciliation boundary before WhatsApp ordering.
+
+The cart reconciliation route accepts only bounded product/variant IDs and quantities, reads through the public catalogue views, uses `Cache-Control: no-store`, and returns only safe public fields. It must not expose hidden product details, `cost_price_xof`, `stock_on_hand`, `reserved_quantity`, staff records, audit data, Supabase diagnostics, SQL, signed URLs, or private Storage paths.
 
 First-touch attribution accepts only normalized UTM fields and must never be used for authorization.
 

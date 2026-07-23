@@ -123,6 +123,7 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 - Catalogue pagination returns bounded pages with default size 12 and maximum size 48.
 - `/admin/contenu` is accessible only to OWNER and ADMIN; public Contact and Delivery pages reflect saved content after revalidation.
 - Public cart copy contains no internal phase terminology and the WhatsApp CTA does not create orders or reserve inventory.
+- Phase 7 cart validation uses `/api/cart/reconcile` with `Cache-Control: no-store`. Confirm the route is reachable in production and that public catalogue view grants are applied before validating cart readiness or WhatsApp ordering.
 - Admin routes require authentication.
 - Checkout creates orders without exposing secrets.
 - Resend sends transactional messages.

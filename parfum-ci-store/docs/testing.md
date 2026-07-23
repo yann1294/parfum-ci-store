@@ -170,6 +170,26 @@ Unit and integration coverage should include:
 - absence of public implementation-phase wording;
 - WhatsApp cart message encoding and no inventory reservation/decrement.
 
+## Phase 7 Cart Hardening
+
+Cart tests should cover:
+
+- persisted cart schema version `2`;
+- local storage key `parfum-ci:cart`;
+- intent-only persistence with product ID, variant ID, quantity, optional validated attribution, and timestamps;
+- migration from legacy snapshot carts when product IDs are available;
+- corrupted, unsupported, oversized, or prototype-pollution-shaped payload reset;
+- duplicate variant merge and separate lines for different variants;
+- authoritative reconciliation through `/api/cart/reconcile`;
+- hidden-product and hidden-variant generic unavailable responses;
+- stock-not-configured versus out-of-stock labels;
+- integer XOF line totals and subtotal;
+- WhatsApp message generation from reconciled data only;
+- validation failure preserving local intent;
+- drawer open validation and `/panier` validation;
+- localStorage write failure fallback;
+- cross-tab update handling through storage events.
+
 Playwright content-management tests require staff credentials from ignored environment variables and a migrated Supabase project with `store_content` applied. If those are unavailable, mark live persistence and browser content-edit tests `NOT VERIFIED`.
 
 ## Environment Diagnostics

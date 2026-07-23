@@ -40,6 +40,12 @@
 - Order totals are recalculated server-side from current product variant prices.
 - The client must not be trusted for price, stock, payment status, or order status.
 - The Phase 6.5 cart WhatsApp CTA is a manual enquiry. It may include product names, variants, quantities, formatted line totals, subtotal, and canonical product URLs, but it must not claim an order is confirmed.
+- Phase 7 cart persistence stores customer intent only: schema version, product ID, variant ID, requested quantity, optional validated first-touch attribution, and timestamps. Product names, images, prices, publication state, and availability are authoritative only after public server reconciliation.
+- Cart lines are keyed by `variantId`. Adding the same variant merges quantities; adding a different variant of the same product creates a separate line.
+- Unavailable cart lines are not silently removed. Hidden products, inactive or deleted variants, stock not configured, and out-of-stock variants remain visible as unavailable until the customer removes them.
+- Cart ordering readiness is authoritative. WhatsApp ordering is disabled while validating, after validation failure, when unavailable lines remain, or when quantity adjustments are unresolved.
+- Quantity requests are positive integers capped at the configured cart maximum. Server reconciliation may reduce the effective orderable quantity for totals, but the line remains visible with a correction notice.
+- Cart reconciliation is fresh on cart open, `/panier`, add/update/remove, retry, WhatsApp ordering, and tab reactivation after the stale window. It does not poll continuously.
 
 ## Public Content
 

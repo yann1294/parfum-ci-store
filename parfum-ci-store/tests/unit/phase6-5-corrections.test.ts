@@ -13,7 +13,7 @@ import { normalizePublicCatalogueQuery } from "@/lib/catalogue/validation";
 import { aggregateFragranceFamilyFacets } from "@/lib/catalogue/fragrance-family-facets";
 import { contactContentSchema, deliveryContentSchema, homeContentSchema } from "@/lib/storefront/content-schemas";
 import { buildCartWhatsAppMessage } from "@/components/storefront/cart-page-client";
-import type { CartState } from "@/lib/storefront/cart";
+import type { ReconciledCart } from "@/lib/storefront/cart-reconciliation-core";
 import type { PublicProductDto } from "@/lib/catalogue/types";
 
 describe("Phase 6.5 public catalogue pagination", () => {
@@ -258,24 +258,35 @@ describe("Phase 6.5 managed content validation", () => {
 
 describe("Phase 6.5 cart WhatsApp boundary", () => {
   it("builds a customer-safe WhatsApp summary without inventory reservation fields", () => {
-    const cart: CartState = {
-      attribution: null,
+    const cart: ReconciledCart = {
+      readiness: "READY",
+      subtotalXof: 50000,
+      validatedAt: "2026-01-01T00:00:00.000Z",
       lines: [
         {
-          variantId: "variant-1",
+          productId: "11111111-1111-4111-8111-111111111111",
           productSlug: "musc-royal",
           productName: "Musc Royal",
+          brandName: null,
+          variantId: "22222222-2222-4222-8222-222222222222",
+          variantLabel: "50 ml · EDP",
           imageUrl: null,
           imageAlt: "Musc Royal",
           sizeMl: 50,
           concentration: "EDP",
           unitPriceXof: 25000,
-          quantity: 2,
-          availabilityStatus: "IN_STOCK",
+          compareAtPriceXof: null,
+          availability: "AVAILABLE",
+          orderable: true,
+          unavailableReason: null,
+          requestedQuantity: 2,
+          adjustedQuantity: 2,
+          maxQuantity: 20,
+          notices: [],
         },
       ],
     };
-    const message = buildCartWhatsAppMessage(cart, 50000);
+    const message = buildCartWhatsAppMessage(cart);
 
     expect(message).toContain("Musc Royal");
     expect(message).toContain("Sous-total panier");

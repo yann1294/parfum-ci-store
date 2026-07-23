@@ -116,6 +116,8 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - Product editor pages must show a breadcrumb, visible `Retour aux produits` action, product name, and status badge. The return control must include text, not an icon-only affordance.
 - Product image upload surfaces distinguish temporary pending cards from persisted image cards. Successful pending cards are removed after finalization and refresh; failed pending cards remain retryable.
 - Storefront product cards use stable image aspect ratios, `next/image`, French XOF prices, and availability labels. They must not show cost price, physical stock, or reserved stock.
+- Storefront cart surfaces use the same authoritative reconciled line display: product image, name, variant label, quantity controls, availability notice, line total, subtotal, retry state, and customer-friendly manual-confirmation language.
+- The cart drawer is a compact sheet opened from the cart icon. It must have an accessible title, close affordance, item count context, a bounded item preview, links to `/panier` and `/catalogue`, and no internal roadmap wording.
 - Public catalogue filters are URL-backed and accessible on mobile and desktop. Filtered URLs may be shareable, but canonical SEO must avoid indexing arbitrary UTM or heavy filter combinations.
 - The canonical public catalogue reset destination is `/catalogue`. Reset clears search, brand, category, `Public cible`, `Famille olfactive`, concentration, size, availability, page, and returns sorting to `Nouveautés`.
 - Public catalogue pagination uses a compact, mobile-friendly control with previous/next and nearby page numbers. The result summary should read like `Produits 1-8 sur 100`.

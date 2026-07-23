@@ -50,15 +50,8 @@ export function ProductDetailClient({ product }: { product: PublicProductDto }) 
     if (!selectedVariant || !canAdd) return;
     addCartLine(
       {
+        productId: product.id,
         variantId: selectedVariant.id,
-        productSlug: product.slug,
-        productName: product.name,
-        imageUrl: selectedImage?.publicUrl ?? null,
-        imageAlt: selectedImage?.altText ?? product.name,
-        sizeMl: selectedVariant.sizeMl,
-        concentration: selectedVariant.concentration,
-        unitPriceXof: selectedVariant.priceXof,
-        availabilityStatus: selectedVariant.availabilityStatus,
         quantity: Math.min(quantity, availableMax),
       },
       readAttribution(),
