@@ -198,6 +198,7 @@ export type Database = {
           email: string | null
           full_name: string
           id: string
+          normalized_phone: string | null
           phone: string | null
           updated_at: string
           whatsapp: string | null
@@ -207,6 +208,7 @@ export type Database = {
           email?: string | null
           full_name: string
           id?: string
+          normalized_phone?: string | null
           phone?: string | null
           updated_at?: string
           whatsapp?: string | null
@@ -216,6 +218,7 @@ export type Database = {
           email?: string | null
           full_name?: string
           id?: string
+          normalized_phone?: string | null
           phone?: string | null
           updated_at?: string
           whatsapp?: string | null
@@ -305,6 +308,7 @@ export type Database = {
           channel: Database["public"]["Enums"]["notification_channel"]
           created_at: string
           id: string
+          idempotency_key: string | null
           payload: Json
           processed_at: string | null
           provider_message_id: string | null
@@ -320,6 +324,7 @@ export type Database = {
           channel: Database["public"]["Enums"]["notification_channel"]
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           payload?: Json
           processed_at?: string | null
           provider_message_id?: string | null
@@ -335,6 +340,7 @@ export type Database = {
           channel?: Database["public"]["Enums"]["notification_channel"]
           created_at?: string
           id?: string
+          idempotency_key?: string | null
           payload?: Json
           processed_at?: string | null
           provider_message_id?: string | null
@@ -349,13 +355,18 @@ export type Database = {
       }
       order_items: {
         Row: {
+          brand_name: string | null
+          concentration: string | null
           created_at: string
+          currency: string
           id: string
           image_url: string | null
           order_id: string
           product_id: string | null
           product_name: string
+          product_slug: string | null
           quantity: number
+          size_ml: number | null
           sku: string | null
           total_price_xof: number
           unit_price_xof: number
@@ -364,13 +375,18 @@ export type Database = {
           variant_name: string | null
         }
         Insert: {
+          brand_name?: string | null
+          concentration?: string | null
           created_at?: string
+          currency?: string
           id?: string
           image_url?: string | null
           order_id: string
           product_id?: string | null
           product_name: string
+          product_slug?: string | null
           quantity: number
+          size_ml?: number | null
           sku?: string | null
           total_price_xof: number
           unit_price_xof: number
@@ -379,13 +395,18 @@ export type Database = {
           variant_name?: string | null
         }
         Update: {
+          brand_name?: string | null
+          concentration?: string | null
           created_at?: string
+          currency?: string
           id?: string
           image_url?: string | null
           order_id?: string
           product_id?: string | null
           product_name?: string
+          product_slug?: string | null
           quantity?: number
+          size_ml?: number | null
           sku?: string | null
           total_price_xof?: number
           unit_price_xof?: number
@@ -1061,6 +1082,8 @@ export type Database = {
           created_at: string
           default_low_stock_threshold: number
           delivery_information: string | null
+          enabled_delivery_methods: string[]
+          enabled_payment_methods: Database["public"]["Enums"]["payment_method"][]
           facebook_url: string | null
           id: boolean
           instagram_url: string | null
@@ -1082,6 +1105,8 @@ export type Database = {
           created_at?: string
           default_low_stock_threshold?: number
           delivery_information?: string | null
+          enabled_delivery_methods?: string[]
+          enabled_payment_methods?: Database["public"]["Enums"]["payment_method"][]
           facebook_url?: string | null
           id?: boolean
           instagram_url?: string | null
@@ -1103,6 +1128,8 @@ export type Database = {
           created_at?: string
           default_low_stock_threshold?: number
           delivery_information?: string | null
+          enabled_delivery_methods?: string[]
+          enabled_payment_methods?: Database["public"]["Enums"]["payment_method"][]
           facebook_url?: string | null
           id?: boolean
           instagram_url?: string | null
@@ -1208,6 +1235,7 @@ export type Database = {
       }
     }
     Functions: {
+      create_guest_order_server: { Args: { request: Json }; Returns: Json }
       initialize_variant_inventory: {
         Args: {
           initial_stock: number
