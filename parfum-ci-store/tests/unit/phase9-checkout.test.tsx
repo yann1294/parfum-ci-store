@@ -23,6 +23,7 @@ import {
   configuredPaymentMethods,
   defaultPaymentConfigs,
   normalizePaymentConfigs,
+  validatePaymentSettingsForSave,
 } from "@/lib/orders/payment-settings-core";
 import { CART_SCHEMA_VERSION, clearCartForTests, readCart, writeCart } from "@/lib/storefront/cart";
 import type { ReconciledCart } from "@/lib/storefront/cart-reconciliation-core";
@@ -114,6 +115,13 @@ function seedCart() {
   });
 }
 
+async function fillRequiredCheckoutFields() {
+  fireEvent.change(screen.getByLabelText("Nom complet"), { target: { value: "Awa Kone" } });
+  fireEvent.change(screen.getByLabelText("Téléphone"), { target: { value: "+225 07 00 00 00 00" } });
+  fireEvent.change(screen.getByLabelText("Commune ou quartier"), { target: { value: "Cocody" } });
+  fireEvent.click(screen.getByLabelText(/J'accepte les conditions/i));
+}
+
 describe("Phase 9 checkout helpers", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -183,6 +191,20 @@ describe("Phase 9 checkout helpers", () => {
     expect(configuredPaymentMethods(configs)).toEqual(["CASH_ON_DELIVERY"]);
     expect(JSON.stringify(configs)).not.toContain("CRYPTO");
   });
+
+  it("rejects incomplete enabled manual methods but allows cash on delivery without merchant number", () => {
+    const configs = defaultPaymentConfigs(["CASH_ON_DELIVERY", "ORANGE_MONEY"]);
+    configs.CASH_ON_DELIVERY = { ...configs.CASH_ON_DELIVERY, merchantNumber: "", instructions: "" };
+    configs.ORANGE_MONEY = { ...configs.ORANGE_MONEY, merchantNumber: "", instructions: "Instructions publiques." };
+
+    const issues = validatePaymentSettingsForSave(configs);
+    expect(issues.some((issue) => issue.method === "CASH_ON_DELIVERY" && issue.field === "merchantNumber")).toBe(false);
+    expect(issues).toContainEqual({
+      method: "ORANGE_MONEY",
+      field: "merchantNumber",
+      message: "Le numéro marchand est requis.",
+    });
+  });
 });
 
 describe("Phase 9 checkout form", () => {
@@ -230,15 +252,63 @@ describe("Phase 9 checkout form", () => {
     render(<CheckoutPageClient settings={settings} />);
     expect(await screen.findByText("Sauvage")).toBeDefined();
 
-    fireEvent.change(screen.getByLabelText("Nom complet"), { target: { value: "Awa Kone" } });
-    fireEvent.change(screen.getByLabelText("Téléphone"), { target: { value: "+225 07 00 00 00 00" } });
-    fireEvent.change(screen.getByLabelText("Commune ou quartier"), { target: { value: "Cocody" } });
-    fireEvent.click(screen.getByLabelText(/J'accepte les conditions/i));
+    await fillRequiredCheckoutFields();
     fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/commande/succes/CMD-2026-A1B2C3"));
     expect(readCart().items).toHaveLength(0);
     expect(readSafeConfirmation("CMD-2026-A1B2C3")?.orderNumber).toBe("CMD-2026-A1B2C3");
+  });
+
+  it("does not clear the cart or navigate when /api/orders returns HTTP 400", async () => {
+    seedCart();
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/api/cart/reconcile") return Response.json(readySnapshot);
+      if (url === "/api/orders") {
+        return Response.json(
+          { error: { code: "ORDER_PAYMENT_METHOD_DISABLED", message: "disabled" } },
+          { status: 400 },
+        );
+      }
+      throw new Error(`Unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CheckoutPageClient settings={settings} />);
+    expect(await screen.findByText("Sauvage")).toBeDefined();
+    await fillRequiredCheckoutFields();
+    await waitFor(() =>
+      expect((screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled).toBe(false),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
+
+    expect(await screen.findByText("Ce mode de paiement n'est plus disponible.")).toBeDefined();
+    expect(push).not.toHaveBeenCalled();
+    expect(readCart().items).toHaveLength(1);
+  });
+
+  it("rejects malformed successful order payloads before confirmation handling", async () => {
+    seedCart();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === "/api/cart/reconcile") return Response.json(readySnapshot);
+        if (url === "/api/orders") return Response.json({ ok: true }, { status: 201 });
+        throw new Error(`Unexpected ${url}`);
+      }),
+    );
+
+    render(<CheckoutPageClient settings={settings} />);
+    expect(await screen.findByText("Sauvage")).toBeDefined();
+    await fillRequiredCheckoutFields();
+    await waitFor(() =>
+      expect((screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled).toBe(false),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
+
+    expect(await screen.findByText("La commande n'a pas pu être enregistrée.")).toBeDefined();
+    expect(push).not.toHaveBeenCalled();
+    expect(readCart().items).toHaveLength(1);
   });
 
   it("validates the cart once after hydration and does not loop when readiness changes", async () => {
@@ -373,6 +443,32 @@ describe("Phase 9 WhatsApp order intent", () => {
     fireEvent.click(screen.getByRole("button", { name: "Commander via WhatsApp" }));
 
     await waitFor(() => expect(openMock).toHaveBeenCalled());
+    expect(decodeURIComponent(String(openMock.mock.calls[0]?.[0]))).toContain("Sauvage");
+  });
+
+  it("keeps WhatsApp usable when optional intent tracking endpoint fails after ready reconciliation", async () => {
+    seedCart();
+    const openMock = vi.spyOn(window, "open").mockImplementation(() => null);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === "/api/cart/reconcile") return Response.json(readySnapshot);
+        if (url === "/api/storefront/order-intents/whatsapp") {
+          return Response.json(
+            { ok: false, error: { code: "WHATSAPP_INTENT_RATE_LIMITED", message: "rate" } },
+            { status: 429 },
+          );
+        }
+        throw new Error(`Unexpected ${url}`);
+      }),
+    );
+
+    render(<CartPageClient whatsappNumber="2250700000000" />);
+    expect(await screen.findByText("Sauvage")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Commander via WhatsApp" }));
+
+    await waitFor(() => expect(openMock).toHaveBeenCalled());
+    expect(await screen.findByText(/Le suivi WhatsApp n'a pas été enregistré/i)).toBeDefined();
     expect(decodeURIComponent(String(openMock.mock.calls[0]?.[0]))).toContain("Sauvage");
   });
 

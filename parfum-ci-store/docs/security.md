@@ -141,11 +141,15 @@ The checkout UI never imports the privileged Supabase client and never calculate
 
 Payment choices displayed at checkout are derived from `store_settings.enabled_payment_methods` plus structured `payment_method_configs`. Manual methods are hidden unless their public customer instructions are configured. OWNER and ADMIN may update this configuration from `/admin/contenu`; other roles must not mutate it.
 
+Payment settings saves use the server-side admin client and update only the explicit payment columns on the boolean singleton row (`id = true`). If `payment_method_configs` is missing, the application reports the pending migration instead of falling back to hard-coded or local-only settings.
+
 Detailed confirmation data is a short-lived session-storage recovery aid written after successful checkout. It excludes the internal order UUID and must not be treated as an authorization token. Direct visits to `/commande/succes/[orderNumber]` show a generic recovery state and do not query protected order tables by order number alone.
 
 `POST /api/orders/track` is the server-only customer tracking lookup. It validates bounded JSON, normalizes Côte d'Ivoire phone numbers with the Phase 8 policy, rate limits attempts, queries with the server-secret client, and returns data only when both order number and submitted phone match. Wrong phone, unknown order, malformed lookup, and rate-limited attempts use safe generic responses and do not expose SQL, Supabase details, customer IDs, full addresses, cost prices, inventory data, audit logs, notification payloads, or staff notes.
 
 `POST /api/storefront/order-intents/whatsapp` is a server-controlled analytics boundary. It accepts only bounded cart identifiers/quantities, revalidates through the public catalogue views, stores safe authoritative intent snapshots with the server-secret client, and returns no internal IDs. It never calls the Phase 8 order transaction, never changes `reserved_quantity`, and never decrements `stock_on_hand`. Direct anonymous inserts into intent tables are not allowed; RLS limits staff reads to authorized operational roles.
+
+The checkout client must require both `response.ok` and a valid Phase 8 confirmation body before writing confirmation state, clearing the cart, or navigating to success. Typed 400 responses and malformed success bodies are customer-safe failures.
 
 ## Test Users
 

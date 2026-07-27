@@ -160,14 +160,24 @@ export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) 
 
   const itemCount = useMemo(() => cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0, [cart]);
 
+  function openWhatsAppForSnapshot(snapshot: ReconciledCart, intentReference?: string | null) {
+    const url = buildWhatsAppUrlForNumber(
+      normalizedWhatsAppNumber,
+      buildCartWhatsAppMessage(snapshot, intentReference),
+    );
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   async function openWhatsApp() {
     if (!cart || !normalizedWhatsAppNumber || whatsappPending) return;
     setWhatsappPending(true);
     setValidation((current) => ({ ...current, status: "loading", message: null }));
+    let fallbackSnapshot: ReconciledCart | null = null;
 
     try {
       const latestCart = readCart();
       const latest = await reconcileCartClient(latestCart);
+      fallbackSnapshot = latest;
       setValidation({ status: "ready", message: null, snapshot: latest });
       if (latest.readiness !== "READY") {
         setValidation({
@@ -205,26 +215,48 @@ export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) 
         | { ok: false; error?: { code: string; message: string } };
 
       if (!payload.ok) {
+        if (
+          payload.error?.code === "WHATSAPP_INTENT_CART_NOT_READY" ||
+          payload.error?.code === "WHATSAPP_INTENT_VALIDATION_FAILED"
+        ) {
+          setValidation({
+            status: "error",
+            message: "Le panier doit être revérifié avant l'envoi via WhatsApp.",
+            snapshot: latest,
+          });
+          return;
+        }
         setValidation({
-          status: "error",
-          message: "Le panier n'a pas pu être préparé pour WhatsApp.",
+          status: "ready",
+          message: "Le suivi WhatsApp n'a pas été enregistré, mais votre panier peut être envoyé.",
           snapshot: latest,
         });
+        openWhatsAppForSnapshot(latest);
         return;
       }
 
-      setValidation({ status: "ready", message: null, snapshot: payload.snapshot });
-      const url = buildWhatsAppUrlForNumber(
-        normalizedWhatsAppNumber,
-        buildCartWhatsAppMessage(payload.snapshot, payload.intentReference),
-      );
-      if (url) window.open(url, "_blank", "noopener,noreferrer");
+      setValidation({
+        status: "ready",
+        message: payload.tracked ? null : "Le suivi WhatsApp n'a pas été enregistré, mais votre panier peut être envoyé.",
+        snapshot: payload.snapshot,
+      });
+      openWhatsAppForSnapshot(payload.snapshot, payload.intentReference);
     } catch {
-      setValidation((current) => ({
-        ...current,
-        status: "error",
-        message: "Le panier n'a pas pu être vérifié pour le moment.",
-      }));
+      const latest = fallbackSnapshot;
+      if (latest?.readiness === "READY") {
+        setValidation({
+          status: "ready",
+          message: "Le suivi WhatsApp n'a pas été enregistré, mais votre panier peut être envoyé.",
+          snapshot: latest,
+        });
+        openWhatsAppForSnapshot(latest);
+      } else {
+        setValidation((current) => ({
+          ...current,
+          status: "error",
+          message: "Le panier n'a pas pu être vérifié pour le moment.",
+        }));
+      }
     } finally {
       setWhatsappPending(false);
     }

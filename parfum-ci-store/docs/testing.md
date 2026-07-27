@@ -218,6 +218,8 @@ Checkout reconciliation-loop tests must verify one validation after hydration, n
 
 WhatsApp intent tests must verify no intent on render, intent creation only after a customer click, authoritative prices/names from server reconciliation, duplicate-click deduplication, safe attribution storage, no Phase 8 order creation, no stock reservation/decrement, persistence-failure fallback, and encoded WhatsApp text without sensitive fields.
 
+Phase 9 integration repair tests must verify payment settings persistence reaches the singleton `store_settings` update with only explicit payment columns, missing payment migration is surfaced as a typed safe failure, HTTP 400 from `/api/orders` does not clear cart or navigate, malformed 2xx order payloads are rejected, order errors remain visible after follow-up cart refresh, and optional WhatsApp intent endpoint failures do not block a freshly validated READY cart.
+
 Route tests for `/api/orders/track` must verify bounded JSON, phone normalization, rate limiting, no-store responses, generic no-result shape for wrong phone/unknown order, and absence of customer IDs, cost prices, inventory data, audit data, notification payloads, or Supabase diagnostics.
 
 Playwright Phase 9 tests require real ACTIVE products with initialized available inventory, applied Phase 8 migrations, and a non-production database. Do not mark successful checkout, cart clearing, duplicate submission, tracking security, wrong-phone privacy, or reservation behavior as passed without a real database-backed order.

@@ -52,6 +52,12 @@ Expected: OWNER/ADMIN can configure payment labels, enabled state, merchant numb
 Actual:
 PASS/FAIL:
 
+## Payment Settings Persistence Failure
+
+Expected: if the Phase 9 payment settings migration is missing or the database rejects the save, `/admin/contenu` shows a failure message, preserves entered values, and does not show a success toast.
+Actual:
+PASS/FAIL:
+
 ## Checkout Reconciliation Lifecycle
 
 Expected: `/commande` shows `Vérification du panier` briefly, then settles without repeated validation requests until the cart intent changes or the user retries.
@@ -85,6 +91,12 @@ PASS/FAIL:
 ## Recoverable Failure
 
 Expected: temporary validation or order creation failure preserves cart, form values, and retry path.
+Actual:
+PASS/FAIL:
+
+## Checkout HTTP 400 Handling
+
+Expected: a 400 response from `POST /api/orders` displays a French error, preserves the cart and form, does not clear the cart, and does not navigate to `/commande/succes`.
 Actual:
 PASS/FAIL:
 
@@ -151,6 +163,12 @@ PASS/FAIL:
 ## WhatsApp Intent Fallback
 
 Expected: if analytics persistence fails after cart validation, the UI allows a controlled WhatsApp fallback without claiming tracking succeeded.
+Actual:
+PASS/FAIL:
+
+## WhatsApp Validation Failure
+
+Expected: if fresh cart reconciliation fails or readiness is not READY, WhatsApp is blocked with a cart-validation message and no intent/order/reservation is created.
 Actual:
 PASS/FAIL:
 

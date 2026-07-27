@@ -16,8 +16,10 @@ import { updateStorefrontContent } from "@/lib/storefront/content";
 import {
   defaultPaymentConfigs,
   paymentMethodConfigSchema,
+  PaymentSettingsError,
   supportedPaymentMethods,
   updatePaymentSettings as persistPaymentSettings,
+  validatePaymentSettingsForSave,
   type PaymentMethodConfig,
 } from "@/lib/orders/payment-settings";
 import type { PaymentMethod } from "@/lib/orders/display";
@@ -214,6 +216,11 @@ export async function updatePaymentSettings(
       configs[method] = paymentMethodConfigSchema.parse(raw);
     }
 
+    const validationIssues = validatePaymentSettingsForSave(configs);
+    if (validationIssues.length > 0) {
+      return { ok: false, message: validationIssues[0]?.message ?? "Vérifiez les paramètres de paiement." };
+    }
+
     const saved = await persistPaymentSettings(configs);
     await auditCatalogueEvent({
       actorId: staff.id,
@@ -235,6 +242,18 @@ export async function updatePaymentSettings(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return { ok: false, message: "Vérifiez les paramètres de paiement." };
+    }
+    if (error instanceof PaymentSettingsError) {
+      if (error.code === "PAYMENT_SETTINGS_MIGRATION_REQUIRED") {
+        return {
+          ok: false,
+          message:
+            "La migration des paramètres de paiement n'est pas appliquée. Appliquez la migration Phase 9 puis régénérez les types.",
+        };
+      }
+      if (error.code === "PAYMENT_SETTINGS_INVALID") {
+        return { ok: false, message: "Complétez les modes de paiement activés avant d'enregistrer." };
+      }
     }
     return { ok: false, message: "Les paramètres de paiement n'ont pas pu être enregistrés." };
   }

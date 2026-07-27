@@ -89,3 +89,62 @@ export function configuredPaymentMethods(configs: Record<PaymentMethod, PaymentM
     })
     .sort((a, b) => configs[a].displayOrder - configs[b].displayOrder);
 }
+
+export type PaymentSettingsValidationIssue = {
+  method: PaymentMethod;
+  field: keyof PaymentMethodConfig;
+  message: string;
+};
+
+function validPublicMerchantNumber(value: string) {
+  return /^[0-9+\s().-]{6,40}$/.test(value);
+}
+
+export function validatePaymentSettingsForSave(configs: Record<PaymentMethod, PaymentMethodConfig>) {
+  const issues: PaymentSettingsValidationIssue[] = [];
+  const displayOrders = new Set<number>();
+
+  for (const method of supportedPaymentMethods) {
+    const config = configs[method];
+    if (displayOrders.has(config.displayOrder)) {
+      issues.push({ method, field: "displayOrder", message: "Chaque ordre d'affichage doit être unique." });
+    }
+    displayOrders.add(config.displayOrder);
+
+    if (!config.enabled) continue;
+    if (!config.label.trim()) {
+      issues.push({ method, field: "label", message: "Le libellé client est requis." });
+    }
+
+    if (method === "CASH_ON_DELIVERY") continue;
+
+    if (!config.instructions.trim()) {
+      issues.push({ method, field: "instructions", message: "Les instructions client sont requises." });
+    }
+
+    if (method === "PAY_IN_STORE") continue;
+
+    if (method === "BANK_TRANSFER") {
+      if (!config.beneficiaryName.trim()) {
+        issues.push({ method, field: "beneficiaryName", message: "Le bénéficiaire est requis." });
+      }
+      continue;
+    }
+
+    if (!config.merchantNumber.trim()) {
+      issues.push({ method, field: "merchantNumber", message: "Le numéro marchand est requis." });
+    } else if (!validPublicMerchantNumber(config.merchantNumber.trim())) {
+      issues.push({ method, field: "merchantNumber", message: "Le numéro marchand n'est pas valide." });
+    }
+  }
+
+  if (configuredPaymentMethods(configs).length === 0) {
+    issues.push({
+      method: "CASH_ON_DELIVERY",
+      field: "enabled",
+      message: "Activez au moins un mode de paiement utilisable.",
+    });
+  }
+
+  return issues;
+}

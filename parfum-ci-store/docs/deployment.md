@@ -81,6 +81,7 @@ pnpm build
 - Phase 8 adds the guest-order transaction migration. Review `supabase/migrations/20260723080100_phase8_guest_order_transaction.sql`, apply it manually with `pnpm exec supabase db push`, then regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`. Run `psql "$DATABASE_URL" -f supabase/tests/phase8_guest_order_transaction.sql` against an isolated local or staging database, plus real concurrent final-unit tests, before enabling a checkout UI.
 - Phase 9 adds customer checkout, confirmation, and tracking routes. The Phase 9 correction migration `20260727090100_phase9_payment_settings_whatsapp_intents.sql` adds structured payment-method configuration and WhatsApp order-intent analytics. Review it, apply it manually with `pnpm exec supabase db push`, then regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`.
 - Confirm Phase 8 is applied and concurrency-verified before enabling `/commande`. Payment method and delivery method choices come from `store_settings.enabled_payment_methods` and `store_settings.enabled_delivery_methods`; merchant/payment instructions come from managed store settings and content. Configure these values before production checkout testing.
+- After applying the Phase 9 correction migration, verify `/admin/contenu` can save multiple payment methods and that `src/types/database.types.ts` includes `payment_method_configs`, `storefront_order_intents`, and `storefront_order_intent_items`.
 
 ## Product Images
 
@@ -130,6 +131,7 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 - Phase 8 `/api/orders` must return `Cache-Control: no-store`, call the service-role-only transaction wrapper, and create pending notification intents only. Do not deploy checkout UI until the final-unit concurrency and rollback checks have passed.
 - Phase 9 `/commande`, `/commande/succes/[orderNumber]`, and `/suivi-commande` must be `noindex, nofollow` and absent from `/sitemap.xml`. `/api/orders/track` must return `Cache-Control: no-store` and require order number plus phone.
 - `/api/storefront/order-intents/whatsapp` must return `Cache-Control: no-store`, create only analytics intent rows from authoritative cart data, and must not create orders or inventory reservations.
+- Test a controlled `/api/orders` HTTP 400 before launch. It must leave the cart intact and must not redirect to a confirmation route.
 - Admin routes require authentication.
 - Checkout creates orders without exposing secrets.
 - Resend sends transactional messages.

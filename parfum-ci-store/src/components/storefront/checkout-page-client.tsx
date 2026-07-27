@@ -19,6 +19,11 @@ import {
   storeSafeConfirmation,
 } from "@/lib/orders/checkout-client";
 import {
+  buildGuestOrderRequest,
+  checkoutOrderErrorSchema,
+  checkoutOrderSuccessSchema,
+} from "@/lib/orders/checkout-submit-client";
+import {
   deliveryMethodLabel,
   configuredPaymentMethodLabel,
   merchantNumberForPaymentMethod,
@@ -184,11 +189,6 @@ function requestIntentSignature(form: CheckoutFormState, cart: CartState | null)
   });
 }
 
-function toOptional(value: string) {
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
-}
-
 export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
   const router = useRouter();
   const [hydrated, setHydrated] = useState(false);
@@ -201,6 +201,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
   const [idempotencyKey, setIdempotencyKey] = useState(createCheckoutIdempotencyKey);
   const [lastSubmittedIntent, setLastSubmittedIntent] = useState<string | null>(null);
   const firstInvalidRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null);
+  const submissionMessageRef = useRef<HTMLDivElement | null>(null);
   const lastCartSignatureRef = useRef<string>("empty");
   const snapshotRef = useRef<ReconciledCart | null>(null);
   const requestId = useRef(0);
@@ -353,84 +354,92 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     setStatus("submitting");
     setMessage(null);
 
-    const response = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-      body: JSON.stringify({
-        idempotencyKey: key,
-        customer: {
-          fullName: parsed.data.fullName,
-          phone: parsed.data.phone,
-          city: parsed.data.city,
-          commune: parsed.data.commune,
-          email: toOptional(parsed.data.email),
-          whatsapp: toOptional(parsed.data.whatsapp),
-          address: toOptional(parsed.data.address),
-          landmark: toOptional(parsed.data.landmark),
-          deliveryInstructions: toOptional(parsed.data.deliveryInstructions),
-          customerNote: toOptional(parsed.data.customerNote),
-        },
-        deliveryMethod: parsed.data.deliveryMethod,
-        paymentMethod: parsed.data.paymentMethod,
-        lines: latestCart.items.map((item) => ({
-          productId: item.productId,
-          variantId: item.variantId,
-          quantity: item.quantity,
-        })),
-        attribution: readAttribution() ?? undefined,
-        honeypot: parsed.data.website,
-      }),
+    const requestBody = buildGuestOrderRequest({
+      idempotencyKey: key,
+      customer: {
+        fullName: parsed.data.fullName,
+        phone: parsed.data.phone,
+        city: parsed.data.city,
+        commune: parsed.data.commune,
+        email: parsed.data.email,
+        whatsapp: parsed.data.whatsapp,
+        address: parsed.data.address,
+        landmark: parsed.data.landmark,
+        deliveryInstructions: parsed.data.deliveryInstructions,
+        customerNote: parsed.data.customerNote,
+      },
+      deliveryMethod: parsed.data.deliveryMethod,
+      paymentMethod: parsed.data.paymentMethod,
+      cart: latestCart,
+      attribution: readAttribution() ?? null,
+      honeypot: parsed.data.website,
     });
 
-    const payload = (await response.json()) as
-      | {
-          error: { code: OrderErrorCode; message: string };
-        }
-      | {
-          orderNumber: string;
-          orderStatus: string;
-          paymentStatus: string;
-          currency: "XOF";
-          subtotalXof: number;
-          deliveryFeeXof: number;
-          totalXof: number;
-          createdAt: string;
-          items: Array<{
-            productName: string;
-            variantLabel: string | null;
-            quantity: number;
-            unitPriceXof: number;
-            lineTotalXof: number;
-          }>;
-          nextStepCode: string;
-        };
-
-    if ("error" in payload) {
+    let response: Response;
+    let payload: unknown;
+    try {
+      response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify(requestBody),
+      });
+      payload = await response.json();
+    } catch {
       setStatus("review");
-      setMessage(orderErrorMessage(payload.error.code));
-      if (
-        payload.error.code === "ORDER_ITEM_UNAVAILABLE" ||
-        payload.error.code === "ORDER_INSUFFICIENT_STOCK" ||
-        payload.error.code === "ORDER_INVENTORY_NOT_CONFIGURED" ||
-        payload.error.code === "ORDER_PAYMENT_METHOD_DISABLED" ||
-        payload.error.code === "ORDER_DELIVERY_METHOD_DISABLED"
-      ) {
-        void validateCart(true);
-      }
+      setMessage("La commande n'a pas pu être enregistrée.");
+      window.setTimeout(() => submissionMessageRef.current?.focus(), 0);
       return;
     }
 
+    const parsedError = checkoutOrderErrorSchema.safeParse(payload);
+    if (!response.ok) {
+      setStatus("review");
+      const code = parsedError.success ? parsedError.data.error.code : "ORDER_CREATION_FAILED";
+      const errorMessage = orderErrorMessage(code);
+      setMessage(errorMessage);
+      if (
+        code === "ORDER_ITEM_UNAVAILABLE" ||
+        code === "ORDER_INSUFFICIENT_STOCK" ||
+        code === "ORDER_INVENTORY_NOT_CONFIGURED" ||
+        code === "ORDER_PAYMENT_METHOD_DISABLED" ||
+        code === "ORDER_DELIVERY_METHOD_DISABLED"
+      ) {
+        void validateCart(true).finally(() => {
+          setStatus("review");
+          setMessage(errorMessage);
+        });
+      }
+      window.setTimeout(() => submissionMessageRef.current?.focus(), 0);
+      return;
+    }
+
+    if (parsedError.success) {
+      setStatus("review");
+      setMessage(orderErrorMessage(parsedError.data.error.code));
+      window.setTimeout(() => submissionMessageRef.current?.focus(), 0);
+      return;
+    }
+
+    const parsedSuccess = checkoutOrderSuccessSchema.safeParse(payload);
+    if (!parsedSuccess.success) {
+      setStatus("review");
+      setMessage("La commande n'a pas pu être enregistrée.");
+      window.setTimeout(() => submissionMessageRef.current?.focus(), 0);
+      return;
+    }
+
+    const confirmation = parsedSuccess.data;
     storeSafeConfirmation({
-      confirmation: payload,
+      confirmation,
       deliveryMethod: parsed.data.deliveryMethod,
       paymentMethod: parsed.data.paymentMethod,
       customerPhone: parsed.data.phone,
-      customerEmail: toOptional(parsed.data.email),
+      customerEmail: parsed.data.email.trim() || undefined,
     });
     clearCart();
     setIdempotencyKey(createCheckoutIdempotencyKey());
-    router.push(`/commande/succes/${encodeURIComponent(payload.orderNumber)}`);
+    router.push(`/commande/succes/${encodeURIComponent(confirmation.orderNumber)}`);
   }
 
   if (!hydrated) {
@@ -464,7 +473,11 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
         </div>
 
         {message ? (
-          <Alert variant={status === "error" || status === "review" ? "destructive" : "default"}>
+          <Alert
+            ref={submissionMessageRef}
+            tabIndex={-1}
+            variant={status === "error" || status === "review" ? "destructive" : "default"}
+          >
             <AlertTitle>Commande non envoyée</AlertTitle>
             <AlertDescription>{message}</AlertDescription>
           </Alert>

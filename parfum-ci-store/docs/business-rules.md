@@ -52,6 +52,7 @@
 - Cart reconciliation is fresh on cart open, `/panier`, add/update/remove, retry, WhatsApp ordering, and tab reactivation after the stale window. It does not poll continuously.
 - Checkout lives at `/commande` and may submit only when the authoritative reconciled cart readiness is `READY`. It forces a fresh reconciliation immediately before `POST /api/orders`.
 - Checkout submits only cart identifiers/quantities, customer fields, delivery method, payment method, validated attribution, honeypot, and an idempotency key. Product names, prices, SKUs, totals, stock, statuses, and customer IDs are never accepted from the browser.
+- Checkout treats order creation as successful only when `POST /api/orders` returns a successful HTTP status and the body matches the Phase 8 confirmation contract. HTTP 400, typed order errors, network failures, and malformed 2xx bodies must preserve the cart and form and must not navigate to confirmation.
 - The cart is cleared only after a confirmed Phase 8 success response. Recoverable failures preserve customer fields, cart contents, and the current checkout attempt key when the material request is unchanged.
 - Confirmation details are not shown from an order number alone. Detailed `/commande/succes/[orderNumber]` rendering requires the short-lived browser confirmation state created by the successful checkout flow; otherwise the page shows a generic success/recovery state.
 - Public order tracking requires both order number and the normalized phone number submitted with the order. Unknown orders and wrong phones use the same generic no-result response.
@@ -60,6 +61,7 @@
 - Checkout cart validation uses the material cart intent only: product ID, variant ID, and quantity. Hydration triggers one reconciliation, readiness changes do not trigger a loop, and explicit retry or a material cart change triggers one new request.
 - WhatsApp is the primary cart ordering CTA when a WhatsApp number is configured. Formal online checkout remains available as a secondary action and still uses Phase 8 order creation.
 - WhatsApp order-intent tracking is analytics only. It stores authoritative reconciled subtotal and safe line snapshots, but it never creates a Phase 8 order, reserves inventory, decrements stock, changes payment status, or confirms order completion.
+- WhatsApp blocks only when fresh cart reconciliation/readiness fails, the cart is empty/unavailable/adjusted, the WhatsApp number is invalid/missing, or an authoritative cart summary cannot be generated. Optional intent tracking failures are non-blocking and may continue with a customer-visible notice that tracking was not recorded.
 
 ## Public Content
 
@@ -90,6 +92,7 @@
 
 - MVP methods are manual Mobile Money and cash on delivery.
 - Checkout displays only payment methods that are supported by the Phase 8 enum, enabled in store settings, and configured with required public instructions. Mobile Money methods require a public merchant number and instructions; bank transfer requires instructions and a beneficiary; pay-in-store requires instructions. Underconfigured manual methods are hidden.
+- Payment settings persistence writes only `enabled_payment_methods` and `payment_method_configs` on the singleton `store_settings` row and preserves unrelated settings. Missing `payment_method_configs` indicates the Phase 9 correction migration is not applied and must be reported as an operational setup failure.
 - No Stripe in the MVP.
 - Never store card details, Mobile Money PINs, OTPs, or CVVs.
 - Manual Mobile Money verification is performed by an authenticated admin.
