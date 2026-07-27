@@ -54,6 +54,7 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - The cart remains pre-checkout discovery state. `Commander via WhatsApp` opens a manual enquiry and does not create orders, reserve stock, decrement inventory, or confirm payment.
 - Phase 7 hardens the guest cart with versioned local intent storage and authoritative server reconciliation before display-sensitive ordering actions. It still does not create orders, reserve inventory, decrement stock, process payments, or persist anonymous carts server-side.
 - Phase 8 reuses the Phase 7 intent-only cart as input. Guest order creation revalidates every submitted line in a PostgreSQL transaction before order creation and reservation.
+- Phase 9 adds the guest checkout UI at `/commande`, order confirmation at `/commande/succes/[orderNumber]`, and secure order tracking at `/suivi-commande`. The UI reuses Phase 7 cart reconciliation and Phase 8 `POST /api/orders`; it does not duplicate order creation, pricing, reservation, customer matching, notification, or audit logic.
 
 ## Non-Goals for MVP
 

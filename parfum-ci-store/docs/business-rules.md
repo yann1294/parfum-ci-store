@@ -50,6 +50,13 @@
 - Cart ordering readiness is authoritative. WhatsApp ordering is disabled while validating, after validation failure, when unavailable lines remain, or when quantity adjustments are unresolved.
 - Quantity requests are positive integers capped at the configured cart maximum. Server reconciliation may reduce the effective orderable quantity for totals, but the line remains visible with a correction notice.
 - Cart reconciliation is fresh on cart open, `/panier`, add/update/remove, retry, WhatsApp ordering, and tab reactivation after the stale window. It does not poll continuously.
+- Checkout lives at `/commande` and may submit only when the authoritative reconciled cart readiness is `READY`. It forces a fresh reconciliation immediately before `POST /api/orders`.
+- Checkout submits only cart identifiers/quantities, customer fields, delivery method, payment method, validated attribution, honeypot, and an idempotency key. Product names, prices, SKUs, totals, stock, statuses, and customer IDs are never accepted from the browser.
+- The cart is cleared only after a confirmed Phase 8 success response. Recoverable failures preserve customer fields, cart contents, and the current checkout attempt key when the material request is unchanged.
+- Confirmation details are not shown from an order number alone. Detailed `/commande/succes/[orderNumber]` rendering requires the short-lived browser confirmation state created by the successful checkout flow; otherwise the page shows a generic success/recovery state.
+- Public order tracking requires both order number and the normalized phone number submitted with the order. Unknown orders and wrong phones use the same generic no-result response.
+- Phase 9 delivery fees remain pending because Phase 8 records `delivery_fee_xof = 0` for manual confirmation. The storefront must display `Frais de livraison à confirmer` and must not present zero as free delivery.
+- Checkout requires explicit delivery/return terms acceptance in the UI. The current Phase 8 schema does not snapshot a terms version/timestamp; add a reviewed migration before using terms acceptance for audit/legal proof.
 
 ## Public Content
 

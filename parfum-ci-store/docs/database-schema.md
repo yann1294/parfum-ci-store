@@ -259,6 +259,14 @@ Phase 8 adds `supabase/migrations/20260723080100_phase8_guest_order_transaction.
 
 The transaction locks affected variants/products in deterministic variant-ID order, validates ACTIVE publication requirements, active variants, positive prices, initialized inventory and available quantity, creates the customer/order/items/history/audit/notification rows, increments `reserved_quantity`, and inserts `RESERVED` inventory ledger rows. `stock_on_hand` is not decremented.
 
+## Phase 9 Checkout And Tracking
+
+Phase 9 does not add a database migration. Checkout submits to the existing Phase 8 `/api/orders` contract and order transaction.
+
+Confirmation detail recovery is intentionally client-session scoped and does not add a broadly readable order lookup table or view. Public order tracking is a server-only lookup requiring both `orders.order_number` and the submitted `orders.customer_phone`; it returns a limited customer-facing projection and never exposes internal order IDs, customer IDs, inventory reservations, audit rows, notification rows, or staff notes.
+
+Terms acceptance is currently enforced by the checkout UI only. The schema has no terms-version/timestamp snapshot column; add a forward-only migration before relying on terms acceptance for audit or legal proof.
+
 ## Local Reset, Seed, and Verification
 
 For local development only, run:

@@ -133,6 +133,16 @@ The real order engine lives in `app_private.create_guest_order(jsonb)`. `app_pri
 
 Guest-order audit metadata is bounded and excludes full request bodies, full addresses, customer notes beyond order snapshots, payment secrets, cost prices, SQL diagnostics, stack traces, and notification internals. Notification rows are pending intents only; no external delivery occurs in Phase 8.
 
+## Phase 9 Checkout And Tracking
+
+`/commande`, `/commande/succes/[orderNumber]`, and `/suivi-commande` are `noindex, nofollow` customer routes and are excluded from the sitemap. `/commande` reads cart intent from the Phase 7 client cart, reconciles through `/api/cart/reconcile`, and submits only the Phase 8 request contract to `POST /api/orders`.
+
+The checkout UI never imports the privileged Supabase client and never calculates authoritative prices, totals, publication state, or reservation state. It clears the cart only after a successful Phase 8 response.
+
+Detailed confirmation data is a short-lived session-storage recovery aid written after successful checkout. It excludes the internal order UUID and must not be treated as an authorization token. Direct visits to `/commande/succes/[orderNumber]` show a generic recovery state and do not query protected order tables by order number alone.
+
+`POST /api/orders/track` is the server-only customer tracking lookup. It validates bounded JSON, normalizes Côte d'Ivoire phone numbers with the Phase 8 policy, rate limits attempts, queries with the server-secret client, and returns data only when both order number and submitted phone match. Wrong phone, unknown order, malformed lookup, and rate-limited attempts use safe generic responses and do not expose SQL, Supabase details, customer IDs, full addresses, cost prices, inventory data, audit logs, notification payloads, or staff notes.
+
 ## Test Users
 
 Create staff test users manually in Supabase Auth and then insert or update their `profiles` rows with current roles and `active` values. Do not add fake owner UUIDs to seed data and do not commit test credentials.

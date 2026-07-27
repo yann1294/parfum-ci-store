@@ -16,6 +16,7 @@ import {
   updateCartQuantity,
 } from "@/lib/storefront/cart";
 import type { ReconciledCart, ReconciledCartLine } from "@/lib/storefront/cart-reconciliation-core";
+import { reconcileCartClient } from "@/lib/storefront/cart-reconcile-client";
 
 type ValidationState = {
   status: "idle" | "loading" | "ready" | "error";
@@ -60,19 +61,6 @@ export function buildCartWhatsAppMessage(snapshot: ReconciledCart) {
   ].join("\n");
 }
 
-async function reconcileCart(cart: CartState, signal?: AbortSignal) {
-  const response = await fetch("/api/cart/reconcile", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ items: cart.items }),
-    cache: "no-store",
-    signal,
-  });
-  const payload = (await response.json()) as ReconciledCart | { error?: { code: string; message: string } };
-  if ("error" in payload && payload.error) throw new Error(payload.error.code);
-  return payload as ReconciledCart;
-}
-
 export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) {
   const [hydrated, setHydrated] = useState(false);
   const [cart, setCart] = useState<CartState | null>(null);
@@ -106,7 +94,7 @@ export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) 
     abortRef.current = controller;
     setValidation((current) => ({ ...current, status: "loading", message: null }));
 
-    reconcileCart(nextCart, controller.signal)
+    reconcileCartClient(nextCart, controller.signal)
       .then((snapshot) => {
         if (controller.signal.aborted || requestId.current !== currentRequest) return;
         lastValidatedAt.current = Date.now();
@@ -168,7 +156,7 @@ export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) 
     setValidation((current) => ({ ...current, status: "loading", message: null }));
 
     try {
-      const latest = await reconcileCart(readCart());
+      const latest = await reconcileCartClient(readCart());
       setValidation({ status: "ready", message: null, snapshot: latest });
       if (latest.readiness !== "READY") return;
       const url = buildWhatsAppUrlForNumber(normalizedWhatsAppNumber, buildCartWhatsAppMessage(latest));
@@ -256,6 +244,23 @@ export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) 
           La disponibilité finale, les frais de livraison et les modalités de paiement seront confirmés avant validation de la commande.
         </p>
         <div className="mt-5 grid gap-3">
+          <Link
+            href="/commande"
+            aria-disabled={snapshot?.readiness !== "READY" || validation.status !== "ready"}
+            className={buttonVariants({
+              className:
+                snapshot?.readiness === "READY" && validation.status === "ready"
+                  ? "w-full"
+                  : "w-full pointer-events-none opacity-50",
+            })}
+          >
+            Finaliser ma commande
+          </Link>
+          {snapshot?.readiness !== "READY" || validation.status !== "ready" ? (
+            <p className="text-xs text-muted-foreground">
+              Vérifiez ou corrigez le panier avant de finaliser la commande.
+            </p>
+          ) : null}
           {normalizedWhatsAppNumber ? (
             <Button type="button" className="w-full" onClick={openWhatsApp} disabled={!canOrder}>
               Commander via WhatsApp

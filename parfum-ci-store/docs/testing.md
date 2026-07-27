@@ -208,6 +208,14 @@ That SQL test verifies successful order creation, authoritative integer totals, 
 
 Final-unit and opposite-lock-order concurrency must be verified with two real simultaneous database sessions or an equivalent integration harness before Phase 8 can be approved. Sequential SQL tests are not sufficient to mark overselling prevention as passed.
 
+## Phase 9 Checkout, Confirmation And Tracking
+
+Unit/component tests cover checkout form validation, enabled delivery/payment methods, terms acceptance, fresh cart reconciliation before submit, exact Phase 8 request shape, idempotency-key stability for a checkout attempt, cart clearing only after success, confirmation storage without internal UUIDs, French status/payment labels, pending delivery-fee wording, and generic tracking responses.
+
+Route tests for `/api/orders/track` must verify bounded JSON, phone normalization, rate limiting, no-store responses, generic no-result shape for wrong phone/unknown order, and absence of customer IDs, cost prices, inventory data, audit data, notification payloads, or Supabase diagnostics.
+
+Playwright Phase 9 tests require real ACTIVE products with initialized available inventory, applied Phase 8 migrations, and a non-production database. Do not mark successful checkout, cart clearing, duplicate submission, tracking security, wrong-phone privacy, or reservation behavior as passed without a real database-backed order.
+
 ## Environment Diagnostics
 
 Run:
