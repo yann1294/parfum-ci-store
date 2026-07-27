@@ -106,6 +106,18 @@ Expected: cash-on-delivery order is created through `/api/orders`, cart clears o
 Actual:
 PASS/FAIL:
 
+## Successful Confirmation Navigation
+
+Expected: after a successful `POST /api/orders`, the UI stores safe confirmation proof, clears the cart, navigates with the human order number to `/commande/succes/[orderNumber]`, displays `Commande reçue`, and does not create a second order on refresh.
+Actual:
+PASS/FAIL:
+
+## Confirmation Navigation Fallback
+
+Expected: if the order is created but route replacement fails, checkout stops showing the pending state, displays `Votre commande a bien été enregistrée.` with the order number, provides `Voir la confirmation` and `/suivi-commande`, and does not resubmit the order.
+Actual:
+PASS/FAIL:
+
 ## Successful Manual Mobile Money Order
 
 Expected: enabled Mobile Money method displays configured merchant instructions, requests no PIN/OTP, creates a pending-verification order, and shows order number as reference when configured.

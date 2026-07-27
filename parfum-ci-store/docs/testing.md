@@ -212,6 +212,10 @@ Final-unit and opposite-lock-order concurrency must be verified with two real si
 
 Unit/component tests cover checkout form validation, enabled delivery/payment methods, terms acceptance, fresh cart reconciliation before submit, exact Phase 8 request shape, idempotency-key stability for a checkout attempt, cart clearing only after success, confirmation storage without internal UUIDs, French status/payment labels, pending delivery-fee wording, and generic tracking responses.
 
+Checkout success tests must verify the full post-commit lifecycle: parse the successful Phase 8 response envelope, require a non-empty `orderNumber`, store only the short-lived safe confirmation state, clear the cart after that proof is stored, and navigate with `router.replace('/commande/succes/[orderNumber]')`. The confirmation URL must never use the internal order UUID, and an empty-cart rerender after cart clearing must not interrupt confirmation navigation.
+
+If an order was created but confirmation navigation fails, tests must assert the UI shows the inline success fallback `Votre commande a bien été enregistrée.`, displays the same order number, offers `Voir la confirmation` and `/suivi-commande`, settles the pending state, and does not resubmit the order or convert the committed order into a generic creation failure.
+
 Phase 9 correction tests must also cover structured payment-method configuration: enabled and configured methods appear, disabled methods are hidden, unsupported values are ignored, merchant instructions come from settings, and checkout maps display labels back to the Phase 8 enum values. Payment settings mutation tests should verify OWNER/ADMIN authorization and unauthorized-role denial where server-action mocks are available.
 
 Checkout reconciliation-loop tests must verify one validation after hydration, no repeat loop after readiness or authoritative-line updates, one new validation after a material cart intent change, one forced validation before submit, settled loading after success/failure, stale response protection, and an enabled submit button once readiness is `READY` and the form is valid.

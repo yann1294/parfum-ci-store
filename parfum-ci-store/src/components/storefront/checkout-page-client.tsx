@@ -16,12 +16,14 @@ import { formatXof } from "@/lib/catalogue/format";
 import {
   cartMaterialSignature,
   createCheckoutIdempotencyKey,
+  readSafeConfirmation,
   storeSafeConfirmation,
 } from "@/lib/orders/checkout-client";
 import {
   buildGuestOrderRequest,
   checkoutOrderErrorSchema,
   checkoutOrderSuccessSchema,
+  type CheckoutOrderSuccess,
 } from "@/lib/orders/checkout-submit-client";
 import {
   deliveryMethodLabel,
@@ -194,12 +196,13 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
   const [hydrated, setHydrated] = useState(false);
   const [cart, setCart] = useState<CartState | null>(null);
   const [snapshot, setSnapshot] = useState<ReconciledCart | null>(null);
-  const [status, setStatus] = useState<"idle" | "validating" | "ready" | "error" | "submitting" | "review">("idle");
+  const [status, setStatus] = useState<"idle" | "validating" | "ready" | "error" | "submitting" | "review" | "success">("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [form, setForm] = useState<CheckoutFormState>(() => initialForm(settings));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [idempotencyKey, setIdempotencyKey] = useState(createCheckoutIdempotencyKey);
   const [lastSubmittedIntent, setLastSubmittedIntent] = useState<string | null>(null);
+  const [successfulOrder, setSuccessfulOrder] = useState<CheckoutOrderSuccess | null>(null);
   const firstInvalidRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null);
   const submissionMessageRef = useRef<HTMLDivElement | null>(null);
   const lastCartSignatureRef = useRef<string>("empty");
@@ -291,20 +294,23 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     !snapshot ||
     status === "validating" ||
     status === "submitting" ||
+    status === "success" ||
     readiness !== "READY" ||
     !hasConfiguredPaymentMethod ||
     !formValid;
   const orderableLines = snapshot?.lines ?? [];
   const checkoutDisabledReason =
-    status === "validating"
-      ? "Vérification du panier en cours."
-      : readiness !== "READY"
-        ? "Corrigez le panier avant de commander."
-        : !hasConfiguredPaymentMethod
-          ? "Aucun mode de paiement n'est configuré pour le moment."
-          : !formValid
-          ? "Complétez les champs requis et acceptez les conditions."
-          : "La commande est en cours d'envoi.";
+    status === "success"
+      ? "Commande enregistrée. Ouverture de la confirmation..."
+      : status === "validating"
+        ? "Vérification du panier en cours."
+        : readiness !== "READY"
+          ? "Corrigez le panier avant de commander."
+          : !hasConfiguredPaymentMethod
+            ? "Aucun mode de paiement n'est configuré pour le moment."
+            : !formValid
+              ? "Complétez les champs requis et acceptez les conditions."
+              : "La commande est en cours d'envoi.";
 
   function updateField<K extends keyof CheckoutFormState>(key: K, value: CheckoutFormState[K]) {
     if ((key === "deliveryMethod" || key === "paymentMethod") && form[key] !== value) {
@@ -353,6 +359,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     setLastSubmittedIntent(intent);
     setStatus("submitting");
     setMessage(null);
+    setSuccessfulOrder(null);
 
     const requestBody = buildGuestOrderRequest({
       idempotencyKey: key,
@@ -430,16 +437,32 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     }
 
     const confirmation = parsedSuccess.data;
-    storeSafeConfirmation({
+    const safeConfirmation = storeSafeConfirmation({
       confirmation,
       deliveryMethod: parsed.data.deliveryMethod,
       paymentMethod: parsed.data.paymentMethod,
       customerPhone: parsed.data.phone,
       customerEmail: parsed.data.email.trim() || undefined,
     });
+    const confirmationPath = `/commande/succes/${encodeURIComponent(confirmation.orderNumber)}`;
+    setSuccessfulOrder(confirmation);
+    setStatus("success");
+    setMessage("Commande enregistrée. Ouverture de la confirmation...");
     clearCart();
     setIdempotencyKey(createCheckoutIdempotencyKey());
-    router.push(`/commande/succes/${encodeURIComponent(confirmation.orderNumber)}`);
+    if (readSafeConfirmation(safeConfirmation.orderNumber)?.orderNumber !== safeConfirmation.orderNumber) {
+      setMessage("Votre commande a bien été enregistrée.");
+      window.setTimeout(() => submissionMessageRef.current?.focus(), 0);
+      return;
+    }
+
+    try {
+      router.replace(confirmationPath);
+    } catch {
+      setStatus("success");
+      setMessage("Votre commande a bien été enregistrée.");
+      window.setTimeout(() => submissionMessageRef.current?.focus(), 0);
+    }
   }
 
   if (!hydrated) {
@@ -450,7 +473,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     );
   }
 
-  if (!cart || cart.items.length === 0 || snapshot?.readiness === "EMPTY") {
+  if ((!cart || cart.items.length === 0 || snapshot?.readiness === "EMPTY") && !successfulOrder) {
     return (
       <div className="rounded-lg border bg-surface p-8 text-center">
         <h1 className="font-heading text-4xl">Finaliser ma commande</h1>
@@ -472,7 +495,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
           </p>
         </div>
 
-        {message ? (
+        {message && !successfulOrder ? (
           <Alert
             ref={submissionMessageRef}
             tabIndex={-1}
@@ -480,6 +503,27 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
           >
             <AlertTitle>Commande non envoyée</AlertTitle>
             <AlertDescription>{message}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {successfulOrder ? (
+          <Alert ref={submissionMessageRef} tabIndex={-1}>
+            <AlertTitle>Votre commande a bien été enregistrée.</AlertTitle>
+            <AlertDescription>
+              Commande {successfulOrder.orderNumber}. Si la confirmation ne s&apos;ouvre pas automatiquement, utilisez
+              le bouton ci-dessous.
+            </AlertDescription>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href={`/commande/succes/${encodeURIComponent(successfulOrder.orderNumber)}`}
+                className={buttonVariants()}
+              >
+                Voir la confirmation
+              </Link>
+              <Link href="/suivi-commande" className={buttonVariants({ variant: "outline" })}>
+                Suivre ma commande
+              </Link>
+            </div>
           </Alert>
         ) : null}
 
@@ -669,7 +713,11 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
 
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button type="submit" disabled={checkoutBlocked} aria-describedby="checkout-disabled-help">
-            {status === "submitting" ? "Création de la commande..." : "Envoyer la commande"}
+            {status === "success"
+              ? "Commande enregistrée"
+              : status === "submitting"
+                ? "Création de la commande..."
+                : "Envoyer la commande"}
           </Button>
           <Link href="/panier" className={buttonVariants({ variant: "outline" })}>
             Retour au panier

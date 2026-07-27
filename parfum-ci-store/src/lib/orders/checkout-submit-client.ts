@@ -8,7 +8,7 @@ import type { AttributionDto } from "@/lib/storefront/attribution";
 
 export const checkoutOrderSuccessSchema = z
   .object({
-    orderId: z.uuid(),
+    orderId: z.uuid().optional(),
     orderNumber: z.string().trim().min(1),
     orderStatus: z.string().trim().min(1),
     paymentStatus: z.string().trim().min(1),

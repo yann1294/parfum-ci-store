@@ -29,9 +29,10 @@ import { CART_SCHEMA_VERSION, clearCartForTests, readCart, writeCart } from "@/l
 import type { ReconciledCart } from "@/lib/storefront/cart-reconciliation-core";
 
 const push = vi.fn();
+const replace = vi.fn();
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
 }));
 
 const productId = "11111111-1111-4111-8111-111111111111";
@@ -105,6 +106,28 @@ const readySnapshot: ReconciledCart = {
   readiness: "READY",
   validatedAt: "2026-07-27T00:00:00.000Z",
 };
+
+const successfulOrderPayload = {
+  orderId: "44444444-4444-4444-8444-444444444444",
+  orderNumber: "CMD-2026-A1B2C3",
+  orderStatus: "PENDING_CONFIRMATION",
+  paymentStatus: "UNPAID",
+  currency: "XOF",
+  subtotalXof: 95000,
+  deliveryFeeXof: 0,
+  totalXof: 95000,
+  createdAt: "2026-07-27T00:00:00.000Z",
+  items: [
+    {
+      productName: "Sauvage",
+      variantLabel: "100 ml · EDP",
+      quantity: 1,
+      unitPriceXof: 95000,
+      lineTotalXof: 95000,
+    },
+  ],
+  nextStepCode: "PENDING_CONFIRMATION",
+} as const;
 
 function seedCart() {
   writeCart({
@@ -212,6 +235,7 @@ describe("Phase 9 checkout form", () => {
     clearCartForTests();
     window.sessionStorage.clear();
     push.mockClear();
+    replace.mockClear();
   });
 
   it("submits only the Phase 8 intent contract and clears the cart after success", async () => {
@@ -228,22 +252,7 @@ describe("Phase 9 checkout form", () => {
         expect(JSON.stringify(body)).not.toContain("Sauvage");
         expect(JSON.stringify(body)).not.toContain("95000");
         expect(JSON.stringify(body)).not.toContain("EDP");
-        return Response.json(
-          {
-            orderId: "44444444-4444-4444-8444-444444444444",
-            orderNumber: "CMD-2026-A1B2C3",
-            orderStatus: "PENDING_CONFIRMATION",
-            paymentStatus: "UNPAID",
-            currency: "XOF",
-            subtotalXof: 95000,
-            deliveryFeeXof: 0,
-            totalXof: 95000,
-            createdAt: "2026-07-27T00:00:00.000Z",
-            items: [{ productName: "Sauvage", variantLabel: "100 ml · EDP", quantity: 1, unitPriceXof: 95000, lineTotalXof: 95000 }],
-            nextStepCode: "PENDING_CONFIRMATION",
-          },
-          { status: 201 },
-        );
+        return Response.json(successfulOrderPayload, { status: 201 });
       }
       throw new Error(`Unexpected ${url}`);
     });
@@ -255,9 +264,67 @@ describe("Phase 9 checkout form", () => {
     await fillRequiredCheckoutFields();
     fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/commande/succes/CMD-2026-A1B2C3"));
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/commande/succes/CMD-2026-A1B2C3"));
+    expect(push).not.toHaveBeenCalled();
     expect(readCart().items).toHaveLength(0);
     expect(readSafeConfirmation("CMD-2026-A1B2C3")?.orderNumber).toBe("CMD-2026-A1B2C3");
+  });
+
+  it("shows an inline success fallback when confirmation navigation fails after order creation", async () => {
+    seedCart();
+    replace.mockImplementationOnce(() => {
+      throw new Error("navigation failed");
+    });
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/api/cart/reconcile") return Response.json(readySnapshot);
+      if (url === "/api/orders") return Response.json(successfulOrderPayload, { status: 201 });
+      throw new Error(`Unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CheckoutPageClient settings={settings} />);
+    expect(await screen.findByText("Sauvage")).toBeDefined();
+    await fillRequiredCheckoutFields();
+    await waitFor(() =>
+      expect((screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled).toBe(false),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
+
+    expect(await screen.findByText("Votre commande a bien été enregistrée.")).toBeDefined();
+    expect(screen.getByText(/Commande CMD-2026-A1B2C3/i)).toBeDefined();
+    expect(screen.getByRole("link", { name: "Voir la confirmation" }).getAttribute("href")).toBe(
+      "/commande/succes/CMD-2026-A1B2C3",
+    );
+    expect(fetchMock.mock.calls.filter(([url]) => url === "/api/orders")).toHaveLength(1);
+    expect(readCart().items).toHaveLength(0);
+  });
+
+  it("shows an inline success fallback when confirmation proof cannot be stored", async () => {
+    seedCart();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(Storage.prototype, "setItem").mockImplementationOnce(() => {
+      throw new Error("session storage unavailable");
+    });
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/api/cart/reconcile") return Response.json(readySnapshot);
+      if (url === "/api/orders") return Response.json(successfulOrderPayload, { status: 201 });
+      throw new Error(`Unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CheckoutPageClient settings={settings} />);
+    expect(await screen.findByText("Sauvage")).toBeDefined();
+    await fillRequiredCheckoutFields();
+    await waitFor(() =>
+      expect((screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled).toBe(false),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
+
+    expect(await screen.findByText("Votre commande a bien été enregistrée.")).toBeDefined();
+    expect(replace).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls.filter(([url]) => url === "/api/orders")).toHaveLength(1);
+    expect(readCart().items).toHaveLength(0);
+    warn.mockRestore();
   });
 
   it("does not clear the cart or navigate when /api/orders returns HTTP 400", async () => {
@@ -284,6 +351,7 @@ describe("Phase 9 checkout form", () => {
 
     expect(await screen.findByText("Ce mode de paiement n'est plus disponible.")).toBeDefined();
     expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
     expect(readCart().items).toHaveLength(1);
   });
 
@@ -308,6 +376,7 @@ describe("Phase 9 checkout form", () => {
 
     expect(await screen.findByText("La commande n'a pas pu être enregistrée.")).toBeDefined();
     expect(push).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
     expect(readCart().items).toHaveLength(1);
   });
 
