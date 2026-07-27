@@ -28,6 +28,13 @@ export type PaymentInstructionSettings = {
     pickupInformation?: string;
     orderConfirmationProcess?: string;
   };
+  paymentMethodConfigs?: Partial<Record<PaymentMethod, {
+    label: string;
+    merchantNumber?: string;
+    beneficiaryName?: string;
+    instructions?: string;
+    displayOrder?: number;
+  }>>;
 };
 
 export const paymentMethodLabels: Record<PaymentMethod, string> = {
@@ -79,6 +86,12 @@ export function paymentMethodLabel(value: string | null | undefined) {
     : "Mode de paiement";
 }
 
+export function configuredPaymentMethodLabel(value: string | null | undefined, settings: PaymentInstructionSettings) {
+  if (!value || !(value in paymentMethodLabels)) return "Mode de paiement";
+  const config = settings.paymentMethodConfigs?.[value as PaymentMethod];
+  return config?.label?.trim() || paymentMethodLabel(value);
+}
+
 export function deliveryMethodLabel(value: string | null | undefined) {
   return value && value in deliveryMethodLabels
     ? deliveryMethodLabels[value as DeliveryMethod]
@@ -93,6 +106,9 @@ export function merchantNumberForPaymentMethod(
   method: string | null | undefined,
   settings: PaymentInstructionSettings,
 ) {
+  const configured =
+    method && method in paymentMethodLabels ? settings.paymentMethodConfigs?.[method as PaymentMethod]?.merchantNumber?.trim() : "";
+  if (configured) return configured;
   if (method === "ORANGE_MONEY") return settings.orangeMoneyNumber;
   if (method === "MTN_MOMO") return settings.mtnMomoNumber;
   if (method === "WAVE") return settings.waveNumber;
@@ -105,14 +121,20 @@ export function paymentInstructionForMethod(
   settings: PaymentInstructionSettings,
   orderNumber?: string,
 ) {
+  const config = method && method in paymentMethodLabels ? settings.paymentMethodConfigs?.[method as PaymentMethod] : undefined;
+  const configuredInstructions = config?.instructions?.trim();
+  const configuredMerchantNumber = config?.merchantNumber?.trim();
+  const configuredBeneficiaryName = config?.beneficiaryName?.trim();
+
   if (paymentMethodIsMobileMoney(method)) {
-    const merchantNumber = merchantNumberForPaymentMethod(method, settings);
+    const merchantNumber = configuredMerchantNumber || merchantNumberForPaymentMethod(method, settings);
     if (!merchantNumber) return null;
     return [
-      settings.deliveryContent.mobileMoneyDescription ||
+      configuredInstructions ||
+        settings.deliveryContent.mobileMoneyDescription ||
         "Le paiement Mobile Money sera vérifié manuellement par notre équipe.",
       `Numéro marchand: ${merchantNumber}`,
-      settings.legalName ? `Bénéficiaire: ${settings.legalName}` : null,
+      configuredBeneficiaryName || settings.legalName ? `Bénéficiaire: ${configuredBeneficiaryName || settings.legalName}` : null,
       orderNumber ? `Référence à indiquer si possible: ${orderNumber}` : null,
       "Ne partagez jamais votre PIN, OTP ou code secret.",
     ].filter(Boolean);
@@ -120,20 +142,27 @@ export function paymentInstructionForMethod(
 
   if (method === "CASH_ON_DELIVERY") {
     return [
-      settings.deliveryContent.cashOnDeliveryConditions ||
+      configuredInstructions ||
+        settings.deliveryContent.cashOnDeliveryConditions ||
         "Le paiement sera effectué à la livraison selon les conditions confirmées par l'équipe.",
     ];
   }
 
   if (method === "PAY_IN_STORE") {
     return [
-      settings.deliveryContent.pickupInformation ||
+      configuredInstructions ||
+        settings.deliveryContent.pickupInformation ||
         "Le paiement sera effectué en boutique selon les informations confirmées par l'équipe.",
     ];
   }
 
   if (method === "BANK_TRANSFER") {
-    return ["Les instructions de virement seront confirmées par l'équipe avant tout paiement."];
+    if (!configuredInstructions) return null;
+    return [
+      configuredInstructions,
+      configuredBeneficiaryName ? `Bénéficiaire: ${configuredBeneficiaryName}` : null,
+      orderNumber ? `Référence à indiquer si possible: ${orderNumber}` : null,
+    ].filter(Boolean);
   }
 
   return null;
@@ -161,4 +190,3 @@ export type SafeConfirmation = Omit<GuestOrderConfirmation, "orderId"> & {
   storedAt: string;
   expiresAt: string;
 };
-

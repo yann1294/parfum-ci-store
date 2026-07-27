@@ -79,7 +79,8 @@ pnpm build
 - Run `psql "$DATABASE_URL" -f supabase/tests/phase4_catalogue_storage.sql` after applying the Phase 4 migration.
 - Phase 6.5 adds the `store_content` migration. Review it, then apply with `pnpm exec supabase db push` and regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`.
 - Phase 8 adds the guest-order transaction migration. Review `supabase/migrations/20260723080100_phase8_guest_order_transaction.sql`, apply it manually with `pnpm exec supabase db push`, then regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`. Run `psql "$DATABASE_URL" -f supabase/tests/phase8_guest_order_transaction.sql` against an isolated local or staging database, plus real concurrent final-unit tests, before enabling a checkout UI.
-- Phase 9 adds customer checkout, confirmation, and tracking routes without new database migrations. Confirm Phase 8 is applied and concurrency-verified before enabling `/commande`. Payment method and delivery method choices come from `store_settings.enabled_payment_methods` and `store_settings.enabled_delivery_methods`; merchant/payment instructions come from managed store settings and content. Configure these values before production checkout testing.
+- Phase 9 adds customer checkout, confirmation, and tracking routes. The Phase 9 correction migration `20260727090100_phase9_payment_settings_whatsapp_intents.sql` adds structured payment-method configuration and WhatsApp order-intent analytics. Review it, apply it manually with `pnpm exec supabase db push`, then regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`.
+- Confirm Phase 8 is applied and concurrency-verified before enabling `/commande`. Payment method and delivery method choices come from `store_settings.enabled_payment_methods` and `store_settings.enabled_delivery_methods`; merchant/payment instructions come from managed store settings and content. Configure these values before production checkout testing.
 
 ## Product Images
 
@@ -122,12 +123,13 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 
 - Public pages load in French.
 - Catalogue reads published products only.
-- Catalogue pagination returns bounded pages with default size 12 and maximum size 48.
+- Catalogue pagination returns bounded pages with default size 8 and maximum size 32.
 - `/admin/contenu` is accessible only to OWNER and ADMIN; public Contact and Delivery pages reflect saved content after revalidation.
 - Public cart copy contains no internal phase terminology and the WhatsApp CTA does not create orders or reserve inventory.
 - Phase 7 cart validation uses `/api/cart/reconcile` with `Cache-Control: no-store`. Confirm the route is reachable in production and that public catalogue view grants are applied before validating cart readiness or WhatsApp ordering.
 - Phase 8 `/api/orders` must return `Cache-Control: no-store`, call the service-role-only transaction wrapper, and create pending notification intents only. Do not deploy checkout UI until the final-unit concurrency and rollback checks have passed.
 - Phase 9 `/commande`, `/commande/succes/[orderNumber]`, and `/suivi-commande` must be `noindex, nofollow` and absent from `/sitemap.xml`. `/api/orders/track` must return `Cache-Control: no-store` and require order number plus phone.
+- `/api/storefront/order-intents/whatsapp` must return `Cache-Control: no-store`, create only analytics intent rows from authoritative cart data, and must not create orders or inventory reservations.
 - Admin routes require authentication.
 - Checkout creates orders without exposing secrets.
 - Resend sends transactional messages.

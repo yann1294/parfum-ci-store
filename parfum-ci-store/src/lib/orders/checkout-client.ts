@@ -14,6 +14,13 @@ export function createCheckoutIdempotencyKey() {
   return `checkout-${crypto.randomUUID()}-${entropy}`;
 }
 
+export function createWhatsAppOrderIntentKey() {
+  const random = new Uint8Array(16);
+  crypto.getRandomValues(random);
+  const entropy = [...random].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `whatsapp-${crypto.randomUUID()}-${entropy}`;
+}
+
 export function cartMaterialSignature(cart: CartState | null) {
   if (!cart) return "empty";
   return cart.items

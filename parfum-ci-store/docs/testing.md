@@ -212,6 +212,12 @@ Final-unit and opposite-lock-order concurrency must be verified with two real si
 
 Unit/component tests cover checkout form validation, enabled delivery/payment methods, terms acceptance, fresh cart reconciliation before submit, exact Phase 8 request shape, idempotency-key stability for a checkout attempt, cart clearing only after success, confirmation storage without internal UUIDs, French status/payment labels, pending delivery-fee wording, and generic tracking responses.
 
+Phase 9 correction tests must also cover structured payment-method configuration: enabled and configured methods appear, disabled methods are hidden, unsupported values are ignored, merchant instructions come from settings, and checkout maps display labels back to the Phase 8 enum values. Payment settings mutation tests should verify OWNER/ADMIN authorization and unauthorized-role denial where server-action mocks are available.
+
+Checkout reconciliation-loop tests must verify one validation after hydration, no repeat loop after readiness or authoritative-line updates, one new validation after a material cart intent change, one forced validation before submit, settled loading after success/failure, stale response protection, and an enabled submit button once readiness is `READY` and the form is valid.
+
+WhatsApp intent tests must verify no intent on render, intent creation only after a customer click, authoritative prices/names from server reconciliation, duplicate-click deduplication, safe attribution storage, no Phase 8 order creation, no stock reservation/decrement, persistence-failure fallback, and encoded WhatsApp text without sensitive fields.
+
 Route tests for `/api/orders/track` must verify bounded JSON, phone normalization, rate limiting, no-store responses, generic no-result shape for wrong phone/unknown order, and absence of customer IDs, cost prices, inventory data, audit data, notification payloads, or Supabase diagnostics.
 
 Playwright Phase 9 tests require real ACTIVE products with initialized available inventory, applied Phase 8 migrations, and a non-production database. Do not mark successful checkout, cart clearing, duplicate submission, tracking security, wrong-phone privacy, or reservation behavior as passed without a real database-backed order.

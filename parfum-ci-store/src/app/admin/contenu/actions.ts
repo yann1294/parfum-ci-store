@@ -13,6 +13,14 @@ import {
   type StorefrontContent,
 } from "@/lib/storefront/content-schemas";
 import { updateStorefrontContent } from "@/lib/storefront/content";
+import {
+  defaultPaymentConfigs,
+  paymentMethodConfigSchema,
+  supportedPaymentMethods,
+  updatePaymentSettings as persistPaymentSettings,
+  type PaymentMethodConfig,
+} from "@/lib/orders/payment-settings";
+import type { PaymentMethod } from "@/lib/orders/display";
 
 export type ContentActionState = {
   ok: boolean;
@@ -20,6 +28,12 @@ export type ContentActionState = {
   pageKey?: StoreContentPageKey;
   value?: StorefrontContent[StoreContentPageKey];
   updatedAt?: string | null;
+};
+
+export type PaymentSettingsActionState = {
+  ok: boolean;
+  message: string;
+  value?: Record<PaymentMethod, PaymentMethodConfig>;
 };
 
 const pageKeySchema = z.enum(storeContentPageKeys);
@@ -177,5 +191,51 @@ export async function updateContentSection(
       return { ok: false, message: "Vérifiez les champs de cette section." };
     }
     return { ok: false, message: "Le contenu n'a pas pu être enregistré." };
+  }
+}
+
+export async function updatePaymentSettings(
+  _previousState: PaymentSettingsActionState,
+  formData: FormData,
+): Promise<PaymentSettingsActionState> {
+  const staff = await requireRole(["OWNER", "ADMIN"]);
+  const configs = defaultPaymentConfigs([]);
+
+  try {
+    for (const method of supportedPaymentMethods) {
+      const raw = {
+        enabled: formData.get(`${method}.enabled`) === "on",
+        label: text(formData, `${method}.label`),
+        merchantNumber: text(formData, `${method}.merchantNumber`),
+        beneficiaryName: text(formData, `${method}.beneficiaryName`),
+        instructions: text(formData, `${method}.instructions`),
+        displayOrder: Number.parseInt(text(formData, `${method}.displayOrder`), 10) || 50,
+      };
+      configs[method] = paymentMethodConfigSchema.parse(raw);
+    }
+
+    const saved = await persistPaymentSettings(configs);
+    await auditCatalogueEvent({
+      actorId: staff.id,
+      action: "STOREFRONT_PAYMENT_SETTINGS_UPDATED",
+      resourceType: "store_settings",
+      metadata: {
+        enabled_payment_methods: saved.enabledPaymentMethods,
+      },
+    });
+    revalidatePath("/admin/contenu");
+    revalidatePath("/commande");
+    revalidatePath("/panier");
+
+    return {
+      ok: true,
+      message: "Paramètres de paiement enregistrés.",
+      value: saved.configs,
+    };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return { ok: false, message: "Vérifiez les paramètres de paiement." };
+    }
+    return { ok: false, message: "Les paramètres de paiement n'ont pas pu être enregistrés." };
   }
 }

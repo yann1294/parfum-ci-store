@@ -20,10 +20,10 @@ import {
 } from "@/lib/orders/checkout-client";
 import {
   deliveryMethodLabel,
+  configuredPaymentMethodLabel,
   merchantNumberForPaymentMethod,
   paymentInstructionForMethod,
   paymentMethodIsMobileMoney,
-  paymentMethodLabel,
   type DeliveryMethod,
   type PaymentMethod,
   type PaymentInstructionSettings,
@@ -202,7 +202,15 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
   const [lastSubmittedIntent, setLastSubmittedIntent] = useState<string | null>(null);
   const firstInvalidRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null);
   const lastCartSignatureRef = useRef<string>("empty");
+  const snapshotRef = useRef<ReconciledCart | null>(null);
+  const requestId = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
   const lastValidatedAt = useRef(0);
+
+  const applySnapshot = useCallback((nextSnapshot: ReconciledCart) => {
+    snapshotRef.current = nextSnapshot;
+    setSnapshot(nextSnapshot);
+  }, []);
 
   const validateCart = useCallback(async (force = false) => {
     const currentCart = readCart();
@@ -210,37 +218,53 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     setHydrated(true);
 
     const signature = cartMaterialSignature(currentCart);
-    if (signature !== lastCartSignatureRef.current) {
+    const signatureChanged = signature !== lastCartSignatureRef.current;
+    if (signatureChanged) {
       lastCartSignatureRef.current = signature;
       setIdempotencyKey(createCheckoutIdempotencyKey());
       setLastSubmittedIntent(null);
+      lastValidatedAt.current = 0;
     }
 
     if (currentCart.items.length === 0) {
-      setSnapshot(emptySnapshot());
+      abortRef.current?.abort();
+      const empty = emptySnapshot();
+      applySnapshot(empty);
       setStatus("ready");
       setMessage(null);
-      return emptySnapshot();
+      return empty;
     }
 
-    if (!force && Date.now() - lastValidatedAt.current < CART_RECONCILIATION_STALE_MS && snapshot) {
-      return snapshot;
+    if (
+      !force &&
+      !signatureChanged &&
+      snapshotRef.current &&
+      Date.now() - lastValidatedAt.current < CART_RECONCILIATION_STALE_MS
+    ) {
+      return snapshotRef.current;
     }
 
+    const currentRequest = requestId.current + 1;
+    requestId.current = currentRequest;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setStatus("validating");
     setMessage(null);
     try {
-      const nextSnapshot = await reconcileCartClient(currentCart);
+      const nextSnapshot = await reconcileCartClient(currentCart, controller.signal);
+      if (controller.signal.aborted || requestId.current !== currentRequest) return null;
       lastValidatedAt.current = Date.now();
-      setSnapshot(nextSnapshot);
+      applySnapshot(nextSnapshot);
       setStatus("ready");
       return nextSnapshot;
     } catch {
+      if (controller.signal.aborted || requestId.current !== currentRequest) return null;
       setStatus("error");
       setMessage("Le panier n'a pas pu être vérifié pour le moment.");
       return null;
     }
-  }, [snapshot]);
+  }, [applySnapshot]);
 
   useEffect(() => {
     const initialRefresh = window.setTimeout(() => void validateCart(true), 0);
@@ -252,6 +276,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     window.addEventListener("parfum-ci-cart-change", onCartChange);
     window.addEventListener("storage", onStorage);
     return () => {
+      abortRef.current?.abort();
       window.clearTimeout(initialRefresh);
       window.removeEventListener("parfum-ci-cart-change", onCartChange);
       window.removeEventListener("storage", onStorage);
@@ -259,8 +284,26 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
   }, [validateCart]);
 
   const readiness = snapshot?.readiness ?? "VALIDATING";
-  const checkoutBlocked = !snapshot || status === "validating" || status === "submitting" || readiness !== "READY";
+  const hasConfiguredPaymentMethod = settings.enabledPaymentMethods.length > 0;
+  const formValid = useMemo(() => checkoutFormSchema.safeParse(form).success, [form]);
+  const checkoutBlocked =
+    !snapshot ||
+    status === "validating" ||
+    status === "submitting" ||
+    readiness !== "READY" ||
+    !hasConfiguredPaymentMethod ||
+    !formValid;
   const orderableLines = snapshot?.lines ?? [];
+  const checkoutDisabledReason =
+    status === "validating"
+      ? "Vérification du panier en cours."
+      : readiness !== "READY"
+        ? "Corrigez le panier avant de commander."
+        : !hasConfiguredPaymentMethod
+          ? "Aucun mode de paiement n'est configuré pour le moment."
+          : !formValid
+          ? "Complétez les champs requis et acceptez les conditions."
+          : "La commande est en cours d'envoi.";
 
   function updateField<K extends keyof CheckoutFormState>(key: K, value: CheckoutFormState[K]) {
     if ((key === "deliveryMethod" || key === "paymentMethod") && form[key] !== value) {
@@ -557,14 +600,20 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
               onChange={(event) => updateField("paymentMethod", event.currentTarget.value as PaymentMethod)}
               className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
               aria-invalid={Boolean(errors.paymentMethod)}
+              disabled={!hasConfiguredPaymentMethod}
             >
               {settings.enabledPaymentMethods.map((method) => (
                 <option key={method} value={method}>
-                  {paymentMethodLabel(method)}
+                  {configuredPaymentMethodLabel(method, settings)}
                 </option>
               ))}
             </select>
           </Field>
+          {!hasConfiguredPaymentMethod ? (
+            <p className="text-sm text-muted-foreground">
+              Aucun mode de paiement n&apos;est configuré pour la commande en ligne. Contactez l&apos;équipe via WhatsApp.
+            </p>
+          ) : null}
           <PaymentInstructions settings={settings} method={form.paymentMethod} />
         </fieldset>
 
@@ -615,7 +664,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
         </div>
         {checkoutBlocked ? (
           <p id="checkout-disabled-help" className="text-sm text-muted-foreground">
-            La commande est disponible uniquement après vérification complète du panier.
+            {checkoutDisabledReason}
           </p>
         ) : null}
       </form>
@@ -690,7 +739,7 @@ function PaymentInstructions({
   if (paymentMethodIsMobileMoney(method) && !merchantNumber) {
     return (
       <p className="text-sm text-muted-foreground">
-        Les instructions {paymentMethodLabel(method)} seront confirmées par l&apos;équipe.
+        Les instructions {configuredPaymentMethodLabel(method, settings)} seront confirmées par l&apos;équipe.
       </p>
     );
   }

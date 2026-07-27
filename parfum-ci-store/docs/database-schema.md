@@ -261,11 +261,23 @@ The transaction locks affected variants/products in deterministic variant-ID ord
 
 ## Phase 9 Checkout And Tracking
 
-Phase 9 does not add a database migration. Checkout submits to the existing Phase 8 `/api/orders` contract and order transaction.
+Initial Phase 9 checkout and tracking did not add a database migration. Checkout submits to the existing Phase 8 `/api/orders` contract and order transaction.
 
 Confirmation detail recovery is intentionally client-session scoped and does not add a broadly readable order lookup table or view. Public order tracking is a server-only lookup requiring both `orders.order_number` and the submitted `orders.customer_phone`; it returns a limited customer-facing projection and never exposes internal order IDs, customer IDs, inventory reservations, audit rows, notification rows, or staff notes.
 
 Terms acceptance is currently enforced by the checkout UI only. The schema has no terms-version/timestamp snapshot column; add a forward-only migration before relying on terms acceptance for audit or legal proof.
+
+## Phase 9 Payment Settings And WhatsApp Intents
+
+Migration `20260727090100_phase9_payment_settings_whatsapp_intents.sql` adds:
+
+- `store_settings.payment_method_configs jsonb`, a structured public payment-method configuration object. OWNER and ADMIN manage enabled methods, customer labels, merchant numbers, beneficiaries, instructions, and display order from `/admin/contenu`.
+- `public.storefront_order_intents`, a lightweight analytics record for intentional WhatsApp ordering clicks after authoritative cart validation.
+- `public.storefront_order_intent_items`, safe authoritative item snapshots for the intent event.
+
+The intent tables are RLS-enabled. Anonymous users do not insert directly; `/api/storefront/order-intents/whatsapp` writes through the server-controlled boundary. Staff read policies are limited to OWNER, ADMIN, and ORDER_MANAGER.
+
+A WhatsApp intent means only: the customer clicked the WhatsApp ordering action after cart validation. It does not mean WhatsApp opened, the message was sent, an order was created, payment occurred, or stock was reserved. Intent retention defaults to 30 days through `expires_at`; operational cleanup should remove expired rows.
 
 ## Local Reset, Seed, and Verification
 

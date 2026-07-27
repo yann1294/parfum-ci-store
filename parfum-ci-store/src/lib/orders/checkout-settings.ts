@@ -4,6 +4,7 @@ import { siteConfig } from "@/config/site";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStorefrontContent } from "@/lib/storefront/content";
 import type { DeliveryMethod, PaymentMethod, PaymentInstructionSettings } from "@/lib/orders/display";
+import { configuredPaymentMethods, normalizePaymentConfigs, type PaymentMethodConfig } from "@/lib/orders/payment-settings";
 
 type StoreSettingsRow = {
   store_name: string | null;
@@ -18,6 +19,7 @@ type StoreSettingsRow = {
   delivery_information: string | null;
   enabled_payment_methods: PaymentMethod[] | null;
   enabled_delivery_methods: string[] | null;
+  payment_method_configs: unknown;
 };
 
 type StoreSettingsClient = {
@@ -33,26 +35,10 @@ type StoreSettingsClient = {
 export type PublicCheckoutSettings = PaymentInstructionSettings & {
   enabledPaymentMethods: PaymentMethod[];
   enabledDeliveryMethods: DeliveryMethod[];
+  paymentMethodConfigs: Partial<Record<PaymentMethod, PaymentMethodConfig>>;
 };
 
-const paymentMethods: PaymentMethod[] = [
-  "CASH_ON_DELIVERY",
-  "ORANGE_MONEY",
-  "MTN_MOMO",
-  "WAVE",
-  "MOOV_MONEY",
-  "BANK_TRANSFER",
-  "PAY_IN_STORE",
-];
-
 const deliveryMethods: DeliveryMethod[] = ["HOME_DELIVERY", "PICKUP"];
-
-function filterPaymentMethods(input: PaymentMethod[] | null | undefined) {
-  const enabled = (input ?? []).filter((value): value is PaymentMethod =>
-    paymentMethods.includes(value as PaymentMethod),
-  );
-  return enabled.length > 0 ? enabled : (["CASH_ON_DELIVERY"] satisfies PaymentMethod[]);
-}
 
 function filterDeliveryMethods(input: string[] | null | undefined) {
   const enabled = (input ?? []).filter((value): value is DeliveryMethod =>
@@ -82,6 +68,7 @@ export async function getPublicCheckoutSettings(): Promise<PublicCheckoutSetting
     },
     enabledPaymentMethods: ["CASH_ON_DELIVERY"],
     enabledDeliveryMethods: ["HOME_DELIVERY"],
+    paymentMethodConfigs: {},
   };
 
   try {
@@ -89,12 +76,15 @@ export async function getPublicCheckoutSettings(): Promise<PublicCheckoutSetting
     const { data, error } = await supabase
       .from("store_settings")
       .select(
-        "store_name, legal_name, contact_email, contact_phone, whatsapp_number, orange_money_number, mtn_momo_number, wave_number, moov_money_number, delivery_information, enabled_payment_methods, enabled_delivery_methods",
+        "store_name, legal_name, contact_email, contact_phone, whatsapp_number, orange_money_number, mtn_momo_number, wave_number, moov_money_number, delivery_information, enabled_payment_methods, enabled_delivery_methods, payment_method_configs",
       )
       .eq("id", true)
       .maybeSingle();
 
     if (error || !data) return fallback;
+
+    const configs = normalizePaymentConfigs(data.payment_method_configs, data.enabled_payment_methods ?? undefined);
+    const configuredMethods = configuredPaymentMethods(configs);
 
     return {
       ...fallback,
@@ -108,11 +98,11 @@ export async function getPublicCheckoutSettings(): Promise<PublicCheckoutSetting
       waveNumber: data.wave_number,
       moovMoneyNumber: data.moov_money_number,
       deliveryInformation: data.delivery_information || fallback.deliveryInformation,
-      enabledPaymentMethods: filterPaymentMethods(data.enabled_payment_methods),
+      enabledPaymentMethods: configuredMethods,
       enabledDeliveryMethods: filterDeliveryMethods(data.enabled_delivery_methods),
+      paymentMethodConfigs: configs,
     };
   } catch {
     return fallback;
   }
 }
-

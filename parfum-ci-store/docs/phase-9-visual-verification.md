@@ -42,7 +42,25 @@ PASS/FAIL:
 
 ## Payment Methods
 
-Expected: only `store_settings.enabled_payment_methods` supported by Phase 8 are displayed. Disabled methods are absent.
+Expected: only `store_settings.enabled_payment_methods` supported by Phase 8 and correctly configured for customers are displayed. Disabled, unsupported, or underconfigured manual methods are absent.
+Actual:
+PASS/FAIL:
+
+## Payment Settings
+
+Expected: OWNER/ADMIN can configure payment labels, enabled state, merchant numbers, beneficiaries, instructions, and display order from `/admin/contenu`; unauthorized roles cannot save changes.
+Actual:
+PASS/FAIL:
+
+## Checkout Reconciliation Lifecycle
+
+Expected: `/commande` shows `Vérification du panier` briefly, then settles without repeated validation requests until the cart intent changes or the user retries.
+Actual:
+PASS/FAIL:
+
+## Checkout Submit Availability
+
+Expected: `Envoyer la commande` becomes available after cart readiness is READY and required form fields plus terms are valid; it remains disabled while validating, submitting, unavailable, adjusted, or invalid.
 Actual:
 PASS/FAIL:
 
@@ -109,6 +127,30 @@ PASS/FAIL:
 ## WhatsApp CTA
 
 Expected: confirmation WhatsApp CTA includes only the order number and support request, no internal IDs or full address.
+Actual:
+PASS/FAIL:
+
+## WhatsApp Primary Cart CTA
+
+Expected: `/panier` shows `Commander via WhatsApp` as the primary action, `Finaliser la commande en ligne` as secondary, and `Continuer mes achats` after ordering actions.
+Actual:
+PASS/FAIL:
+
+## WhatsApp Intent Tracking
+
+Expected: clicking WhatsApp after READY cart validation creates one intent event from authoritative cart data; rapid duplicate clicks do not create uncontrolled duplicate records.
+Actual:
+PASS/FAIL:
+
+## WhatsApp Intent Boundary
+
+Expected: WhatsApp intent creation does not create an order, reserve stock, decrement stock, change payment state, or claim WhatsApp was opened/sent.
+Actual:
+PASS/FAIL:
+
+## WhatsApp Intent Fallback
+
+Expected: if analytics persistence fails after cart validation, the UI allows a controlled WhatsApp fallback without claiming tracking succeeded.
 Actual:
 PASS/FAIL:
 
@@ -183,4 +225,3 @@ PASS/FAIL:
 Expected: If audit-grade terms proof is required, a reviewed migration captures accepted timestamp and policy version/reference. Current Phase 9 UI enforcement alone is not legal/audit proof.
 Actual:
 PASS/FAIL:
-

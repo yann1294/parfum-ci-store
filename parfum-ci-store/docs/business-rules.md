@@ -57,6 +57,9 @@
 - Public order tracking requires both order number and the normalized phone number submitted with the order. Unknown orders and wrong phones use the same generic no-result response.
 - Phase 9 delivery fees remain pending because Phase 8 records `delivery_fee_xof = 0` for manual confirmation. The storefront must display `Frais de livraison à confirmer` and must not present zero as free delivery.
 - Checkout requires explicit delivery/return terms acceptance in the UI. The current Phase 8 schema does not snapshot a terms version/timestamp; add a reviewed migration before using terms acceptance for audit/legal proof.
+- Checkout cart validation uses the material cart intent only: product ID, variant ID, and quantity. Hydration triggers one reconciliation, readiness changes do not trigger a loop, and explicit retry or a material cart change triggers one new request.
+- WhatsApp is the primary cart ordering CTA when a WhatsApp number is configured. Formal online checkout remains available as a secondary action and still uses Phase 8 order creation.
+- WhatsApp order-intent tracking is analytics only. It stores authoritative reconciled subtotal and safe line snapshots, but it never creates a Phase 8 order, reserves inventory, decrements stock, changes payment status, or confirms order completion.
 
 ## Public Content
 
@@ -86,6 +89,7 @@
 ## Payments
 
 - MVP methods are manual Mobile Money and cash on delivery.
+- Checkout displays only payment methods that are supported by the Phase 8 enum, enabled in store settings, and configured with required public instructions. Mobile Money methods require a public merchant number and instructions; bank transfer requires instructions and a beneficiary; pay-in-store requires instructions. Underconfigured manual methods are hidden.
 - No Stripe in the MVP.
 - Never store card details, Mobile Money PINs, OTPs, or CVVs.
 - Manual Mobile Money verification is performed by an authenticated admin.

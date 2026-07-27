@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatXof } from "@/lib/catalogue/format";
 import { absoluteUrl, buildWhatsAppUrlForNumber, normalizeWhatsAppNumber, siteConfig } from "@/config/site";
+import { cartMaterialSignature, createWhatsAppOrderIntentKey } from "@/lib/orders/checkout-client";
 import {
   CART_RECONCILIATION_STALE_MS,
   type CartState,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/storefront/cart";
 import type { ReconciledCart, ReconciledCartLine } from "@/lib/storefront/cart-reconciliation-core";
 import { reconcileCartClient } from "@/lib/storefront/cart-reconcile-client";
+import { readAttribution } from "@/lib/storefront/attribution";
 
 type ValidationState = {
   status: "idle" | "loading" | "ready" | "error";
@@ -41,7 +43,7 @@ function availabilityLabel(line: ReconciledCartLine) {
   return line.unavailableReason ?? "Indisponible";
 }
 
-export function buildCartWhatsAppMessage(snapshot: ReconciledCart) {
+export function buildCartWhatsAppMessage(snapshot: ReconciledCart, intentReference?: string | null) {
   return [
     "Bonjour, je souhaite commander ces articles :",
     ...snapshot.lines
@@ -57,8 +59,11 @@ export function buildCartWhatsAppMessage(snapshot: ReconciledCart) {
       ]),
     "",
     `Sous-total panier: ${formatXof(snapshot.subtotalXof)}`,
+    intentReference ? `Référence de demande: ${intentReference}` : null,
     "Merci de confirmer la disponibilité finale, les frais de livraison et les modalités de paiement.",
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) {
@@ -69,8 +74,11 @@ export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) 
     message: null,
     snapshot: null,
   });
+  const [whatsappPending, setWhatsappPending] = useState(false);
   const requestId = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
+  const whatsappIntentKeyRef = useRef<string | null>(null);
+  const whatsappIntentFingerprintRef = useRef<string | null>(null);
   const lastValidatedAt = useRef(0);
   const liveMessageRef = useRef<HTMLParagraphElement>(null);
 
@@ -146,20 +154,70 @@ export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) 
       snapshot &&
       snapshot.lines.length > 0 &&
       snapshot.readiness === "READY" &&
-      validation.status === "ready",
+      validation.status === "ready" &&
+      !whatsappPending,
   );
 
   const itemCount = useMemo(() => cart?.items.reduce((sum, item) => sum + item.quantity, 0) ?? 0, [cart]);
 
   async function openWhatsApp() {
-    if (!cart || !normalizedWhatsAppNumber) return;
+    if (!cart || !normalizedWhatsAppNumber || whatsappPending) return;
+    setWhatsappPending(true);
     setValidation((current) => ({ ...current, status: "loading", message: null }));
 
     try {
-      const latest = await reconcileCartClient(readCart());
+      const latestCart = readCart();
+      const latest = await reconcileCartClient(latestCart);
       setValidation({ status: "ready", message: null, snapshot: latest });
-      if (latest.readiness !== "READY") return;
-      const url = buildWhatsAppUrlForNumber(normalizedWhatsAppNumber, buildCartWhatsAppMessage(latest));
+      if (latest.readiness !== "READY") {
+        setValidation({
+          status: "ready",
+          message: "Corrigez le panier avant d'envoyer la demande WhatsApp.",
+          snapshot: latest,
+        });
+        return;
+      }
+
+      const fingerprint = cartMaterialSignature(latestCart);
+      if (!whatsappIntentKeyRef.current || whatsappIntentFingerprintRef.current !== fingerprint) {
+        whatsappIntentKeyRef.current = createWhatsAppOrderIntentKey();
+        whatsappIntentFingerprintRef.current = fingerprint;
+      }
+
+      const response = await fetch("/api/storefront/order-intents/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          intentKey: whatsappIntentKeyRef.current,
+          sourcePage: "/panier",
+          items: latestCart.items,
+          attribution: readAttribution() ?? undefined,
+        }),
+      });
+      const payload = (await response.json()) as
+        | {
+            ok: true;
+            tracked: boolean;
+            intentReference: string | null;
+            snapshot: ReconciledCart;
+          }
+        | { ok: false; error?: { code: string; message: string } };
+
+      if (!payload.ok) {
+        setValidation({
+          status: "error",
+          message: "Le panier n'a pas pu être préparé pour WhatsApp.",
+          snapshot: latest,
+        });
+        return;
+      }
+
+      setValidation({ status: "ready", message: null, snapshot: payload.snapshot });
+      const url = buildWhatsAppUrlForNumber(
+        normalizedWhatsAppNumber,
+        buildCartWhatsAppMessage(payload.snapshot, payload.intentReference),
+      );
       if (url) window.open(url, "_blank", "noopener,noreferrer");
     } catch {
       setValidation((current) => ({
@@ -167,6 +225,8 @@ export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) 
         status: "error",
         message: "Le panier n'a pas pu être vérifié pour le moment.",
       }));
+    } finally {
+      setWhatsappPending(false);
     }
   }
 
@@ -244,27 +304,31 @@ export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) 
           La disponibilité finale, les frais de livraison et les modalités de paiement seront confirmés avant validation de la commande.
         </p>
         <div className="mt-5 grid gap-3">
+          {normalizedWhatsAppNumber ? (
+            <Button type="button" className="w-full" onClick={openWhatsApp} disabled={!canOrder}>
+              {whatsappPending ? "Préparation WhatsApp..." : "Commander via WhatsApp"}
+            </Button>
+          ) : null}
+          <p className="text-xs text-muted-foreground">
+            Envoyez votre panier à notre équipe. La disponibilité, les frais de livraison et le paiement seront confirmés avec vous.
+          </p>
           <Link
             href="/commande"
             aria-disabled={snapshot?.readiness !== "READY" || validation.status !== "ready"}
             className={buttonVariants({
+              variant: "outline",
               className:
                 snapshot?.readiness === "READY" && validation.status === "ready"
                   ? "w-full"
                   : "w-full pointer-events-none opacity-50",
             })}
           >
-            Finaliser ma commande
+            Finaliser la commande en ligne
           </Link>
           {snapshot?.readiness !== "READY" || validation.status !== "ready" ? (
             <p className="text-xs text-muted-foreground">
               Vérifiez ou corrigez le panier avant de finaliser la commande.
             </p>
-          ) : null}
-          {normalizedWhatsAppNumber ? (
-            <Button type="button" className="w-full" onClick={openWhatsApp} disabled={!canOrder}>
-              Commander via WhatsApp
-            </Button>
           ) : null}
           <Link href="/catalogue" className={buttonVariants({ variant: "outline", className: "w-full" })}>
             Continuer mes achats

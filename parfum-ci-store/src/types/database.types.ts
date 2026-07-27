@@ -1092,6 +1092,7 @@ export type Database = {
           mtn_momo_number: string | null
           notification_email: string | null
           orange_money_number: string | null
+          payment_method_configs: Json
           public_readable: boolean
           store_name: string
           tiktok_url: string | null
@@ -1115,6 +1116,7 @@ export type Database = {
           mtn_momo_number?: string | null
           notification_email?: string | null
           orange_money_number?: string | null
+          payment_method_configs?: Json
           public_readable?: boolean
           store_name: string
           tiktok_url?: string | null
@@ -1138,12 +1140,120 @@ export type Database = {
           mtn_momo_number?: string | null
           notification_email?: string | null
           orange_money_number?: string | null
+          payment_method_configs?: Json
           public_readable?: boolean
           store_name?: string
           tiktok_url?: string | null
           updated_at?: string
           wave_number?: string | null
           whatsapp_number?: string | null
+        }
+        Relationships: []
+      }
+      storefront_order_intent_items: {
+        Row: {
+          brand_name: string | null
+          created_at: string
+          id: string
+          intent_id: string
+          line_total_xof: number
+          product_id: string | null
+          product_name: string
+          product_slug: string | null
+          quantity: number
+          unit_price_xof: number
+          variant_id: string | null
+          variant_label: string
+        }
+        Insert: {
+          brand_name?: string | null
+          created_at?: string
+          id?: string
+          intent_id: string
+          line_total_xof: number
+          product_id?: string | null
+          product_name: string
+          product_slug?: string | null
+          quantity: number
+          unit_price_xof: number
+          variant_id?: string | null
+          variant_label: string
+        }
+        Update: {
+          brand_name?: string | null
+          created_at?: string
+          id?: string
+          intent_id?: string
+          line_total_xof?: number
+          product_id?: string | null
+          product_name?: string
+          product_slug?: string | null
+          quantity?: number
+          unit_price_xof?: number
+          variant_id?: string | null
+          variant_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storefront_order_intent_items_intent_id_fkey"
+            columns: ["intent_id"]
+            isOneToOne: false
+            referencedRelation: "storefront_order_intents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      storefront_order_intents: {
+        Row: {
+          cart_fingerprint: string
+          channel: string
+          created_at: string
+          currency: string
+          expires_at: string
+          id: string
+          intent_key: string
+          source_page: string | null
+          status: string
+          subtotal_xof: number
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          cart_fingerprint: string
+          channel: string
+          created_at?: string
+          currency?: string
+          expires_at?: string
+          id?: string
+          intent_key: string
+          source_page?: string | null
+          status: string
+          subtotal_xof: number
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          cart_fingerprint?: string
+          channel?: string
+          created_at?: string
+          currency?: string
+          expires_at?: string
+          id?: string
+          intent_key?: string
+          source_page?: string | null
+          status?: string
+          subtotal_xof?: number
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Relationships: []
       }
