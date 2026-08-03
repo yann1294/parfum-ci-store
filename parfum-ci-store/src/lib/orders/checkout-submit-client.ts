@@ -32,7 +32,7 @@ const checkoutOrderSuccessObjectSchema = z
     subtotalXof: safeInteger,
     deliveryFeeXof: nullableSafeInteger,
     totalXof: nullableSafeInteger,
-    createdAt: z.iso.datetime(),
+    createdAt: z.iso.datetime({ offset: true }),
     items: z.array(
       z
         .object({

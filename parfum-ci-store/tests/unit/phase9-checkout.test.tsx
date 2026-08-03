@@ -302,6 +302,7 @@ describe("Phase 9 checkout form", () => {
             subtotalXof: "95000",
             deliveryFeeXof: "0",
             totalXof: "95000",
+            createdAt: "2026-08-03T13:06:49.557453+00:00",
             items: successfulOrderPayload.items.map((item) => ({
               ...item,
               quantity: "1",
