@@ -112,6 +112,39 @@ describe("POST /api/orders Phase 8 boundary", () => {
     expect(JSON.stringify(payload)).not.toContain("reserved_quantity");
   });
 
+  it("accepts equivalent Côte d'Ivoire phone formats before order creation", async () => {
+    createGuestOrder.mockResolvedValue({
+      orderId: "44444444-4444-4444-8444-444444444444",
+      orderNumber: "CMD-2026-A1B2C3",
+      orderStatus: "PENDING_CONFIRMATION",
+      paymentStatus: "UNPAID",
+      currency: "XOF",
+      subtotalXof: 95000,
+      deliveryFeeXof: 0,
+      totalXof: 95000,
+      createdAt: "2026-07-23T00:00:00.000Z",
+      items: [{ productName: "Nom serveur", variantLabel: "100 ml · EDP", quantity: 1, unitPriceXof: 95000, lineTotalXof: 95000 }],
+      nextStepCode: "PENDING_CONFIRMATION",
+    });
+
+    for (const phone of ["+2250700000000", "002250700000000", "2250700000000", "0700000000"]) {
+      const response = await POST(postRequest(requestBody({ customer: { ...requestBody().customer, phone } })));
+      expect(response.status).toBe(201);
+    }
+
+    expect(createGuestOrder).toHaveBeenCalledTimes(4);
+  });
+
+  it("rejects malformed phone values without calling order creation", async () => {
+    const response = await POST(
+      postRequest(requestBody({ customer: { ...requestBody().customer, phone: "+2252250700000000" } })),
+    );
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).toBe("ORDER_INVALID_PHONE");
+    expect(createGuestOrder).not.toHaveBeenCalled();
+  });
+
   it("maps service errors without exposing raw internals", async () => {
     createGuestOrder.mockRejectedValue(new GuestOrderError("ORDER_ITEM_UNAVAILABLE", 409));
     const response = await POST(postRequest(requestBody()));
@@ -120,5 +153,27 @@ describe("POST /api/orders Phase 8 boundary", () => {
     const payload = await response.json();
     expect(payload.error.code).toBe("ORDER_ITEM_UNAVAILABLE");
     expect(JSON.stringify(payload)).not.toContain("public.product_variants");
+  });
+
+  it("keeps customer conflicts distinguishable from generic creation failures", async () => {
+    createGuestOrder.mockRejectedValue(new GuestOrderError("ORDER_CUSTOMER_CONFLICT", 409));
+    const response = await POST(postRequest(requestBody()));
+
+    expect(response.status).toBe(409);
+    const payload = await response.json();
+    expect(payload.error.code).toBe("ORDER_CUSTOMER_CONFLICT");
+    expect(payload.error.message).toBe("Ce numéro ne peut pas être utilisé pour le moment.");
+    expect(JSON.stringify(payload)).not.toContain("customers_normalized_phone_key");
+  });
+
+  it("keeps server configuration failures distinguishable from generic creation failures", async () => {
+    createGuestOrder.mockRejectedValue(new GuestOrderError("ORDER_SERVER_MISCONFIGURED", 503));
+    const response = await POST(postRequest(requestBody()));
+
+    expect(response.status).toBe(503);
+    const payload = await response.json();
+    expect(payload.error.code).toBe("ORDER_SERVER_MISCONFIGURED");
+    expect(payload.error.message).toBe("La commande en ligne est temporairement indisponible.");
+    expect(JSON.stringify(payload)).not.toContain("permission denied");
   });
 });

@@ -35,6 +35,7 @@ import {
   type PaymentMethod,
   type PaymentInstructionSettings,
 } from "@/lib/orders/display";
+import { normalizeCoteDIvoirePhoneResult } from "@/lib/orders/phone";
 import { CART_RECONCILIATION_STALE_MS, clearCart, readCart, type CartState } from "@/lib/storefront/cart";
 import { reconcileCartClient } from "@/lib/storefront/cart-reconcile-client";
 import type { ReconciledCart, ReconciledCartLine } from "@/lib/storefront/cart-reconciliation-core";
@@ -75,12 +76,18 @@ type OrderErrorCode =
   | "ORDER_INSUFFICIENT_STOCK"
   | "ORDER_INVENTORY_NOT_CONFIGURED"
   | "ORDER_IDEMPOTENCY_CONFLICT"
+  | "ORDER_CUSTOMER_CONFLICT"
   | "ORDER_RATE_LIMITED"
   | "ORDER_CREATION_FAILED"
+  | "ORDER_SERVER_MISCONFIGURED"
+  | "ORDER_STORE_SETTINGS_UNAVAILABLE"
+  | "ORDER_TOTAL_INVALID"
+  | "ORDER_NUMBER_GENERATION_FAILED"
   | "ORDER_PAYMENT_METHOD_DISABLED"
-  | "ORDER_DELIVERY_METHOD_DISABLED";
+  | "ORDER_DELIVERY_METHOD_DISABLED"
+  | "ORDER_PAYMENT_METHOD_UNAVAILABLE"
+  | "ORDER_DELIVERY_METHOD_UNAVAILABLE";
 
-const optionalEmail = z.union([z.literal(""), z.email("Saisissez une adresse e-mail valide.")]);
 const text = (max: number, message: string) =>
   z
     .string()
@@ -94,13 +101,22 @@ const optionalText = (max: number) =>
     .trim()
     .max(max, `Maximum ${max} caractères.`)
     .refine((value) => !/[\u0000-\u001f\u007f]/.test(value), "Caractères non autorisés.");
+const optionalEmail = z.union([z.literal(""), z.email("Saisissez une adresse e-mail valide.")]);
+const phoneField = text(40, "Le téléphone est requis.").refine(
+  (value) => normalizeCoteDIvoirePhoneResult(value).ok,
+  "Saisissez un numéro de téléphone ivoirien valide.",
+);
+const optionalPhoneField = optionalText(40).refine(
+  (value) => !value || normalizeCoteDIvoirePhoneResult(value, false).ok,
+  "Saisissez un numéro de téléphone ivoirien valide.",
+);
 
 const checkoutFormSchema = z
   .object({
     fullName: text(120, "Le nom complet est requis."),
-    phone: text(40, "Le téléphone est requis."),
+    phone: phoneField,
     email: optionalEmail,
-    whatsapp: optionalText(40),
+    whatsapp: optionalPhoneField,
     city: text(80, "La ville est requise."),
     commune: text(120, "La commune ou le quartier est requis."),
     address: optionalText(240),
@@ -155,10 +171,17 @@ function orderErrorMessage(code: OrderErrorCode | string) {
     ORDER_INSUFFICIENT_STOCK: "La quantité disponible d'un article a changé.",
     ORDER_INVENTORY_NOT_CONFIGURED: "Un article ne peut pas être commandé pour le moment.",
     ORDER_IDEMPOTENCY_CONFLICT: "Le contenu de la commande a changé. Veuillez vérifier votre panier avant de réessayer.",
+    ORDER_CUSTOMER_CONFLICT: "Ce numéro ne peut pas être utilisé pour le moment. Vérifiez-le ou contactez l’équipe.",
     ORDER_RATE_LIMITED: "Trop de tentatives ont été effectuées. Réessayez dans quelques instants.",
     ORDER_CREATION_FAILED: "La commande n'a pas pu être créée. Aucun paiement ni réservation supplémentaire n'a été effectué.",
+    ORDER_SERVER_MISCONFIGURED: "La commande en ligne est temporairement indisponible. Contactez l’équipe ou réessayez plus tard.",
+    ORDER_STORE_SETTINGS_UNAVAILABLE: "La boutique ne peut pas recevoir de commande pour le moment. Réessayez plus tard ou contactez l’équipe.",
+    ORDER_TOTAL_INVALID: "Le total de la commande est invalide. Vérifiez votre panier avant de réessayer.",
+    ORDER_NUMBER_GENERATION_FAILED: "La commande n'a pas pu être créée. Aucun paiement ni réservation supplémentaire n'a été effectué.",
     ORDER_PAYMENT_METHOD_DISABLED: "Ce mode de paiement n'est plus disponible.",
     ORDER_DELIVERY_METHOD_DISABLED: "Ce mode de livraison n'est plus disponible.",
+    ORDER_PAYMENT_METHOD_UNAVAILABLE: "Ce mode de paiement n'est plus disponible.",
+    ORDER_DELIVERY_METHOD_UNAVAILABLE: "Ce mode de livraison n'est plus disponible.",
   };
   return messages[code as OrderErrorCode] ?? messages.ORDER_CREATION_FAILED;
 }

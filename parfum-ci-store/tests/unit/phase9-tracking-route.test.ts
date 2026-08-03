@@ -22,6 +22,7 @@ vi.mock("@/lib/orders/rate-limit", () => ({
 }));
 
 const { POST } = await import("@/app/api/orders/track/route");
+const { normalizeTrackingRequest } = await import("@/lib/orders/tracking");
 
 function post(body: unknown) {
   return new Request("http://localhost/api/orders/track", {
@@ -69,6 +70,16 @@ describe("Phase 9 order tracking route", () => {
     expect(JSON.stringify(payload)).not.toContain("reserved_quantity");
   });
 
+  it("normalizes tracking phone input with the shared Côte d'Ivoire policy", () => {
+    expect(normalizeTrackingRequest({ orderNumber: "CMD-2026-A1B2C3", phone: "00225 07 00 00 00 12", honeypot: "" })).toEqual({
+      orderNumber: "CMD-2026-A1B2C3",
+      phone: "+2250700000012",
+    });
+    expect(normalizeTrackingRequest({ orderNumber: "CMD-2026-A1B2C3", phone: "0700000012", honeypot: "" }).phone).toBe(
+      "+2250700000012",
+    );
+  });
+
   it("uses the same generic no-result shape for invalid and missing lookups", async () => {
     const invalid = await POST(post({ orderNumber: "bad", phone: "bad", honeypot: "" }));
     expect(await invalid.json()).toEqual({
@@ -96,4 +107,3 @@ describe("Phase 9 order tracking route", () => {
     expect(lookupOrderForTracking).not.toHaveBeenCalled();
   });
 });
-

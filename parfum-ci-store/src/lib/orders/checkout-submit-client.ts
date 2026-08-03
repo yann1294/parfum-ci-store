@@ -6,6 +6,16 @@ import type { DeliveryMethod, PaymentMethod } from "@/lib/orders/display";
 import type { CartState } from "@/lib/storefront/cart";
 import type { AttributionDto } from "@/lib/storefront/attribution";
 
+const safeInteger = z.preprocess((value) => {
+  if (typeof value === "string" && /^\d+$/.test(value)) return Number.parseInt(value, 10);
+  return value;
+}, z.number().int().min(0).max(Number.MAX_SAFE_INTEGER));
+
+const positiveInteger = z.preprocess((value) => {
+  if (typeof value === "string" && /^\d+$/.test(value)) return Number.parseInt(value, 10);
+  return value;
+}, z.number().int().min(1).max(Number.MAX_SAFE_INTEGER));
+
 export const checkoutOrderSuccessSchema = z
   .object({
     orderId: z.uuid().optional(),
@@ -13,18 +23,18 @@ export const checkoutOrderSuccessSchema = z
     orderStatus: z.string().trim().min(1),
     paymentStatus: z.string().trim().min(1),
     currency: z.literal("XOF"),
-    subtotalXof: z.number().int().min(0),
-    deliveryFeeXof: z.number().int().min(0),
-    totalXof: z.number().int().min(0),
+    subtotalXof: safeInteger,
+    deliveryFeeXof: safeInteger,
+    totalXof: safeInteger,
     createdAt: z.iso.datetime(),
     items: z.array(
       z
         .object({
           productName: z.string().trim().min(1),
           variantLabel: z.string().nullable(),
-          quantity: z.number().int().min(1),
-          unitPriceXof: z.number().int().min(0),
-          lineTotalXof: z.number().int().min(0),
+          quantity: positiveInteger,
+          unitPriceXof: safeInteger,
+          lineTotalXof: safeInteger,
         })
         .strict(),
     ),

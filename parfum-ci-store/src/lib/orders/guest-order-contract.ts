@@ -2,12 +2,18 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import { CART_MAX_QUANTITY } from "@/lib/storefront/cart-constants";
+import { normalizeCoteDIvoirePhone } from "@/lib/orders/phone";
+
+export { normalizeCoteDIvoirePhone, normalizeCoteDIvoirePhoneResult } from "@/lib/orders/phone";
 
 export const GUEST_ORDER_MAX_LINES = 20;
 export const GUEST_ORDER_MAX_BODY_BYTES = 20_000;
 
 export const guestOrderErrorCodes = [
   "ORDER_INVALID_REQUEST",
+  "ORDER_INVALID_IDEMPOTENCY_KEY",
+  "ORDER_INVALID_FINGERPRINT",
+  "ORDER_INVALID_QUANTITY",
   "ORDER_INVALID_PHONE",
   "ORDER_EMPTY_CART",
   "ORDER_TOO_MANY_LINES",
@@ -15,10 +21,17 @@ export const guestOrderErrorCodes = [
   "ORDER_INSUFFICIENT_STOCK",
   "ORDER_INVENTORY_NOT_CONFIGURED",
   "ORDER_IDEMPOTENCY_CONFLICT",
+  "ORDER_CUSTOMER_CONFLICT",
   "ORDER_RATE_LIMITED",
   "ORDER_CREATION_FAILED",
+  "ORDER_SERVER_MISCONFIGURED",
+  "ORDER_STORE_SETTINGS_UNAVAILABLE",
+  "ORDER_TOTAL_INVALID",
+  "ORDER_NUMBER_GENERATION_FAILED",
   "ORDER_PAYMENT_METHOD_DISABLED",
   "ORDER_DELIVERY_METHOD_DISABLED",
+  "ORDER_PAYMENT_METHOD_UNAVAILABLE",
+  "ORDER_DELIVERY_METHOD_UNAVAILABLE",
 ] as const;
 
 export type GuestOrderErrorCode = (typeof guestOrderErrorCodes)[number];
@@ -125,31 +138,6 @@ export type GuestOrderConfirmation = {
   nextStepCode: string;
 };
 
-export function normalizeCoteDIvoirePhone(value: string, required = true) {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    if (required) throw new Error("ORDER_INVALID_PHONE");
-    return undefined;
-  }
-
-  if (/[^0-9+\s().-]/.test(trimmed)) throw new Error("ORDER_INVALID_PHONE");
-  const digits = trimmed.replace(/[^\d+]/g, "");
-  let normalizedDigits: string;
-
-  if (digits.startsWith("+225")) {
-    normalizedDigits = digits.slice(4);
-  } else if (digits.startsWith("225")) {
-    normalizedDigits = digits.slice(3);
-  } else {
-    normalizedDigits = digits;
-  }
-
-  if (!/^[0-9]{10}$/.test(normalizedDigits)) throw new Error("ORDER_INVALID_PHONE");
-  if (!/^(01|05|07|21|25|27)/.test(normalizedDigits)) throw new Error("ORDER_INVALID_PHONE");
-
-  return `+225${normalizedDigits}`;
-}
-
 export function normalizeGuestOrderRequest(input: GuestOrderRequest): NormalizedGuestOrderRequest {
   const merged = new Map<string, z.infer<typeof guestOrderLineSchema>>();
   const phone = normalizeCoteDIvoirePhone(input.customer.phone);
@@ -219,6 +207,16 @@ export function publicOrderError(code: GuestOrderErrorCode, status = 400) {
             ? "Trop de tentatives. Réessayez dans un instant."
             : code === "ORDER_INVALID_PHONE"
               ? "Le numéro de téléphone n'est pas valide."
+              : code === "ORDER_STORE_SETTINGS_UNAVAILABLE"
+                ? "La boutique ne peut pas recevoir de commande pour le moment."
+                : code === "ORDER_SERVER_MISCONFIGURED"
+                  ? "La commande en ligne est temporairement indisponible."
+              : code === "ORDER_CUSTOMER_CONFLICT"
+                ? "Ce numéro ne peut pas être utilisé pour le moment."
+                : code === "ORDER_PAYMENT_METHOD_DISABLED" || code === "ORDER_PAYMENT_METHOD_UNAVAILABLE"
+                  ? "Ce mode de paiement n'est plus disponible."
+                  : code === "ORDER_DELIVERY_METHOD_DISABLED" || code === "ORDER_DELIVERY_METHOD_UNAVAILABLE"
+                    ? "Ce mode de livraison n'est plus disponible."
               : "La commande n'a pas pu être créée. Vérifiez le panier et réessayez.",
       },
     },

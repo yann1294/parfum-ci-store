@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { normalizeCoteDIvoirePhone } from "@/lib/orders/guest-order-contract";
+import { normalizeCoteDIvoirePhone } from "@/lib/orders/phone";
 import {
   deliveryMethodLabel,
   maskPhone,
@@ -198,4 +198,3 @@ export async function lookupOrderForTracking(input: TrackOrderRequest): Promise<
     return notFound();
   }
 }
-

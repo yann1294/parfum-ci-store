@@ -64,11 +64,26 @@ describe("Phase 8 guest order request contract", () => {
   });
 
   it("normalizes Côte d'Ivoire phone values safely", () => {
-    expect(normalizeCoteDIvoirePhone("+225 07 00 00 00 00")).toBe("+2250700000000");
-    expect(normalizeCoteDIvoirePhone("225-07-00-00-00-00")).toBe("+2250700000000");
-    expect(normalizeCoteDIvoirePhone("(07) 00 00 00 00")).toBe("+2250700000000");
+    const accepted = [
+      "+2250700000000",
+      "002250700000000",
+      "2250700000000",
+      "0700000000",
+      "+225 07 00 00 00 00",
+      "00225 07 00 00 00 00",
+      "225-07-00-00-00-00",
+      "(07) 00 00 00 00",
+      "(+225) 07 00 00 00 00",
+    ];
+
+    for (const value of accepted) {
+      expect(normalizeCoteDIvoirePhone(value)).toBe("+2250700000000");
+    }
+
     expect(() => normalizeCoteDIvoirePhone("+225 07 00")).toThrow("ORDER_INVALID_PHONE");
     expect(() => normalizeCoteDIvoirePhone("+225 07 00 00 00 XX")).toThrow("ORDER_INVALID_PHONE");
+    expect(() => normalizeCoteDIvoirePhone("+2252250700000000")).toThrow("ORDER_INVALID_PHONE");
+    expect(() => normalizeCoteDIvoirePhone("002260700000000")).toThrow("ORDER_INVALID_PHONE");
     expect(normalizeCoteDIvoirePhone("", false)).toBeUndefined();
   });
 
@@ -93,6 +108,27 @@ describe("Phase 8 guest order request contract", () => {
     ]);
   });
 
+  it("converges equivalent phone forms to the same customer fingerprint", () => {
+    const forms = ["+2250700000000", "002250700000000", "2250700000000", "0700000000"];
+    const fingerprints = forms.map((phone) =>
+      createGuestOrderFingerprint(
+        normalizeGuestOrderRequest(
+          guestOrderRequestSchema.parse(
+            request({
+              customer: {
+                ...request().customer,
+                phone,
+                whatsapp: phone,
+              },
+            }),
+          ),
+        ),
+      ),
+    );
+
+    expect(new Set(fingerprints).size).toBe(1);
+  });
+
   it("creates a stable material fingerprint and changes for material payload changes", () => {
     const normalized = normalizeGuestOrderRequest(guestOrderRequestSchema.parse(request()));
     const same = normalizeGuestOrderRequest(guestOrderRequestSchema.parse(request()));
@@ -110,6 +146,12 @@ describe("Phase 8 guest order request contract", () => {
       code: "ORDER_INVALID_PHONE",
       message: "Le numéro de téléphone n'est pas valide.",
     });
+    expect(publicOrderError("ORDER_CUSTOMER_CONFLICT").body.error.message).toBe(
+      "Ce numéro ne peut pas être utilisé pour le moment.",
+    );
+    expect(publicOrderError("ORDER_PAYMENT_METHOD_UNAVAILABLE").body.error.message).toBe(
+      "Ce mode de paiement n'est plus disponible.",
+    );
     expect(JSON.stringify(publicOrderError("ORDER_CREATION_FAILED"))).not.toContain("SQL");
     expect(JSON.stringify(publicOrderError("ORDER_CREATION_FAILED"))).not.toContain("details");
   });
@@ -156,7 +198,7 @@ describe("Phase 8 guest order service", () => {
   it("maps expected database errors and suppresses raw Supabase diagnostics", async () => {
     rpc.mockResolvedValue({
       data: null,
-      error: { code: "P0001", message: "ORDER_INSUFFICIENT_STOCK table public.product_variants" },
+      error: { code: "P0001", message: "ERROR: ORDER_INSUFFICIENT_STOCK table public.product_variants" },
     });
 
     await expect(createGuestOrder(guestOrderRequestSchema.parse(request()))).rejects.toMatchObject({
@@ -165,16 +207,82 @@ describe("Phase 8 guest order service", () => {
     });
   });
 
-  it("maps unexpected database failures to a generic safe error", async () => {
+  it("maps missing store settings to a temporary checkout-unavailable error", async () => {
     rpc.mockResolvedValue({
       data: null,
-      error: { code: "42501", message: "permission denied for table app_private.secret" },
+      error: { code: "P0001", message: "ORDER_STORE_SETTINGS_UNAVAILABLE" },
+    });
+
+    await expect(createGuestOrder(guestOrderRequestSchema.parse(request()))).rejects.toMatchObject({
+      code: "ORDER_STORE_SETTINGS_UNAVAILABLE",
+      status: 503,
+    });
+  });
+
+  it("maps normalized-phone customer conflicts to a safe business error", async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: "23505", message: "duplicate key value violates unique constraint customers_normalized_phone_key" },
+    });
+
+    await expect(createGuestOrder(guestOrderRequestSchema.parse(request()))).rejects.toMatchObject({
+      code: "ORDER_CUSTOMER_CONFLICT",
+      status: 409,
+    });
+  });
+
+  it("maps RPC permission and schema drift failures to a safe server-misconfigured error", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: "42501", message: "permission denied for function create_guest_order_server" },
+    });
+
+    await expect(createGuestOrder(guestOrderRequestSchema.parse(request()))).rejects.toMatchObject({
+      code: "ORDER_SERVER_MISCONFIGURED",
+      status: 503,
+    });
+    expect(consoleError).toHaveBeenCalledWith("ORDER_DATABASE_FAILURE", {
+      dbCode: "42501",
+      mappedCode: "ORDER_SERVER_MISCONFIGURED",
+      status: 503,
+      raisedCode: null,
+    });
+    consoleError.mockRestore();
+  });
+
+  it("maps invalid ON CONFLICT targets to a safe server-misconfigured error", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: "42P10", message: "there is no unique or exclusion constraint matching the ON CONFLICT specification" },
+    });
+
+    await expect(createGuestOrder(guestOrderRequestSchema.parse(request()))).rejects.toMatchObject({
+      code: "ORDER_SERVER_MISCONFIGURED",
+      status: 503,
+    });
+    expect(consoleError).toHaveBeenCalledWith("ORDER_DATABASE_FAILURE", {
+      dbCode: "42P10",
+      mappedCode: "ORDER_SERVER_MISCONFIGURED",
+      status: 503,
+      raisedCode: null,
+    });
+    consoleError.mockRestore();
+  });
+
+  it("maps unexpected database failures to a generic safe error", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    rpc.mockResolvedValue({
+      data: null,
+      error: { code: "XX999", message: "unexpected database failure" },
     });
 
     await expect(createGuestOrder(guestOrderRequestSchema.parse(request()))).rejects.toMatchObject({
       code: "ORDER_CREATION_FAILED",
       status: 500,
     });
+    consoleError.mockRestore();
   });
 });
 
@@ -188,6 +296,60 @@ describe("Phase 8 migration contract", () => {
     expect(sql).toContain("revoke all on function public.create_guest_order_server(jsonb) from anon");
     expect(sql).toContain("guest_order_idempotency");
     expect(sql).toContain("'RESERVED'::public.inventory_transaction_type");
+    expect(sql).not.toContain("storage.objects");
+  });
+
+  it("adds a forward migration for the guest-order ambiguous-column repair", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260727163000_phase9_guest_order_ambiguous_column_fix.sql",
+      "utf8",
+    );
+
+    expect(sql).toContain("create or replace function app_private.create_guest_order(request jsonb)");
+    expect(sql).toContain("#variable_conflict use_column");
+    expect(sql).toContain("on conflict (normalized_phone) where normalized_phone is not null do update");
+    expect(sql).toContain("grant execute on function app_private.create_guest_order(jsonb) to service_role");
+    expect(sql).not.toContain("drop table");
+    expect(sql).not.toContain("storage.objects");
+  });
+
+  it("adds a forward migration for the normalized-phone conflict arbiter", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260803120000_phase9_customer_normalized_phone_conflict_target.sql",
+      "utf8",
+    );
+
+    expect(sql).toContain("create unique index if not exists customers_normalized_phone_unique_idx");
+    expect(sql).toContain("on public.customers(normalized_phone)");
+    expect(sql).not.toContain("drop table");
+    expect(sql).not.toContain("storage.objects");
+  });
+
+  it("adds a forward migration that removes fragile customer ON CONFLICT inference", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260803123000_phase9_guest_order_customer_upsert_repair.sql",
+      "utf8",
+    );
+
+    expect(sql).toContain("create or replace function app_private.create_guest_order(request jsonb)");
+    expect(sql).toContain("pg_advisory_xact_lock(hashtextextended('guest_customer:' || v_normalized_phone, 0))");
+    expect(sql).toContain("where customers.normalized_phone = v_normalized_phone");
+    expect(sql).toContain("update public.customers");
+    expect(sql).toContain("insert into public.customers");
+    expect(sql).not.toContain("on conflict (normalized_phone)");
+    expect(sql).not.toContain("drop table");
+    expect(sql).not.toContain("storage.objects");
+  });
+
+  it("adds a forward migration for the notification idempotency conflict arbiter", () => {
+    const sql = readFileSync(
+      "supabase/migrations/20260803130000_phase9_notification_idempotency_conflict_target.sql",
+      "utf8",
+    );
+
+    expect(sql).toContain("create unique index if not exists notifications_idempotency_key_unique_idx");
+    expect(sql).toContain("on public.notifications(idempotency_key)");
+    expect(sql).not.toContain("drop table");
     expect(sql).not.toContain("storage.objects");
   });
 });

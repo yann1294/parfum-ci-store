@@ -138,9 +138,9 @@ function seedCart() {
   });
 }
 
-async function fillRequiredCheckoutFields() {
+async function fillRequiredCheckoutFields(phone = "+225 07 00 00 00 00") {
   fireEvent.change(screen.getByLabelText("Nom complet"), { target: { value: "Awa Kone" } });
-  fireEvent.change(screen.getByLabelText("Téléphone"), { target: { value: "+225 07 00 00 00 00" } });
+  fireEvent.change(screen.getByLabelText("Téléphone"), { target: { value: phone } });
   fireEvent.change(screen.getByLabelText("Commune ou quartier"), { target: { value: "Cocody" } });
   fireEvent.click(screen.getByLabelText(/J'accepte les conditions/i));
 }
@@ -268,6 +268,62 @@ describe("Phase 9 checkout form", () => {
     expect(push).not.toHaveBeenCalled();
     expect(readCart().items).toHaveLength(0);
     expect(readSafeConfirmation("CMD-2026-A1B2C3")?.orderNumber).toBe("CMD-2026-A1B2C3");
+  });
+
+  it("accepts 00225 phone input in the checkout form and lets the server canonicalize it", async () => {
+    seedCart();
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === "/api/cart/reconcile") return Response.json(readySnapshot);
+      if (url === "/api/orders") {
+        const body = JSON.parse(String(init?.body));
+        expect(body.customer.phone).toBe("002250700000000");
+        return Response.json(successfulOrderPayload, { status: 201 });
+      }
+      throw new Error(`Unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CheckoutPageClient settings={settings} />);
+    expect(await screen.findByText("Sauvage")).toBeDefined();
+    await fillRequiredCheckoutFields("002250700000000");
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/commande/succes/CMD-2026-A1B2C3"));
+  });
+
+  it("accepts a successful order response with SQL numeric values serialized as strings", async () => {
+    seedCart();
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/api/cart/reconcile") return Response.json(readySnapshot);
+      if (url === "/api/orders") {
+        return Response.json(
+          {
+            ...successfulOrderPayload,
+            subtotalXof: "95000",
+            deliveryFeeXof: "0",
+            totalXof: "95000",
+            items: successfulOrderPayload.items.map((item) => ({
+              ...item,
+              quantity: "1",
+              unitPriceXof: "95000",
+              lineTotalXof: "95000",
+            })),
+          },
+          { status: 201 },
+        );
+      }
+      throw new Error(`Unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CheckoutPageClient settings={settings} />);
+    expect(await screen.findByText("Sauvage")).toBeDefined();
+    await fillRequiredCheckoutFields();
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/commande/succes/CMD-2026-A1B2C3"));
+    expect(readSafeConfirmation("CMD-2026-A1B2C3")?.subtotalXof).toBe(95000);
+    expect(readCart().items).toHaveLength(0);
   });
 
   it("shows an inline success fallback when confirmation navigation fails after order creation", async () => {

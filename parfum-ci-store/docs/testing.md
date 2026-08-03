@@ -196,7 +196,7 @@ Playwright content-management tests require staff credentials from ignored envir
 
 ## Phase 8 Guest Order Transactions
 
-Unit tests cover the strict `/api/orders` request contract, unexpected field rejection, honeypot rejection, phone and WhatsApp normalization, email normalization, duplicate variant-line merging, quantity and line-count bounds, stable request fingerprinting, rate-limit response mapping, safe success responses, safe expected error responses, and suppression of raw database diagnostics.
+Unit tests cover the strict `/api/orders` request contract, unexpected field rejection, honeypot rejection, phone and WhatsApp normalization, email normalization, duplicate variant-line merging, quantity and line-count bounds, stable request fingerprinting, rate-limit response mapping, safe success responses, safe expected error responses, and suppression of raw database diagnostics. Phone tests must prove `+225XXXXXXXXXX`, `00225XXXXXXXXXX`, `225XXXXXXXXXX`, accepted local values, spaces, hyphens, and parentheses all converge to `+225XXXXXXXXXX`, while repeated country codes, unsupported country prefixes, letters, empty required values, and invalid lengths return `ORDER_INVALID_PHONE`.
 
 After applying the Phase 8 migration to an isolated local or staging Supabase database, run:
 
@@ -224,7 +224,7 @@ WhatsApp intent tests must verify no intent on render, intent creation only afte
 
 Phase 9 integration repair tests must verify payment settings persistence reaches the singleton `store_settings` update with only explicit payment columns, missing payment migration is surfaced as a typed safe failure, HTTP 400 from `/api/orders` does not clear cart or navigate, malformed 2xx order payloads are rejected, order errors remain visible after follow-up cart refresh, and optional WhatsApp intent endpoint failures do not block a freshly validated READY cart.
 
-Route tests for `/api/orders/track` must verify bounded JSON, phone normalization, rate limiting, no-store responses, generic no-result shape for wrong phone/unknown order, and absence of customer IDs, cost prices, inventory data, audit data, notification payloads, or Supabase diagnostics.
+Route tests for `/api/orders/track` must verify bounded JSON, shared phone normalization, rate limiting, no-store responses, generic no-result shape for wrong phone/unknown order, and absence of customer IDs, cost prices, inventory data, audit data, notification payloads, or Supabase diagnostics.
 
 Playwright Phase 9 tests require real ACTIVE products with initialized available inventory, applied Phase 8 migrations, and a non-production database. Do not mark successful checkout, cart clearing, duplicate submission, tracking security, wrong-phone privacy, or reservation behavior as passed without a real database-backed order.
 

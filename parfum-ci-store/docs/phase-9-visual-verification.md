@@ -34,6 +34,18 @@ Expected: invalid Côte d'Ivoire phone values produce a safe French error and no
 Actual:
 PASS/FAIL:
 
+## Phone Format Equivalence
+
+Expected: the same disposable Côte d'Ivoire test number succeeds when entered as `+225XXXXXXXXXX`, `00225XXXXXXXXXX`, `225XXXXXXXXXX`, accepted local digits, and with spaces, hyphens, or parentheses; all forms match the canonical stored value `+225XXXXXXXXXX`.
+Actual:
+PASS/FAIL:
+
+## Phone Customer Conflict
+
+Expected: a normalized-phone customer conflict displays `Ce numéro ne peut pas être utilisé pour le moment. Vérifiez-le ou contactez l’équipe.` and does not expose database constraint names or raw diagnostics.
+Actual:
+PASS/FAIL:
+
 ## Delivery Methods
 
 Expected: only `store_settings.enabled_delivery_methods` supported by Phase 8 are displayed.
