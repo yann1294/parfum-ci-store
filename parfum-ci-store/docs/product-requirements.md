@@ -58,6 +58,7 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - Phase 9 correction: WhatsApp is the primary cart ordering path when configured. A WhatsApp click records a lightweight order-intent event after authoritative cart validation, but it does not create an order, reserve inventory, decrement stock, confirm payment, or prove that WhatsApp opened or that the customer sent the message.
 - Payment methods shown at checkout come from `store_settings`, must be supported by the Phase 8 contract, and must be enabled/configured by OWNER or ADMIN in `/admin/contenu`.
 - Phase 10 adds transactional admin inventory management at `/admin/inventaire`, `/admin/inventaire/[variantId]`, and `/admin/inventaire/stock-faible`. Manual inventory operations reuse `product_variants`, `reserved_quantity`, `inventory_initialized_at`, and `inventory_transactions`; they do not change cart, checkout, order creation, or product publication rules.
+- Phase 11 adds admin order management at `/admin/commandes` and `/admin/commandes/[id]`. Order lifecycle transitions and payment verification use private transactional database functions, reuse Phase 8 reservations and Phase 10 ledger conventions, and do not redesign checkout, cart, catalogue or manual inventory.
 
 ## Non-Goals for MVP
 

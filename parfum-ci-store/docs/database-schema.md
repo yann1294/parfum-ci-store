@@ -201,6 +201,8 @@ The first migration adds indexes for:
 
 Phase 4 adds indexes for case-insensitive product slugs, active/featured product listing, product brand/category filters, variant active/price filters, product image sort order, primary image uniqueness, and pending image upload expiry.
 
+Phase 11 adds `app_private.order_transition_idempotency`, `app_private.payment_status_idempotency`, and `public.order_internal_notes`. Order transitions are handled by `app_private.transition_order(jsonb)` through the service-role-only `public.transition_order_server(jsonb)` wrapper. Payment verification is handled by `app_private.record_order_payment(jsonb)` through `public.record_order_payment_server(jsonb)`. The functions write `order_status_history`, `payment_transactions`, `inventory_transactions`, `audit_logs`, and pending `notifications` in one transaction.
+
 ## Supabase Storage
 
 The `product-images` bucket is configured by migration:
@@ -238,6 +240,16 @@ Phase 6.5 adds `product_variants.inventory_initialized_at` in migration `2026071
 - The public catalogue variant view exposes `UNCONFIGURED` when inventory is not initialized and otherwise derives `IN_STOCK`, `LOW_STOCK`, or `OUT_OF_STOCK`.
 - `public.initialize_variant_inventory(target_variant_id, initial_stock, movement_reason)` is a `SECURITY DEFINER` RPC. It locks the variant row, rejects negative stock, rejects already-initialized variants, updates inventory fields, stamps `inventory_initialized_at`, and inserts an `inventory_transactions` row with actor and reason.
 - Execute permission is granted only to authenticated users; the function itself restricts execution to active `OWNER`, `ADMIN`, and `INVENTORY_MANAGER` staff.
+
+## Order Lifecycle
+
+Phase 11 order status changes are not direct table updates.
+
+- Cancellation before sale decrements `reserved_quantity`, leaves `stock_on_hand` unchanged, and inserts `RELEASED` inventory ledger rows.
+- Delivery converts reservation into sale by decrementing both `stock_on_hand` and `reserved_quantity`, and inserts `SOLD` ledger rows.
+- `RETURNED` changes the order lifecycle only. Resellable stock returns are recorded later through the Phase 10 `RETURNED` inventory operation.
+- Payment verification appends immutable `payment_transactions` and updates `orders.payment_status` transactionally.
+- Staff notes use append-only `order_internal_notes`; customer notes on `orders.customer_note` remain the immutable checkout snapshot.
 
 After applying this migration to a linked Supabase project, regenerate generated types with:
 

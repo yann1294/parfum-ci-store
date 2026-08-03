@@ -92,6 +92,13 @@
 - Current payment statuses are the database enum values: `UNPAID`, `PENDING`, `PAID`, `FAILED`, `REFUNDED`, `PARTIALLY_REFUNDED`.
 - Invalid transitions must be rejected server-side and tested.
 - Customers see only redacted tracking information.
+- Admin order transitions use the controlled Phase 11 transaction boundary. Staff must not update `orders.status` directly.
+- Allowed lifecycle: `PENDING_CONFIRMATION → CONFIRMED/CANCELLED`, `CONFIRMED → PREPARING/CANCELLED`, `PREPARING → READY_FOR_PICKUP` for pickup or `OUT_FOR_DELIVERY` for delivery plus `CANCELLED`, `READY_FOR_PICKUP → DELIVERED/CANCELLED`, `OUT_FOR_DELIVERY → DELIVERED/RETURNED`, and `DELIVERED → RETURNED`.
+- Cancellation before sale releases reservations with `RELEASED` inventory transactions and never decrements physical stock.
+- Delivery converts reserved stock into sold stock with `SOLD` inventory transactions. It decrements both `stock_on_hand` and `reserved_quantity`, so calculated availability remains unchanged by the conversion.
+- `RETURNED` does not automatically restock. Authorized staff must use the Phase 10 `RETURNED` inventory operation after physical inspection for resellable items.
+- Order transition, payment verification and internal notes require server-side staff authorization. Idempotency keys are required for status and payment mutations.
+- Staff internal notes are append-only and separate from immutable customer checkout notes.
 
 ## Payments
 
@@ -102,6 +109,7 @@
 - Never store card details, Mobile Money PINs, OTPs, or CVVs.
 - Manual Mobile Money verification is performed by an authenticated admin.
 - Payment logic must use a provider interface to allow a future gateway.
+- Payment status remains separate from order status. Phase 11 manual verification records immutable `payment_transactions`, uses authoritative order totals, requires a reference or reason for manual methods where appropriate, and does not call payment gateways or perform refunds.
 
 ## Notifications
 

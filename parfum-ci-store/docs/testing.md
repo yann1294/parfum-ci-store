@@ -238,6 +238,20 @@ Sequential tests are not sufficient for Phase 10 approval. Concurrency must be v
 
 Playwright inventory tests require role credentials and disposable inventory fixtures. Mark live operations, CSV downloads, and reservation-race scenarios `NOT VERIFIED` when those fixtures are unavailable.
 
+## Phase 11 Order Management
+
+Unit tests cover order URL filter normalization, French status/payment labels, transition maps, delivery-method-dependent next actions, request schemas, payment mappings, contact masking, idempotency fingerprints and the Phase 11 migration contract.
+
+After applying the Phase 11 migration to an isolated local or staging Supabase database, run:
+
+```bash
+psql "$DATABASE_URL" -f supabase/tests/phase11_order_management.sql
+```
+
+Full Phase 11 approval requires real SQL or integration concurrency coverage for duplicate transitions, conflicting transitions, cancellation versus delivery, and delivery conversion racing a Phase 10 manual stock operation. Sequential tests are not sufficient.
+
+Playwright Phase 11 tests require role credentials, disposable orders created through Phase 9, and initialized inventory fixtures. Mark live order transitions, payment verification, stock effects, notification intents and permission checks `NOT VERIFIED` when those fixtures are unavailable.
+
 ## Environment Diagnostics
 
 Run:

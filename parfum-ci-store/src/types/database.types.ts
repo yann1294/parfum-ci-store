@@ -367,6 +367,45 @@ export type Database = {
         }
         Relationships: []
       }
+      order_internal_notes: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          id: string
+          note: string
+          order_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          note: string
+          order_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          note?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_internal_notes_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_internal_notes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           brand_name: string | null
@@ -1435,6 +1474,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_order_payment_server: { Args: { request: Json }; Returns: Json }
+      transition_order_server: { Args: { request: Json }; Returns: Json }
     }
     Enums: {
       app_role:
