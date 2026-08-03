@@ -326,6 +326,50 @@ describe("Phase 9 checkout form", () => {
     expect(readCart().items).toHaveLength(0);
   });
 
+  it("accepts a successful order response with SQL snake_case fields", async () => {
+    seedCart();
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url === "/api/cart/reconcile") return Response.json(readySnapshot);
+      if (url === "/api/orders") {
+        return Response.json(
+          {
+            order_id: successfulOrderPayload.orderId,
+            order_number: successfulOrderPayload.orderNumber,
+            order_status: successfulOrderPayload.orderStatus,
+            payment_status: successfulOrderPayload.paymentStatus,
+            currency: "XOF",
+            subtotal_xof: "95000",
+            delivery_fee_xof: null,
+            total_xof: null,
+            created_at: successfulOrderPayload.createdAt,
+            order_items: [
+              {
+                product_name: "Sauvage",
+                variant_name: "100 ml · EDP",
+                quantity: "1",
+                unit_price_xof: "95000",
+                total_price_xof: "95000",
+              },
+            ],
+            next_step_code: "PENDING_CONFIRMATION",
+          },
+          { status: 201 },
+        );
+      }
+      throw new Error(`Unexpected ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<CheckoutPageClient settings={settings} />);
+    expect(await screen.findByText("Sauvage")).toBeDefined();
+    await fillRequiredCheckoutFields();
+    fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/commande/succes/CMD-2026-A1B2C3"));
+    expect(readSafeConfirmation("CMD-2026-A1B2C3")?.items[0]?.lineTotalXof).toBe(95000);
+    expect(readCart().items).toHaveLength(0);
+  });
+
   it("shows an inline success fallback when confirmation navigation fails after order creation", async () => {
     seedCart();
     replace.mockImplementationOnce(() => {
