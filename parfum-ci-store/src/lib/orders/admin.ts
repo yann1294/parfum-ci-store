@@ -53,6 +53,7 @@ export type OrderAdminErrorCode =
   | "ORDER_TRANSITION_RESERVATION_MISSING"
   | "ORDER_TRANSITION_STOCK_INVALID"
   | "ORDER_TRANSITION_IDEMPOTENCY_CONFLICT"
+  | "ORDER_TRANSITION_STALE_STATE"
   | "ORDER_TRANSITION_FAILED"
   | "PAYMENT_INVALID_STATUS"
   | "PAYMENT_REFERENCE_REQUIRED"
@@ -203,6 +204,7 @@ export type OrderFilters = {
 export const orderTransitionSchema = z
   .object({
     orderId: z.uuid(),
+    expectedStatus: z.enum(orderStatuses).optional(),
     targetStatus: z.enum(orderStatuses),
     reason: z.string().trim().max(300).optional(),
     note: z.string().trim().max(500).optional(),
@@ -580,6 +582,7 @@ export function orderAdminErrorMessage(code: OrderAdminErrorCode) {
     ORDER_TRANSITION_RESERVATION_MISSING: "La réservation stock nécessaire est introuvable ou insuffisante.",
     ORDER_TRANSITION_STOCK_INVALID: "L'effet stock de cette transition violerait les invariants d'inventaire.",
     ORDER_TRANSITION_IDEMPOTENCY_CONFLICT: "Cette action a déjà été utilisée avec un contenu différent.",
+    ORDER_TRANSITION_STALE_STATE: "La commande a changé depuis l'ouverture de cette action. Rechargez la page.",
     ORDER_TRANSITION_FAILED: "La transition de commande n'a pas pu être enregistrée.",
     PAYMENT_INVALID_STATUS: "Ce changement de paiement n'est pas autorisé.",
     PAYMENT_REFERENCE_REQUIRED: "Une référence ou un motif est requis pour ce paiement manuel.",
@@ -600,6 +603,7 @@ function mapOrderDbError(error?: { code?: string; message?: string }): OrderAdmi
   if (raised === "ORDER_TRANSITION_RESERVATION_MISSING") return "ORDER_TRANSITION_RESERVATION_MISSING";
   if (raised === "ORDER_TRANSITION_STOCK_INVALID") return "ORDER_TRANSITION_STOCK_INVALID";
   if (raised === "ORDER_TRANSITION_IDEMPOTENCY_CONFLICT") return "ORDER_TRANSITION_IDEMPOTENCY_CONFLICT";
+  if (raised === "ORDER_TRANSITION_STALE_STATE") return "ORDER_TRANSITION_STALE_STATE";
   if (raised === "PAYMENT_INVALID_STATUS") return "PAYMENT_INVALID_STATUS";
   if (raised === "PAYMENT_REFERENCE_REQUIRED") return "PAYMENT_REFERENCE_REQUIRED";
   if (raised === "PAYMENT_REASON_REQUIRED") return "PAYMENT_REASON_REQUIRED";
@@ -614,6 +618,7 @@ export function createOrderTransitionFingerprint(input: Omit<OrderTransitionInpu
     .update(JSON.stringify({
       actorId: input.actorId,
       orderId: input.orderId,
+      expectedStatus: input.expectedStatus ?? null,
       targetStatus: input.targetStatus,
       reason: input.reason?.trim() ?? null,
       note: input.note?.trim() ?? null,

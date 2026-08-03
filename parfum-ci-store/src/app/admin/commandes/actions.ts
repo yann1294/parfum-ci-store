@@ -39,6 +39,7 @@ export async function transitionOrderFromForm(
   const staff = await requireOrderManageAccess();
   const parsed = orderTransitionSchema.safeParse({
     orderId,
+    expectedStatus: text(formData, "expectedStatus"),
     targetStatus: text(formData, "targetStatus"),
     reason: text(formData, "reason"),
     note: text(formData, "note"),

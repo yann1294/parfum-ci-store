@@ -98,6 +98,7 @@ export function OrderTransitionDialog({
           </DialogDescription>
         </DialogHeader>
         <form action={submit} className="grid gap-4">
+          <input type="hidden" name="expectedStatus" value={currentStatus} />
           <input type="hidden" name="targetStatus" value={targetStatus} />
           <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
           <div className="rounded-lg border bg-muted/30 p-4 text-sm">

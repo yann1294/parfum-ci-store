@@ -23,6 +23,7 @@ const actorId = "22222222-2222-4222-8222-222222222222";
 function transition(overrides: Record<string, unknown> = {}) {
   return {
     orderId,
+    expectedStatus: "PENDING_CONFIRMATION",
     targetStatus: "CONFIRMED",
     idempotencyKey: "order-transition-idempotency-key-1234567890",
     ...overrides,
@@ -68,6 +69,9 @@ describe("Phase 11 order management contracts", () => {
     expect(transitionFingerprint).toBe(createOrderTransitionFingerprint({ ...parsedTransition, actorId }));
     expect(transitionFingerprint).not.toBe(
       createOrderTransitionFingerprint({ ...parsedTransition, targetStatus: "CANCELLED", reason: "Annulation", actorId }),
+    );
+    expect(transitionFingerprint).not.toBe(
+      createOrderTransitionFingerprint({ ...parsedTransition, expectedStatus: "CONFIRMED", actorId }),
     );
 
     const parsedPayment = paymentStatusUpdateSchema.parse(payment());
@@ -135,5 +139,10 @@ describe("Phase 11 order management contracts", () => {
     expect(sql).toContain("revoke update, delete on public.order_status_history from anon, authenticated");
     expect(sql).toContain("grant execute on function public.transition_order_server(jsonb) to service_role");
     expect(sql).toContain("grant execute on function public.record_order_payment_server(jsonb) to service_role");
+
+    const repairSql = readFileSync("supabase/migrations/20260804103000_phase11_order_transition_expected_status.sql", "utf8");
+    expect(repairSql).toContain("v_expected_status");
+    expect(repairSql).toContain("ORDER_TRANSITION_STALE_STATE");
+    expect(repairSql).toContain("order_row.status <> v_expected_status");
   });
 });
