@@ -15,6 +15,8 @@ import {
   type PaymentStatusUpdateResult,
 } from "@/lib/orders/admin";
 import { requireOrderManageAccess, requireOrderReadAccess } from "@/lib/orders/admin";
+import { evaluateLowStockForOrder } from "@/lib/notifications/low-stock";
+import { processNotifications } from "@/lib/notifications/processor";
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -55,7 +57,13 @@ export async function transitionOrderFromForm(
   }
 
   const result = await transitionOrder(parsed.data, staff);
-  if (result.ok) revalidateOrderSurfaces(orderId);
+  if (result.ok) {
+    if (result.data.stockEffect !== "NONE") {
+      evaluateLowStockForOrder(orderId).catch(() => console.error("LOW_STOCK_POST_TRANSITION_FAILED"));
+    }
+    processNotifications(2).catch(() => console.error("NOTIFICATION_POST_TRANSITION_PROCESS_FAILED"));
+    revalidateOrderSurfaces(orderId);
+  }
   return result;
 }
 
@@ -81,7 +89,10 @@ export async function updatePaymentStatusFromForm(
   }
 
   const result = await updatePaymentStatus(parsed.data, staff);
-  if (result.ok) revalidateOrderSurfaces(orderId);
+  if (result.ok) {
+    processNotifications(2).catch(() => console.error("NOTIFICATION_POST_PAYMENT_PROCESS_FAILED"));
+    revalidateOrderSurfaces(orderId);
+  }
   return result;
 }
 

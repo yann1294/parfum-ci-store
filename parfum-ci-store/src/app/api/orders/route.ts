@@ -8,6 +8,8 @@ import {
 } from "@/lib/orders/guest-order-contract";
 import { createGuestOrder, GuestOrderError } from "@/lib/orders/guest-order-service";
 import { checkoutRateLimiter, checkoutRateLimitKey } from "@/lib/orders/rate-limit";
+import { evaluateLowStockForVariants } from "@/lib/notifications/low-stock";
+import { processNotifications } from "@/lib/notifications/processor";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +79,9 @@ export async function POST(request: Request) {
 
   try {
     const confirmation = await createGuestOrder(parsed.data);
+    const variantIds = parsed.data.lines.map((line) => line.variantId);
+    evaluateLowStockForVariants(variantIds).catch(() => console.error("LOW_STOCK_POST_ORDER_FAILED"));
+    processNotifications(2).catch(() => console.error("NOTIFICATION_POST_ORDER_PROCESS_FAILED"));
     return NextResponse.json(confirmation, noStore(201));
   } catch (error) {
     if (error instanceof GuestOrderError) {

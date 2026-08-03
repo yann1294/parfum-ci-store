@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ComponentType } from "react";
 import {
   BarChart3,
+  Bell,
   Boxes,
   FolderTree,
   ClipboardList,
@@ -28,6 +29,7 @@ const navIcons: Record<AdminNavigationItem["module"], ComponentType<{ className?
   orders: ClipboardList,
   customers: Users,
   payments: CreditCard,
+  notifications: Bell,
   messages: MessageSquare,
   analytics: BarChart3,
   "design-system": Palette,

@@ -203,6 +203,8 @@ Phase 4 adds indexes for case-insensitive product slugs, active/featured product
 
 Phase 11 adds `app_private.order_transition_idempotency`, `app_private.payment_status_idempotency`, and `public.order_internal_notes`. Order transitions are handled by `app_private.transition_order(jsonb)` through the service-role-only `public.transition_order_server(jsonb)` wrapper. Payment verification is handled by `app_private.record_order_payment(jsonb)` through `public.record_order_payment_server(jsonb)`. The functions write `order_status_history`, `payment_transactions`, `inventory_transactions`, `audit_logs`, and pending `notifications` in one transaction.
 
+Phase 12 extends the existing `public.notifications` outbox with provider, claim, retry, cancellation, error and attempt-count fields. It adds immutable `public.notification_attempts` rows for delivery evidence and `public.low_stock_alert_states` for threshold-crossing deduplication. Service-role-only RPC wrappers claim rows with `FOR UPDATE SKIP LOCKED`, mark success/failure, and cancel eligible notifications. The repair migration `20260804124500_phase12_notification_ambiguous_parameter_fix.sql` replaces result/cancel functions with non-ambiguous `p_`-prefixed parameters. Direct anonymous/customer mutation remains denied.
+
 ## Supabase Storage
 
 The `product-images` bucket is configured by migration:

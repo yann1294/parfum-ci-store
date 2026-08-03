@@ -135,6 +135,9 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 - `/api/storefront/order-intents/whatsapp` must return `Cache-Control: no-store`, create only analytics intent rows from authoritative cart data, and must not create orders or inventory reservations.
 - `/admin/inventaire` must be accessible only to authorized staff. Manual inventory operations must call the transactional adjustment function, preserve reserved-stock invariants, create immutable ledger rows and audit rows, and refresh public availability.
 - `/admin/commandes` must be accessible only to authorized order staff. Status transitions must call the transactional transition function, cancellation must release reservations exactly once, delivery must convert reservations into `SOLD` exactly once, and returns must not automatically restock inventory.
+- Phase 12 notification delivery requires `EMAIL_FROM`, `ADMIN_NOTIFICATION_EMAIL`, `CRON_SECRET`, `NOTIFICATION_PROVIDER`, `NOTIFICATION_BATCH_SIZE`, and `NOTIFICATION_MAX_ATTEMPTS`. Production must set `NOTIFICATION_PROVIDER=resend` and `RESEND_API_KEY`; local/test may use `NOTIFICATION_PROVIDER=development`.
+- Configure Vercel Cron or an equivalent scheduler to POST `/api/cron/notifications` with `Authorization: Bearer <CRON_SECRET>`. The route returns counts only and is safe for overlapping invocations because rows are claimed transactionally.
+- Do not deploy real email delivery until SPF/DKIM/domain setup and a Resend sandbox acceptance test are verified with non-customer data.
 - Test a controlled `/api/orders` HTTP 400 before launch. It must leave the cart intact and must not redirect to a confirmation route.
 - Admin routes require authentication.
 - Checkout creates orders without exposing secrets.

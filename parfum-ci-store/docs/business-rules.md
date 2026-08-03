@@ -116,3 +116,8 @@
 - Transactional emails use Resend.
 - Notification payloads must not include secrets or unnecessary full addresses.
 - Failed notification delivery should be retryable and visible to admins.
+- Notification intents are inserted inside business transactions, but provider calls happen only after commit through the Phase 12 processor. Provider failure must never roll back order creation, order transitions, payment updates, inventory adjustments, or contact-message persistence.
+- Phase 12 supports the existing order and payment template keys plus low-stock alerts. Outbox payloads are treated as references or bounded snapshots, not full unrestricted customer/order rows.
+- Low-stock alerts are based on available quantity (`stock_on_hand - reserved_quantity`) and are deduplicated by threshold crossing. A variant can alert again only after recovering above the threshold and crossing below it later.
+- Contact-message notification delivery depends on a real contact-message submission flow. The current public contact page only displays managed contact details, so contact-message email is not wired until that persistence flow exists.
+- Resend webhooks are excluded until official signature verification, replay protection and sanitized event storage are implemented.

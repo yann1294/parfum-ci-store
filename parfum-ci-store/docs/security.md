@@ -157,6 +157,14 @@ Detailed confirmation data is a short-lived session-storage recovery aid written
 
 The checkout client must require both `response.ok` and a valid Phase 8 confirmation body before writing confirmation state, clearing the cart, or navigating to success. Typed 400 responses and malformed success bodies are customer-safe failures.
 
+## Phase 12 Notifications
+
+`RESEND_API_KEY` and `CRON_SECRET` are server-only and must never use a `NEXT_PUBLIC_` prefix. `/api/cron/notifications` accepts only POST requests with `Authorization: Bearer <CRON_SECRET>` and returns safe counts only.
+
+Notification delivery state is mutated through service-role-only database functions. Anonymous users and ordinary authenticated users cannot directly insert, update, cancel, or mark notifications sent. Admin list/detail DTOs mask recipients and expose bounded payload summaries instead of raw JSON, email HTML, provider responses, secrets, full customer addresses, or internal idempotency material.
+
+The development notification provider logs only notification ID, subject/template context, and masked recipient. Production must use Resend and must not silently fall back to the development provider.
+
 ## Test Users
 
 Create staff test users manually in Supabase Auth and then insert or update their `profiles` rows with current roles and `active` values. Do not add fake owner UUIDs to seed data and do not commit test credentials.

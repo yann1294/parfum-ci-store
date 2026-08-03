@@ -20,6 +20,7 @@ export type AdminNavigationItem = {
     | "orders"
     | "customers"
     | "payments"
+    | "notifications"
     | "messages"
     | "analytics"
     | "design-system"
@@ -36,6 +37,7 @@ const adminNavigation: AdminNavigationItem[] = [
   { label: "Commandes", href: "/admin/commandes", module: "orders" },
   { label: "Clients", href: "/admin/clients", module: "customers" },
   { label: "Paiements", href: "/admin/paiements", module: "payments" },
+  { label: "Notifications", href: "/admin/notifications", module: "notifications" },
   { label: "Messages", href: "/admin/messages", module: "messages" },
   { label: "Analytics", href: "/admin/analytics", module: "analytics" },
   { label: "Contenu public", href: "/admin/contenu", module: "content" },
@@ -60,6 +62,8 @@ function canAccessAdminModule(staff: StaffProfile, module: AdminNavigationItem["
     case "customers":
     case "payments":
       return canManageOrders(staff);
+    case "notifications":
+      return canManageSettings(staff) || canManageOrders(staff);
     case "messages":
       return canManageMessages(staff);
     case "content":

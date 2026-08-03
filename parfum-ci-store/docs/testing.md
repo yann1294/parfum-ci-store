@@ -252,6 +252,14 @@ Full Phase 11 approval requires real SQL or integration concurrency coverage for
 
 Playwright Phase 11 tests require role credentials, disposable orders created through Phase 9, and initialized inventory fixtures. Mark live order transitions, payment verification, stock effects, notification intents and permission checks `NOT VERIFIED` when those fixtures are unavailable.
 
+## Phase 12 Notifications
+
+Unit tests cover notification provider selection, development redaction, Resend response mapping, admin filter normalization, template rendering, safe links, migration contracts, and processor claim/result calls.
+
+Database tests for Phase 12 must use a real PostgreSQL/Supabase database for concurrent claiming, stale claim recovery, duplicate-send prevention, retry scheduling, cancellation, and low-stock crossing deduplication. Sequential mocks are not proof of concurrency safety.
+
+Playwright Phase 12 tests should use the development provider unless a verified Resend sandbox recipient and API key are configured. Mark external Resend delivery `NOT VERIFIED` unless the provider accepts the message and inbox delivery is actually checked.
+
 ## Environment Diagnostics
 
 Run:

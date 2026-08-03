@@ -9,6 +9,8 @@ import {
   type InventoryAdjustmentResult,
 } from "@/lib/inventory/admin";
 import { requireInventoryAccess } from "@/lib/inventory/admin";
+import { evaluateLowStockForVariants } from "@/lib/notifications/low-stock";
+import { processNotifications } from "@/lib/notifications/processor";
 
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -54,6 +56,8 @@ export async function adjustInventoryFromForm(
 
   const result = await adjustInventory(parsed.data, staff);
   if (result.ok) {
+    evaluateLowStockForVariants([variantId]).catch(() => console.error("LOW_STOCK_POST_INVENTORY_FAILED"));
+    processNotifications(1).catch(() => console.error("NOTIFICATION_POST_INVENTORY_PROCESS_FAILED"));
     revalidateInventory(variantId);
   }
 

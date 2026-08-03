@@ -316,17 +316,138 @@ export type Database = {
           },
         ]
       }
+      low_stock_alert_states: {
+        Row: {
+          below_threshold: boolean
+          cycle: number
+          last_crossed_at: string | null
+          last_notification_id: string | null
+          recovered_at: string | null
+          updated_at: string
+          variant_id: string
+        }
+        Insert: {
+          below_threshold?: boolean
+          cycle?: number
+          last_crossed_at?: string | null
+          last_notification_id?: string | null
+          recovered_at?: string | null
+          updated_at?: string
+          variant_id: string
+        }
+        Update: {
+          below_threshold?: boolean
+          cycle?: number
+          last_crossed_at?: string | null
+          last_notification_id?: string | null
+          recovered_at?: string | null
+          updated_at?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "low_stock_alert_states_last_notification_id_fkey"
+            columns: ["last_notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "low_stock_alert_states_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: true
+            referencedRelation: "admin_inventory_variants"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "low_stock_alert_states_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: true
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "low_stock_alert_states_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: true
+            referencedRelation: "public_catalogue_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_attempts: {
+        Row: {
+          attempt_number: number
+          claim_token: string | null
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          id: string
+          notification_id: string
+          provider: string
+          provider_message_id: string | null
+          retryable: boolean | null
+          status: Database["public"]["Enums"]["notification_status"]
+        }
+        Insert: {
+          attempt_number: number
+          claim_token?: string | null
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          notification_id: string
+          provider: string
+          provider_message_id?: string | null
+          retryable?: boolean | null
+          status: Database["public"]["Enums"]["notification_status"]
+        }
+        Update: {
+          attempt_number?: number
+          claim_token?: string | null
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          notification_id?: string
+          provider?: string
+          provider_message_id?: string | null
+          retryable?: boolean | null
+          status?: Database["public"]["Enums"]["notification_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_attempts_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
+          attempt_count: number
           body: string | null
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           channel: Database["public"]["Enums"]["notification_channel"]
+          claim_token: string | null
+          claimed_at: string | null
           created_at: string
           id: string
           idempotency_key: string | null
+          last_error_code: string | null
+          last_error_message: string | null
+          max_attempts: number
+          next_attempt_at: string | null
           payload: Json
           processed_at: string | null
+          provider: string | null
           provider_message_id: string | null
           recipient: string
+          retryable: boolean | null
           scheduled_at: string
           status: Database["public"]["Enums"]["notification_status"]
           subject: string | null
@@ -334,15 +455,27 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attempt_count?: number
           body?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           channel: Database["public"]["Enums"]["notification_channel"]
+          claim_token?: string | null
+          claimed_at?: string | null
           created_at?: string
           id?: string
           idempotency_key?: string | null
+          last_error_code?: string | null
+          last_error_message?: string | null
+          max_attempts?: number
+          next_attempt_at?: string | null
           payload?: Json
           processed_at?: string | null
+          provider?: string | null
           provider_message_id?: string | null
           recipient: string
+          retryable?: boolean | null
           scheduled_at?: string
           status?: Database["public"]["Enums"]["notification_status"]
           subject?: string | null
@@ -350,22 +483,42 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attempt_count?: number
           body?: string | null
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           channel?: Database["public"]["Enums"]["notification_channel"]
+          claim_token?: string | null
+          claimed_at?: string | null
           created_at?: string
           id?: string
           idempotency_key?: string | null
+          last_error_code?: string | null
+          last_error_message?: string | null
+          max_attempts?: number
+          next_attempt_at?: string | null
           payload?: Json
           processed_at?: string | null
+          provider?: string | null
           provider_message_id?: string | null
           recipient?: string
+          retryable?: boolean | null
           scheduled_at?: string
           status?: Database["public"]["Enums"]["notification_status"]
           subject?: string | null
           template_key?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notifications_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_internal_notes: {
         Row: {
@@ -1465,7 +1618,40 @@ export type Database = {
     }
     Functions: {
       adjust_inventory_server: { Args: { request: Json }; Returns: Json }
+      cancel_notification_server: {
+        Args: { actor_id: string; notification_id: string; reason: string }
+        Returns: Json
+      }
+      claim_notifications_server: {
+        Args: {
+          batch_limit: number
+          stale_after_seconds: number
+          worker_id: string
+        }
+        Returns: Json
+      }
+      complete_notification_server: {
+        Args: {
+          claim_token: string
+          notification_id: string
+          provider_message_id: string
+          provider_name: string
+        }
+        Returns: Json
+      }
       create_guest_order_server: { Args: { request: Json }; Returns: Json }
+      fail_notification_server: {
+        Args: {
+          claim_token: string
+          error_code: string
+          error_message: string
+          notification_id: string
+          provider_name: string
+          retry_delay_seconds: number
+          retryable: boolean
+        }
+        Returns: Json
+      }
       initialize_variant_inventory: {
         Args: {
           initial_stock: number
