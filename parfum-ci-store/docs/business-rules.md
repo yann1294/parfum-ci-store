@@ -80,6 +80,11 @@
 - New variants default to unconfigured inventory. They are not treated as confirmed out of stock until inventory is initialized through the inventory transaction workflow.
 - Initial stock is set by the `Initialiser le stock` operation for authorized OWNER, ADMIN, or INVENTORY_MANAGER users. The operation creates an inventory transaction, records the actor and reason, updates physical stock through the inventory boundary, and stamps the initialization marker.
 - Available stock is calculated as `stock_on_hand - reserved_quantity`.
+- Phase 10 manual inventory operations are transactional and idempotent. Authorized staff may use `INITIALIZE`, `RECEIVED`, `DAMAGED`, `ADJUSTMENT`, and `RETURNED`; `RESERVED`, `RELEASED`, and `SOLD` are not manually selectable.
+- `DAMAGED` accepts a positive quantity in the UI and records a negative on-hand delta. `ADJUSTMENT` requires an explicit increase/decrease direction. `RETURNED` increases stock only after staff confirms the item is resellable.
+- Manual inventory operations must never change `reserved_quantity` and must reject any result where `reserved_quantity > stock_on_hand`.
+- Ledger history is immutable through the application. Corrections use compensating `ADJUSTMENT` rows.
+- CSV inventory and ledger exports are staff-authorized, exclude customer/private data, and escape spreadsheet formula-like values.
 
 ## Orders
 

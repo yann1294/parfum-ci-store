@@ -127,6 +127,13 @@ export type Database = {
             foreignKeyName: "categories_parent_id_fkey"
             columns: ["parent_id"]
             isOneToOne: false
+            referencedRelation: "admin_inventory_variants"
+            referencedColumns: ["category_id"]
+          },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
@@ -290,6 +297,13 @@ export type Database = {
             foreignKeyName: "inventory_transactions_variant_id_fkey"
             columns: ["variant_id"]
             isOneToOne: false
+            referencedRelation: "admin_inventory_variants"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
@@ -435,6 +449,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_catalogue_products"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inventory_variants"
+            referencedColumns: ["variant_id"]
           },
           {
             foreignKeyName: "order_items_variant_id_fkey"
@@ -987,6 +1008,13 @@ export type Database = {
             foreignKeyName: "products_brand_id_fkey"
             columns: ["brand_id"]
             isOneToOne: false
+            referencedRelation: "admin_inventory_variants"
+            referencedColumns: ["brand_id"]
+          },
+          {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
             referencedRelation: "brands"
             referencedColumns: ["id"]
           },
@@ -996,6 +1024,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_catalogue_products"
             referencedColumns: ["brand_id"]
+          },
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inventory_variants"
+            referencedColumns: ["category_id"]
           },
           {
             foreignKeyName: "products_category_id_fkey"
@@ -1259,6 +1294,51 @@ export type Database = {
       }
     }
     Views: {
+      admin_inventory_variants: {
+        Row: {
+          available_quantity: number | null
+          brand_id: string | null
+          brand_name: string | null
+          category_id: string | null
+          category_name: string | null
+          concentration: string | null
+          inventory_initialized_at: string | null
+          inventory_status: string | null
+          last_movement_at: string | null
+          last_movement_type:
+            | Database["public"]["Enums"]["inventory_transaction_type"]
+            | null
+          low_stock_threshold: number | null
+          product_id: string | null
+          product_name: string | null
+          product_slug: string | null
+          product_status: Database["public"]["Enums"]["product_status"] | null
+          reserved_quantity: number | null
+          size_ml: number | null
+          sku: string | null
+          stock_initialized: boolean | null
+          stock_on_hand: number | null
+          updated_at: string | null
+          variant_active: boolean | null
+          variant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "public_catalogue_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_catalogue_images: {
         Row: {
           alt_text: string | null
@@ -1345,6 +1425,7 @@ export type Database = {
       }
     }
     Functions: {
+      adjust_inventory_server: { Args: { request: Json }; Returns: Json }
       create_guest_order_server: { Args: { request: Json }; Returns: Json }
       initialize_variant_inventory: {
         Args: {

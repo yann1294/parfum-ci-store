@@ -82,6 +82,7 @@ pnpm build
 - Phase 9 adds customer checkout, confirmation, and tracking routes. The Phase 9 correction migration `20260727090100_phase9_payment_settings_whatsapp_intents.sql` adds structured payment-method configuration and WhatsApp order-intent analytics. Review it, apply it manually with `pnpm exec supabase db push`, then regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`.
 - Confirm Phase 8 is applied and concurrency-verified before enabling `/commande`. Payment method and delivery method choices come from `store_settings.enabled_payment_methods` and `store_settings.enabled_delivery_methods`; merchant/payment instructions come from managed store settings and content. Configure these values before production checkout testing.
 - After applying the Phase 9 correction migration, verify `/admin/contenu` can save multiple payment methods and that `src/types/database.types.ts` includes `payment_method_configs`, `storefront_order_intents`, and `storefront_order_intent_items`.
+- Phase 10 adds transactional admin inventory management in `20260803143000_phase10_inventory_adjustments.sql`. Review the migration, apply it manually with `pnpm exec supabase db push`, regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`, then run SQL/integration concurrency tests before approving inventory operations.
 
 ## Product Images
 
@@ -131,6 +132,7 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 - Phase 8 `/api/orders` must return `Cache-Control: no-store`, call the service-role-only transaction wrapper, and create pending notification intents only. Do not deploy checkout UI until the final-unit concurrency and rollback checks have passed.
 - Phase 9 `/commande`, `/commande/succes/[orderNumber]`, and `/suivi-commande` must be `noindex, nofollow` and absent from `/sitemap.xml`. `/api/orders/track` must return `Cache-Control: no-store` and require order number plus phone.
 - `/api/storefront/order-intents/whatsapp` must return `Cache-Control: no-store`, create only analytics intent rows from authoritative cart data, and must not create orders or inventory reservations.
+- `/admin/inventaire` must be accessible only to authorized staff. Manual inventory operations must call the transactional adjustment function, preserve reserved-stock invariants, create immutable ledger rows and audit rows, and refresh public availability.
 - Test a controlled `/api/orders` HTTP 400 before launch. It must leave the cart intact and must not redirect to a confirmation route.
 - Admin routes require authentication.
 - Checkout creates orders without exposing secrets.

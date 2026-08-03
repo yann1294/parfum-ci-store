@@ -228,6 +228,16 @@ Route tests for `/api/orders/track` must verify bounded JSON, shared phone norma
 
 Playwright Phase 9 tests require real ACTIVE products with initialized available inventory, applied Phase 8 migrations, and a non-production database. Do not mark successful checkout, cart clearing, duplicate submission, tracking security, wrong-phone privacy, or reservation behavior as passed without a real database-backed order.
 
+## Phase 10 Inventory Management
+
+Unit tests cover manual inventory request schemas, signed adjustment direction, idempotency fingerprints, URL filter normalization, French labels, CSV generation, formula-injection protection, and the Phase 10 migration contract.
+
+After applying the Phase 10 migration to an isolated local or staging Supabase database, add real SQL/integration coverage for receive, initialize, damage, positive adjustment, negative adjustment, returned stock, reason requirement, reserved-invariant rejection, idempotent replay, conflicting idempotency payloads, ledger insertion, audit insertion, direct ledger update/delete denial, rollback, concurrent adjustments, and manual adjustment racing a Phase 8 reservation.
+
+Sequential tests are not sufficient for Phase 10 approval. Concurrency must be verified with simultaneous database sessions or an equivalent harness proving no lost update and no final state where `reserved_quantity > stock_on_hand`.
+
+Playwright inventory tests require role credentials and disposable inventory fixtures. Mark live operations, CSV downloads, and reservation-race scenarios `NOT VERIFIED` when those fixtures are unavailable.
+
 ## Environment Diagnostics
 
 Run:

@@ -279,6 +279,19 @@ The intent tables are RLS-enabled. Anonymous users do not insert directly; `/api
 
 A WhatsApp intent means only: the customer clicked the WhatsApp ordering action after cart validation. It does not mean WhatsApp opened, the message was sent, an order was created, payment occurred, or stock was reserved. Intent retention defaults to 30 days through `expires_at`; operational cleanup should remove expired rows.
 
+## Phase 10 Inventory Adjustments
+
+Migration `20260803143000_phase10_inventory_adjustments.sql` adds:
+
+- `app_private.inventory_adjustment_idempotency`, a private idempotency table for manual inventory operations.
+- `public.admin_inventory_variants`, a staff/admin inventory view that derives available quantity and inventory status from `product_variants`; it does not store availability.
+- `app_private.adjust_inventory(request jsonb)`, the private transactional manual inventory engine.
+- `public.adjust_inventory_server(request jsonb)`, a service-role-only wrapper for server application code.
+
+Manual operations are `INITIALIZE`, `RECEIVED`, `DAMAGED`, `ADJUSTMENT`, and `RETURNED`. `RESERVED`, `RELEASED`, and `SOLD` remain system-controlled order/fulfilment operations. The function locks the target variant row with `FOR UPDATE`, enforces `stock_on_hand >= 0`, `reserved_quantity >= 0`, and `reserved_quantity <= stock_on_hand`, updates only `stock_on_hand` and initialization state, inserts one immutable `inventory_transactions` row, and writes a bounded `INVENTORY_ADJUSTED` audit event.
+
+Ledger rows remain immutable through the application. Corrections must be compensating `ADJUSTMENT` rows, not edits or deletes to historical transactions.
+
 ## Local Reset, Seed, and Verification
 
 For local development only, run:

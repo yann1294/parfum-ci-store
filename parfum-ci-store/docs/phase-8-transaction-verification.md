@@ -4,6 +4,8 @@ Do not use production customer data. Do not send email, SMS, WhatsApp, payment r
 
 Phase 8 adds a server-side guest-order engine only. It does not add checkout UI, order management UI, payment verification, shipment workflow, reservation expiry, or notification delivery.
 
+Phase 10 inventory adjustments must remain compatible with this reservation model: order creation increments `reserved_quantity` and writes `RESERVED` ledger rows while manual inventory operations may change only `stock_on_hand` and must reject any result where reserved stock would exceed physical stock.
+
 ## Request Contract
 
 `POST /api/orders` accepts JSON only, with a 20 KB body limit. Required fields are `idempotencyKey`, customer `fullName`, `phone`, `city`, `commune`, `deliveryMethod`, `paymentMethod`, and cart `lines` containing only `productId`, `variantId`, and `quantity`. Country is always `CI`.
