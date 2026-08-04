@@ -1,6 +1,13 @@
 -- Phase 12 repair: remove ambiguous parameter/column references from
 -- notification result and cancellation functions.
 
+drop function if exists public.complete_notification_server(uuid, uuid, text, text);
+drop function if exists public.fail_notification_server(uuid, uuid, text, text, text, boolean, integer);
+drop function if exists public.cancel_notification_server(uuid, uuid, text);
+drop function if exists app_private.complete_notification(uuid, uuid, text, text);
+drop function if exists app_private.fail_notification(uuid, uuid, text, text, text, boolean, integer);
+drop function if exists app_private.cancel_notification(uuid, uuid, text);
+
 create or replace function app_private.complete_notification(
   p_notification_id uuid,
   p_claim_token uuid,
@@ -73,17 +80,17 @@ end;
 $$;
 
 create or replace function public.complete_notification_server(
-  p_notification_id uuid,
-  p_claim_token uuid,
-  p_provider_name text,
-  p_provider_message_id text
+  notification_id uuid,
+  claim_token uuid,
+  provider_name text,
+  provider_message_id text
 )
 returns jsonb
 language sql
 security definer
 set search_path = ''
 as $$
-  select app_private.complete_notification(p_notification_id, p_claim_token, p_provider_name, p_provider_message_id);
+  select app_private.complete_notification($1, $2, $3, $4);
 $$;
 
 create or replace function app_private.fail_notification(
@@ -169,28 +176,20 @@ end;
 $$;
 
 create or replace function public.fail_notification_server(
-  p_notification_id uuid,
-  p_claim_token uuid,
-  p_provider_name text,
-  p_error_code text,
-  p_error_message text,
-  p_retryable boolean,
-  p_retry_delay_seconds integer
+  notification_id uuid,
+  claim_token uuid,
+  provider_name text,
+  error_code text,
+  error_message text,
+  retryable boolean,
+  retry_delay_seconds integer
 )
 returns jsonb
 language sql
 security definer
 set search_path = ''
 as $$
-  select app_private.fail_notification(
-    p_notification_id,
-    p_claim_token,
-    p_provider_name,
-    p_error_code,
-    p_error_message,
-    p_retryable,
-    p_retry_delay_seconds
-  );
+  select app_private.fail_notification($1, $2, $3, $4, $5, $6, $7);
 $$;
 
 create or replace function app_private.cancel_notification(
@@ -270,16 +269,16 @@ end;
 $$;
 
 create or replace function public.cancel_notification_server(
-  p_notification_id uuid,
-  p_actor_id uuid,
-  p_reason text
+  notification_id uuid,
+  actor_id uuid,
+  reason text
 )
 returns jsonb
 language sql
 security definer
 set search_path = ''
 as $$
-  select app_private.cancel_notification(p_notification_id, p_actor_id, p_reason);
+  select app_private.cancel_notification($1, $2, $3);
 $$;
 
 revoke all on function app_private.complete_notification(uuid, uuid, text, text) from public, anon, authenticated;
