@@ -19,6 +19,7 @@ export const notificationTemplateKeys = [
   "order_returned",
   "order_payment_status_changed",
   "low_stock",
+  "contact_message_received",
 ] as const;
 
 export type NotificationTemplateKey = (typeof notificationTemplateKeys)[number];
@@ -36,6 +37,7 @@ const notificationPayloadSchema = z.object({
   status: z.string().trim().max(40).optional(),
   payment_status: z.string().trim().max(40).optional(),
   variant_id: z.uuid().optional(),
+  message_id: z.uuid().optional(),
 }).passthrough();
 
 type OrderSnapshot = {
@@ -53,6 +55,19 @@ type OrderSnapshot = {
   deliveryFeeXof: number;
   totalXof: number;
   items: Array<{ productName: string; variantLabel: string; quantity: number; unitPriceXof: number; totalPriceXof: number }>;
+};
+
+type ContactMessageSnapshot = {
+  id: string;
+  customerName: string;
+  customerEmail: string | null;
+  customerPhone: string | null;
+  source: string;
+  subject: string | null;
+  body: string;
+  orderNumber: string | null;
+  productSnapshot: Record<string, unknown>;
+  createdAt: string;
 };
 
 function escapeHtml(value: unknown) {
@@ -138,7 +153,7 @@ async function renderOrderTemplate(key: NotificationTemplateKey, payload: z.infe
   const adminUrl = absoluteUrl(siteUrl, `/admin/commandes/${encodeURIComponent(order.id)}`);
   const trackingUrl = absoluteUrl(siteUrl, "/suivi-commande");
 
-  const titles: Record<NotificationTemplateKey, string> = {
+  const titles: Partial<Record<NotificationTemplateKey, string>> = {
     admin_order_created: `Nouvelle commande ${order.orderNumber}`,
     customer_order_received: `Commande recue ${order.orderNumber}`,
     order_confirmed: `Commande confirmee ${order.orderNumber}`,
@@ -153,7 +168,7 @@ async function renderOrderTemplate(key: NotificationTemplateKey, payload: z.infe
   };
 
   const admin = key === "admin_order_created" || key === "order_payment_status_changed";
-  const subject = titles[key];
+  const subject = titles[key] ?? `Notification ${order.orderNumber}`;
   const text = admin
     ? `${subject}\nClient: ${order.customerName}\nTelephone: ${order.customerPhone ?? "Non renseigne"}\nZone: ${order.city}${order.commune ? `, ${order.commune}` : ""}\nLivraison: ${deliveryMethodLabel(order.deliveryMethod)}\nPaiement: ${paymentMethodLabel(order.paymentMethod)} - ${paymentStatusLabel(order.paymentStatus)}\n${orderLines(order)}\nSous-total: ${formatXof(order.subtotalXof)}\nAdministration: connectez-vous puis recherchez ${order.orderNumber}.`
     : `${subject}\nVotre commande ${order.orderNumber} est au statut: ${orderStatusLabel(order.orderStatus)}.\n${orderLines(order)}\nSous-total: ${formatXof(order.subtotalXof)}\nFrais de livraison: ${order.deliveryFeeXof === 0 ? "a confirmer" : formatXof(order.deliveryFeeXof)}\nSuivi: ${trackingUrl}\nNe partagez jamais de PIN ou OTP.`;
@@ -176,6 +191,79 @@ async function renderLowStock(payload: z.infer<typeof notificationPayloadSchema>
   return { subject, html, text, summary: `low_stock:${data.variant_id}` };
 }
 
+async function loadContactMessage(messageId: string | undefined): Promise<ContactMessageSnapshot | null> {
+  if (!messageId) return null;
+  const { data, error } = await (createSupabaseAdminClient() as never as {
+    from(table: "contact_messages"): {
+      select(columns: string): {
+        eq(column: string, value: unknown): {
+          single(): Promise<{ data: Record<string, unknown> | null; error: { message?: string } | null }>;
+        };
+      };
+    };
+  })
+    .from("contact_messages")
+    .select("id, customer_name, customer_email, customer_phone, source, subject, body, order_number, product_snapshot, created_at")
+    .eq("id", messageId)
+    .single();
+  if (error || !data) return null;
+  return {
+    id: data.id as string,
+    customerName: data.customer_name as string,
+    customerEmail: data.customer_email as string | null,
+    customerPhone: data.customer_phone as string | null,
+    source: data.source as string,
+    subject: data.subject as string | null,
+    body: data.body as string,
+    orderNumber: data.order_number as string | null,
+    productSnapshot: ((data as { product_snapshot?: Record<string, unknown> | null }).product_snapshot ?? {}),
+    createdAt: data.created_at as string,
+  };
+}
+
+function sourceLabel(source: string) {
+  const labels: Record<string, string> = {
+    WEBSITE: "Site web",
+    INSTAGRAM: "Instagram",
+    FACEBOOK: "Facebook",
+    TIKTOK: "TikTok",
+    WHATSAPP: "WhatsApp",
+    PHONE: "Téléphone",
+    EMAIL: "E-mail",
+    OTHER: "Autre",
+  };
+  return labels[source] ?? "Message";
+}
+
+async function renderContactMessage(payload: z.infer<typeof notificationPayloadSchema>, siteUrl: string): Promise<RenderedNotification> {
+  const message = await loadContactMessage(payload.message_id);
+  if (!message) throw new Error("NOTIFICATION_TEMPLATE_MESSAGE_NOT_FOUND");
+  const subject = `Nouveau message client - ${message.subject ?? sourceLabel(message.source)}`;
+  const adminUrl = absoluteUrl(siteUrl, `/admin/messages/${encodeURIComponent(message.id)}`);
+  const excerpt = message.body.slice(0, 500);
+  const productName = typeof message.productSnapshot.productName === "string" ? message.productSnapshot.productName : null;
+  const text = [
+    subject,
+    `Source: ${sourceLabel(message.source)}`,
+    `Client: ${message.customerName}`,
+    `Téléphone: ${message.customerPhone ?? "Non renseigné"}`,
+    `E-mail: ${message.customerEmail ?? "Non renseigné"}`,
+    message.orderNumber ? `Commande: ${message.orderNumber}` : null,
+    productName ? `Produit: ${productName}` : null,
+    `Message: ${excerpt}`,
+    `Administration: ${adminUrl}`,
+  ].filter(Boolean).join("\n");
+  const html = layout(subject, [
+    `<p>Source: ${escapeHtml(sourceLabel(message.source))}</p>`,
+    `<p>Client: ${escapeHtml(message.customerName)}<br>Téléphone: ${escapeHtml(message.customerPhone ?? "Non renseigné")}<br>E-mail: ${escapeHtml(message.customerEmail ?? "Non renseigné")}</p>`,
+    message.orderNumber ? `<p>Commande: ${escapeHtml(message.orderNumber)}</p>` : "",
+    productName ? `<p>Produit: ${escapeHtml(productName)}</p>` : "",
+    `<blockquote>${escapeHtml(excerpt)}</blockquote>`,
+    `<p><a href="${escapeHtml(adminUrl)}">Ouvrir le message</a></p>`,
+  ].join(""));
+  return { subject, html, text, summary: `contact_message:${message.id}` };
+}
+
 export async function renderNotificationTemplate(input: {
   templateKey: string | null;
   payload: unknown;
@@ -189,6 +277,7 @@ export async function renderNotificationTemplate(input: {
 
   if (key && (notificationTemplateKeys as readonly string[]).includes(key)) {
     if (key === "low_stock") return renderLowStock(parsedPayload.data, input.siteUrl);
+    if (key === "contact_message_received") return renderContactMessage(parsedPayload.data, input.siteUrl);
     return renderOrderTemplate(key as NotificationTemplateKey, parsedPayload.data, input.siteUrl);
   }
 

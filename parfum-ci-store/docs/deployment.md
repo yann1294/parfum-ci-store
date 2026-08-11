@@ -137,6 +137,7 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 - `/admin/commandes` must be accessible only to authorized order staff. Status transitions must call the transactional transition function, cancellation must release reservations exactly once, delivery must convert reservations into `SOLD` exactly once, and returns must not automatically restock inventory.
 - Phase 12 notification delivery requires `EMAIL_FROM`, `ADMIN_NOTIFICATION_EMAIL`, `CRON_SECRET`, `NOTIFICATION_PROVIDER`, `NOTIFICATION_BATCH_SIZE`, and `NOTIFICATION_MAX_ATTEMPTS`. Production must set `NOTIFICATION_PROVIDER=resend` and `RESEND_API_KEY`; local/test may use `NOTIFICATION_PROVIDER=development`.
 - Configure Vercel Cron or an equivalent scheduler to POST `/api/cron/notifications` with `Authorization: Bearer <CRON_SECRET>`. The route returns counts only and is safe for overlapping invocations because rows are claimed transactionally.
+- Phase 13 adds `20260804133000_phase13_customer_messages.sql`. Apply it manually, regenerate database types, then run `psql "$DATABASE_URL" -f supabase/tests/phase13_messages.sql` against a non-production database before enabling the public contact form in production.
 - Do not deploy real email delivery until SPF/DKIM/domain setup and a Resend sandbox acceptance test are verified with non-customer data.
 - Test a controlled `/api/orders` HTTP 400 before launch. It must leave the cart intact and must not redirect to a confirmation route.
 - Admin routes require authentication.

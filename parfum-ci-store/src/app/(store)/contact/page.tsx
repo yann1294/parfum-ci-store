@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { PageContainer } from "@/components/shared/page-container";
 import { SectionHeading } from "@/components/shared/section-heading";
+import { ContactMessageForm } from "@/components/storefront/contact-message-form";
 import { buttonVariants } from "@/components/ui/button";
 import { buildSocialLinks, buildWhatsAppUrlForNumber, normalizeWhatsAppNumber, siteConfig } from "@/config/site";
 import { getStorefrontContent } from "@/lib/storefront/content";
@@ -16,7 +17,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function ContactPage() {
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const params = await searchParams;
   const content = await getStorefrontContent();
   const contact = content.contact;
   const whatsappNumber = normalizeWhatsAppNumber(contact.whatsappNumber) ?? normalizeWhatsAppNumber(content.social.whatsappNumber) ?? siteConfig.whatsappNumber;
@@ -87,6 +93,15 @@ export default async function ContactPage() {
           ))}
         </div>
       ) : null}
+      <div className="mt-10">
+        <ContactMessageForm
+          productContext={{
+            productId: params.productId,
+            variantId: params.variantId,
+            productSlug: params.productSlug,
+          }}
+        />
+      </div>
     </PageContainer>
   );
 }

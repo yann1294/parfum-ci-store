@@ -37,7 +37,7 @@ const navIcons: Record<AdminNavigationItem["module"], ComponentType<{ className?
   settings: Settings,
 };
 
-export function AdminSidebar({ items }: { items: AdminNavigationItem[] }) {
+export function AdminSidebar({ items, counts = {} }: { items: AdminNavigationItem[]; counts?: Partial<Record<AdminNavigationItem["module"], number>> }) {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:block">
       <div className="flex h-16 items-center border-b border-sidebar-border px-6">
@@ -59,7 +59,12 @@ export function AdminSidebar({ items }: { items: AdminNavigationItem[] }) {
               className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
               <Icon className="size-4" aria-hidden="true" />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {counts[item.module] ? (
+                <span className="rounded-full bg-sidebar-primary px-2 py-0.5 text-xs text-sidebar-primary-foreground">
+                  {counts[item.module]! > 99 ? "99+" : counts[item.module]}
+                </span>
+              ) : null}
             </Link>
           );
         })}

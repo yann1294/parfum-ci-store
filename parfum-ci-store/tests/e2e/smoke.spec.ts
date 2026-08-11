@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 
 const routes = [
   { path: "/", heading: /Parfums raffinés/i },
-  { path: "/catalogue", heading: "Sélection temporaire" },
-  { path: "/contact", heading: "Parlez-nous de votre besoin" },
+  { path: "/catalogue", heading: "Tous les parfums" },
+  { path: "/contact", heading: "Envoyer un message" },
   { path: "/admin", heading: "Connexion admin" },
 ];
 

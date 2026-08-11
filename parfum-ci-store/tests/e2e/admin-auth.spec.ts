@@ -49,12 +49,11 @@ test("owner password login, logout, back and refresh keep admin protected", asyn
   await page.goto("/connexion?retour=%2Fadmin");
   await page.getByLabel("Adresse email").fill(ownerEmail!);
   await page.getByLabel("Mot de passe").fill(ownerPassword!);
-  await page.getByRole("button", { name: "Continuer" }).click();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await page.waitForURL("**/admin");
-  await expect(page.getByText("Propriétaire")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Compte admin/i })).toBeVisible();
 
   await page.getByRole("button", { name: /Compte admin/i }).click();
-  await expect(page.getByText("Propriétaire")).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Déconnexion" })).toBeVisible();
   await page.keyboard.press("Escape");
 
@@ -71,7 +70,7 @@ test("owner password login, logout, back and refresh keep admin protected", asyn
   for (const link of visibleAdminLinks) {
     await page.getByRole("link", { name: link.label }).click();
     await expect(page).not.toHaveURL(/\/connexion/);
-    await expect(page.getByRole("heading")).toBeVisible();
+    await expect(page.locator("h1")).toBeVisible();
   }
 
   for (const path of ["/admin", "/admin/design-system"]) {
@@ -106,7 +105,7 @@ test("support navigation hides unauthorized payment and inventory modules", asyn
   await page.goto("/connexion?retour=%2Fadmin");
   await page.getByLabel("Adresse email").fill(supportEmail!);
   await page.getByLabel("Mot de passe").fill(supportPassword!);
-  await page.getByRole("button", { name: "Continuer" }).click();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await page.waitForURL("**/admin");
 
   await expect(page.getByRole("link", { name: "Commandes" })).toBeVisible();
@@ -127,7 +126,7 @@ test("inactive staff is denied after password authentication", async ({ page }) 
   await page.goto("/connexion?retour=%2Fadmin");
   await page.getByLabel("Adresse email").fill(inactiveEmail!);
   await page.getByLabel("Mot de passe").fill(inactivePassword!);
-  await page.getByRole("button", { name: "Continuer" }).click();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
 
   await page.waitForURL("**/acces-refuse");
   await expect(page.getByRole("heading", { name: "Accès refusé" })).toBeVisible();

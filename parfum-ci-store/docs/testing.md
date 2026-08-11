@@ -256,6 +256,10 @@ Playwright Phase 11 tests require role credentials, disposable orders created th
 
 Unit tests cover notification provider selection, development redaction, Resend response mapping, admin filter normalization, template rendering, safe links, migration contracts, and processor claim/result calls.
 
+## Phase 13 Messages
+
+Run `psql "$DATABASE_URL" -f supabase/tests/phase13_messages.sql` after applying the Phase 13 migration. Unit tests cover contact-method validation, Côte d’Ivoire phone normalization, idempotency fingerprints, migration contracts, notification-template registration and XSS rendering boundaries. Playwright should cover contact-to-admin flow, manual social entry, permission denial and responsive layouts when staff credentials and fixtures exist.
+
 Database tests for Phase 12 must use a real PostgreSQL/Supabase database for concurrent claiming, stale claim recovery, duplicate-send prevention, retry scheduling, cancellation, and low-stock crossing deduplication. Sequential mocks are not proof of concurrency safety.
 
 Playwright Phase 12 tests should use the development provider unless a verified Resend sandbox recipient and API key are configured. Mark external Resend delivery `NOT VERIFIED` unless the provider accepts the message and inbox delivery is actually checked.

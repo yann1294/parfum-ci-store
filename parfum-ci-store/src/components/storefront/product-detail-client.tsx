@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -39,6 +40,10 @@ export function ProductDetailClient({ product }: { product: PublicProductDto }) 
       ].join("\n"),
     );
   }, [product.name, product.slug, selectedVariant]);
+
+  const contactHref = selectedVariant
+    ? `/contact?productId=${encodeURIComponent(product.id)}&variantId=${encodeURIComponent(selectedVariant.id)}&productSlug=${encodeURIComponent(product.slug)}`
+    : `/contact?productId=${encodeURIComponent(product.id)}&productSlug=${encodeURIComponent(product.slug)}`;
 
   function updateVariant(nextVariantId: string) {
     const nextVariant = product.variants.find((variant) => variant.id === nextVariantId);
@@ -167,6 +172,9 @@ export function ProductDetailClient({ product }: { product: PublicProductDto }) 
                 Demander sur WhatsApp
               </a>
             ) : null}
+            <Link href={contactHref} className={buttonVariants({ variant: "outline" })}>
+              Poser une question
+            </Link>
           </div>
         </div>
       </section>

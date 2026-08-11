@@ -5,6 +5,7 @@ import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { AdminTopBar } from "@/components/layout/admin-top-bar";
 import { canAccessAdminPath, getAdminNavigation } from "@/lib/auth/navigation";
 import { requireActiveStaff } from "@/lib/auth/server";
+import { countNewMessages } from "@/lib/messages/admin";
 
 export default async function AdminLayout({
   children,
@@ -20,10 +21,11 @@ export default async function AdminLayout({
   }
 
   const navigation = getAdminNavigation(staff);
+  const newMessages = await countNewMessages(staff);
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminSidebar items={navigation} />
+      <AdminSidebar items={navigation} counts={{ messages: newMessages }} />
       <div className="min-h-screen lg:pl-72">
         <AdminTopBar staff={staff} />
         <main id="contenu" className="px-4 py-8 sm:px-6 lg:px-8">

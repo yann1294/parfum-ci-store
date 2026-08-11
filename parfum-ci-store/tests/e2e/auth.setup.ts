@@ -14,7 +14,7 @@ setup("authenticate admin", async ({ page }) => {
   await page.goto("/connexion?retour=%2Fadmin");
   await page.getByLabel("Adresse email").fill(adminEmail);
   await page.getByLabel("Mot de passe").fill(adminPassword);
-  await page.getByRole("button", { name: "Continuer" }).click();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await page.waitForURL("**/admin");
   await mkdir("playwright/.auth", { recursive: true });
   await page.context().storageState({ path: "playwright/.auth/admin.json" });

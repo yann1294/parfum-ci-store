@@ -205,6 +205,8 @@ Phase 11 adds `app_private.order_transition_idempotency`, `app_private.payment_s
 
 Phase 12 extends the existing `public.notifications` outbox with provider, claim, retry, cancellation, error and attempt-count fields. It adds immutable `public.notification_attempts` rows for delivery evidence and `public.low_stock_alert_states` for threshold-crossing deduplication. Service-role-only RPC wrappers claim rows with `FOR UPDATE SKIP LOCKED`, mark success/failure, and cancel eligible notifications. The repair migration `20260804124500_phase12_notification_ambiguous_parameter_fix.sql` replaces result/cancel functions with non-ambiguous `p_`-prefixed parameters. Direct anonymous/customer mutation remains denied.
 
+Phase 13 extends `public.contact_messages` with normalized contact fields, product/order/customer links, attribution, consent, source reference and creation actor metadata. It adds append-only `contact_message_status_history`, `contact_message_assignment_history`, `contact_message_internal_notes`, and private message idempotency. Public and manual message creation uses the service-role-only `public.create_contact_message_server(jsonb)` wrapper, which atomically inserts the message, initial history, audit event and Phase 12 notification intents.
+
 ## Supabase Storage
 
 The `product-images` bucket is configured by migration:

@@ -165,6 +165,10 @@ Notification delivery state is mutated through service-role-only database functi
 
 The development notification provider logs only notification ID, subject/template context, and masked recipient. Production must use Resend and must not silently fall back to the development provider.
 
+## Phase 13 Messages
+
+Public contact submissions go through `POST /api/contact/messages`, which validates bounded JSON, honeypot, rate limit, explicit consent, and the telephone-or-email contact rule before calling the service-role-only message transaction. Anonymous users cannot directly read or insert `contact_messages`; normal authenticated non-staff users cannot read messages. Admin list DTOs mask contacts and use excerpts, while full message content and internal notes are restricted to active OWNER, ADMIN and CUSTOMER_SUPPORT staff. Customer/manual message content is rendered as text only and is never passed through `dangerouslySetInnerHTML`.
+
 ## Test Users
 
 Create staff test users manually in Supabase Auth and then insert or update their `profiles` rows with current roles and `active` values. Do not add fake owner UUIDs to seed data and do not commit test credentials.

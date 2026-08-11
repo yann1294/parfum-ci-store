@@ -146,48 +146,248 @@ export type Database = {
           },
         ]
       }
+      contact_message_assignment_history: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          from_assignee: string | null
+          id: string
+          message_id: string
+          to_assignee: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          from_assignee?: string | null
+          id?: string
+          message_id: string
+          to_assignee?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          from_assignee?: string | null
+          id?: string
+          message_id?: string
+          to_assignee?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_message_assignment_history_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_message_assignment_history_from_assignee_fkey"
+            columns: ["from_assignee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_message_assignment_history_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "contact_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_message_assignment_history_to_assignee_fkey"
+            columns: ["to_assignee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_message_internal_notes: {
+        Row: {
+          actor_id: string
+          created_at: string
+          id: string
+          message_id: string
+          note: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          id?: string
+          message_id: string
+          note: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          id?: string
+          message_id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_message_internal_notes_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_message_internal_notes_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "contact_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_message_status_history: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          from_status: Database["public"]["Enums"]["message_status"] | null
+          id: string
+          message_id: string
+          reason: string | null
+          to_status: Database["public"]["Enums"]["message_status"]
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["message_status"] | null
+          id?: string
+          message_id: string
+          reason?: string | null
+          to_status: Database["public"]["Enums"]["message_status"]
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["message_status"] | null
+          id?: string
+          message_id?: string
+          reason?: string | null
+          to_status?: Database["public"]["Enums"]["message_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_message_status_history_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_message_status_history_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "contact_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_messages: {
         Row: {
           assigned_to: string | null
           body: string
+          consent_accepted_at: string | null
+          consent_version: string | null
           created_at: string
+          created_by: string | null
           customer_email: string | null
+          customer_id: string | null
           customer_name: string
           customer_phone: string | null
           customer_whatsapp: string | null
+          external_handle: string | null
           id: string
+          normalized_phone: string | null
+          normalized_whatsapp: string | null
+          order_id: string | null
+          order_number: string | null
+          preferred_contact_method: string | null
+          product_id: string | null
+          product_snapshot: Json
           source: Database["public"]["Enums"]["message_source"]
+          source_page: string | null
+          source_reference: string | null
           status: Database["public"]["Enums"]["message_status"]
           subject: string | null
           updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          variant_id: string | null
         }
         Insert: {
           assigned_to?: string | null
           body: string
+          consent_accepted_at?: string | null
+          consent_version?: string | null
           created_at?: string
+          created_by?: string | null
           customer_email?: string | null
+          customer_id?: string | null
           customer_name: string
           customer_phone?: string | null
           customer_whatsapp?: string | null
+          external_handle?: string | null
           id?: string
+          normalized_phone?: string | null
+          normalized_whatsapp?: string | null
+          order_id?: string | null
+          order_number?: string | null
+          preferred_contact_method?: string | null
+          product_id?: string | null
+          product_snapshot?: Json
           source?: Database["public"]["Enums"]["message_source"]
+          source_page?: string | null
+          source_reference?: string | null
           status?: Database["public"]["Enums"]["message_status"]
           subject?: string | null
           updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          variant_id?: string | null
         }
         Update: {
           assigned_to?: string | null
           body?: string
+          consent_accepted_at?: string | null
+          consent_version?: string | null
           created_at?: string
+          created_by?: string | null
           customer_email?: string | null
+          customer_id?: string | null
           customer_name?: string
           customer_phone?: string | null
           customer_whatsapp?: string | null
+          external_handle?: string | null
           id?: string
+          normalized_phone?: string | null
+          normalized_whatsapp?: string | null
+          order_id?: string | null
+          order_number?: string | null
+          preferred_contact_method?: string | null
+          product_id?: string | null
+          product_snapshot?: Json
           source?: Database["public"]["Enums"]["message_source"]
+          source_page?: string | null
+          source_reference?: string | null
           status?: Database["public"]["Enums"]["message_status"]
           subject?: string | null
           updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -195,6 +395,62 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_messages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_messages_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_messages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_messages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "public_catalogue_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_messages_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "admin_inventory_variants"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "contact_messages_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_messages_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "public_catalogue_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -1617,7 +1873,15 @@ export type Database = {
       }
     }
     Functions: {
+      add_contact_message_note_server: {
+        Args: { actor_id: string; message_id: string; note: string }
+        Returns: Json
+      }
       adjust_inventory_server: { Args: { request: Json }; Returns: Json }
+      assign_contact_message_server: {
+        Args: { actor_id: string; assigned_to: string; message_id: string }
+        Returns: Json
+      }
       cancel_notification_server: {
         Args: { actor_id: string; notification_id: string; reason: string }
         Returns: Json
@@ -1639,6 +1903,7 @@ export type Database = {
         }
         Returns: Json
       }
+      create_contact_message_server: { Args: { request: Json }; Returns: Json }
       create_guest_order_server: { Args: { request: Json }; Returns: Json }
       fail_notification_server: {
         Args: {
@@ -1661,6 +1926,15 @@ export type Database = {
         Returns: undefined
       }
       record_order_payment_server: { Args: { request: Json }; Returns: Json }
+      transition_contact_message_server: {
+        Args: {
+          actor_id: string
+          message_id: string
+          reason: string
+          target_status: Database["public"]["Enums"]["message_status"]
+        }
+        Returns: Json
+      }
       transition_order_server: { Args: { request: Json }; Returns: Json }
     }
     Enums: {
