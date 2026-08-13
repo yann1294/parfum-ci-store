@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { normalizeCoteDIvoirePhoneResult } from "@/lib/orders/phone";
 import { readAttribution } from "@/lib/storefront/attribution";
 
 type ContactMessageFormProps = {
@@ -74,6 +75,18 @@ export function ContactMessageForm({ productContext }: ContactMessageFormProps) 
     event.preventDefault();
     setStatus(null);
     if (!validate() || pending) return;
+    const normalizedPhone = form.phone.trim() ? normalizeCoteDIvoirePhoneResult(form.phone) : null;
+    const normalizedWhatsapp = form.whatsapp.trim() ? normalizeCoteDIvoirePhoneResult(form.whatsapp) : null;
+    if (normalizedPhone && !normalizedPhone.ok) {
+      setErrors((current) => ({ ...current, phone: "Saisissez un numéro de téléphone ivoirien valide." }));
+      setStatus({ kind: "error", message: "Saisissez un numéro de téléphone ivoirien valide." });
+      return;
+    }
+    if (normalizedWhatsapp && !normalizedWhatsapp.ok) {
+      setErrors((current) => ({ ...current, whatsapp: "Saisissez un numéro WhatsApp ivoirien valide." }));
+      setStatus({ kind: "error", message: "Saisissez un numéro de téléphone ivoirien valide." });
+      return;
+    }
     setPending(true);
     try {
       const response = await fetch("/api/contact/messages", {
@@ -84,8 +97,8 @@ export function ContactMessageForm({ productContext }: ContactMessageFormProps) 
           source: "WEBSITE",
           name: form.name,
           email: form.email || undefined,
-          phone: form.phone || undefined,
-          whatsapp: form.whatsapp || undefined,
+          phone: normalizedPhone?.value || undefined,
+          whatsapp: normalizedWhatsapp?.value || undefined,
           preferredContactMethod: form.preferredContactMethod,
           subject: form.subject || defaultSubject,
           message: form.message,

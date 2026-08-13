@@ -10,7 +10,10 @@ export function normalizeCoteDIvoirePhoneResult(value: string, required = true):
     return required ? { ok: false, code: "ORDER_INVALID_PHONE" } : { ok: true, value: "" };
   }
 
-  const compact = trimmed.replace(/[\s().-]/g, "");
+  const compact = trimmed
+    .normalize("NFKC")
+    .replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069]/g, "")
+    .replace(/[\s().\-\u2010-\u2015]/g, "");
   if (/[^0-9+]/.test(compact)) return { ok: false, code: "ORDER_INVALID_PHONE" };
   if (compact.includes("+") && (!compact.startsWith("+") || compact.slice(1).includes("+"))) {
     return { ok: false, code: "ORDER_INVALID_PHONE" };

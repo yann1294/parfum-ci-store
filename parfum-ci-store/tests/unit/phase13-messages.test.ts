@@ -17,6 +17,13 @@ describe("Phase 13 message contracts", () => {
 
     expect(contactMessageRequestSchema.safeParse(base).success).toBe(false);
     expect(normalizeContactMessageRequest({ ...base, phone: "00225 07 00 00 00 12" }).phone).toBe("+2250700000012");
+    expect(normalizeContactMessageRequest({ ...base, phone: "+2250708209830" }).phone).toBe("+2250708209830");
+    expect(normalizeContactMessageRequest({ ...base, phone: "002250708209830" }).phone).toBe("+2250708209830");
+    expect(normalizeContactMessageRequest({ ...base, phone: "2250708209830" }).phone).toBe("+2250708209830");
+    expect(normalizeContactMessageRequest({ ...base, phone: "0708209830" }).phone).toBe("+2250708209830");
+    expect(normalizeContactMessageRequest({ ...base, phone: "(07) 08-20-98-30" }).phone).toBe("+2250708209830");
+    expect(normalizeContactMessageRequest({ ...base, phone: "+225\u200e 07 08 20 98 30" }).phone).toBe("+2250708209830");
+    expect(normalizeContactMessageRequest({ ...base, phone: "07\u201108\u201120\u201198\u201130" }).phone).toBe("+2250708209830");
     expect(normalizeContactMessageRequest({ ...base, email: "AWA@EXAMPLE.COM" }).email).toBe("awa@example.com");
   });
 
