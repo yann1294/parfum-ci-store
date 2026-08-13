@@ -3,8 +3,9 @@ import "server-only";
 import { z } from "zod";
 
 import { formatXof } from "@/lib/catalogue/format";
-import { deliveryMethodLabel, orderStatusLabel, paymentMethodLabel, paymentStatusLabel } from "@/lib/orders/display";
+import { deliveryMethodLabel, orderStatusLabel, paymentInstructionForMethod, paymentMethodLabel, paymentStatusLabel } from "@/lib/orders/display";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getCheckoutSettings } from "@/lib/settings/service";
 import type { Database } from "@/types/database.types";
 
 export const notificationTemplateKeys = [
@@ -142,7 +143,7 @@ function orderHtml(order: OrderSnapshot, adminUrl?: string) {
     `<p>Commande <strong>${escapeHtml(order.orderNumber)}</strong></p>`,
     `<p>Statut: ${escapeHtml(orderStatusLabel(order.orderStatus))}<br>Paiement: ${escapeHtml(paymentStatusLabel(order.paymentStatus))}</p>`,
     `<ul>${items}</ul>`,
-    `<p>Sous-total: ${escapeHtml(formatXof(order.subtotalXof))}<br>Livraison: ${order.deliveryFeeXof === 0 ? "A confirmer" : escapeHtml(formatXof(order.deliveryFeeXof))}<br>Total: ${escapeHtml(formatXof(order.totalXof))}</p>`,
+    `<p>Sous-total: ${escapeHtml(formatXof(order.subtotalXof))}<br>Livraison: ${escapeHtml(formatXof(order.deliveryFeeXof))}<br>Total: ${escapeHtml(formatXof(order.totalXof))}</p>`,
     adminUrl ? `<p><a href="${escapeHtml(adminUrl)}">Ouvrir la commande dans l'administration</a></p>` : "",
   ].join("");
 }
@@ -152,6 +153,8 @@ async function renderOrderTemplate(key: NotificationTemplateKey, payload: z.infe
   if (!order) throw new Error("NOTIFICATION_TEMPLATE_ORDER_NOT_FOUND");
   const adminUrl = absoluteUrl(siteUrl, `/admin/commandes/${encodeURIComponent(order.id)}`);
   const trackingUrl = absoluteUrl(siteUrl, "/suivi-commande");
+  const checkoutSettings = await getCheckoutSettings();
+  const paymentInstructions = paymentInstructionForMethod(order.paymentMethod, checkoutSettings, order.orderNumber) ?? [];
 
   const titles: Partial<Record<NotificationTemplateKey, string>> = {
     admin_order_created: `Nouvelle commande ${order.orderNumber}`,
@@ -171,8 +174,9 @@ async function renderOrderTemplate(key: NotificationTemplateKey, payload: z.infe
   const subject = titles[key] ?? `Notification ${order.orderNumber}`;
   const text = admin
     ? `${subject}\nClient: ${order.customerName}\nTelephone: ${order.customerPhone ?? "Non renseigne"}\nZone: ${order.city}${order.commune ? `, ${order.commune}` : ""}\nLivraison: ${deliveryMethodLabel(order.deliveryMethod)}\nPaiement: ${paymentMethodLabel(order.paymentMethod)} - ${paymentStatusLabel(order.paymentStatus)}\n${orderLines(order)}\nSous-total: ${formatXof(order.subtotalXof)}\nAdministration: connectez-vous puis recherchez ${order.orderNumber}.`
-    : `${subject}\nVotre commande ${order.orderNumber} est au statut: ${orderStatusLabel(order.orderStatus)}.\n${orderLines(order)}\nSous-total: ${formatXof(order.subtotalXof)}\nFrais de livraison: ${order.deliveryFeeXof === 0 ? "a confirmer" : formatXof(order.deliveryFeeXof)}\nSuivi: ${trackingUrl}\nNe partagez jamais de PIN ou OTP.`;
-  const html = layout(subject, admin ? orderHtml(order, adminUrl) : `${orderHtml(order)}<p><a href="${escapeHtml(trackingUrl)}">Suivre ma commande</a></p><p>Ne partagez jamais de PIN ou OTP.</p>`);
+    : `${subject}\nVotre commande ${order.orderNumber} est au statut: ${orderStatusLabel(order.orderStatus)}.\n${orderLines(order)}\nSous-total: ${formatXof(order.subtotalXof)}\nFrais de livraison: ${formatXof(order.deliveryFeeXof)}\nTotal: ${formatXof(order.totalXof)}${paymentInstructions.length ? `\nInstructions de paiement:\n${paymentInstructions.join("\n")}` : ""}\nSuivi: ${trackingUrl}\nNe partagez jamais de PIN ou OTP.`;
+  const instructionHtml = paymentInstructions.length ? `<h2>Instructions de paiement</h2>${paymentInstructions.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}` : "";
+  const html = layout(subject, admin ? orderHtml(order, adminUrl) : `${orderHtml(order)}${instructionHtml}<p><a href="${escapeHtml(trackingUrl)}">Suivre ma commande</a></p><p>Ne partagez jamais de PIN ou OTP.</p>`);
   return { subject, html, text, summary: `${key}:${order.orderNumber}` };
 }
 

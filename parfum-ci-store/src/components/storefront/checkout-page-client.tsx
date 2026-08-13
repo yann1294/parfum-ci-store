@@ -45,8 +45,16 @@ type CheckoutPageClientProps = {
   settings: PaymentInstructionSettings & {
     enabledPaymentMethods: PaymentMethod[];
     enabledDeliveryMethods: DeliveryMethod[];
+    acceptingOrders?: boolean;
+    orderUnavailableMessage?: string | null;
+    authoritativeDeliveryFees?: boolean;
+    deliveryMethodConfigs?: Partial<Record<DeliveryMethod, { label: string; publicLabel?: string }>>;
   };
 };
+
+type CheckoutDeliveryQuote =
+  | { status: "AVAILABLE"; feeXof: number; matchedZoneName?: string; estimatedMinDays?: number; estimatedMaxDays?: number; freeDeliveryApplied: boolean }
+  | { status: "UNAVAILABLE"; reason: string };
 
 type FieldErrors = Partial<Record<keyof CheckoutFormState | "form", string>>;
 
@@ -86,7 +94,9 @@ type OrderErrorCode =
   | "ORDER_PAYMENT_METHOD_DISABLED"
   | "ORDER_DELIVERY_METHOD_DISABLED"
   | "ORDER_PAYMENT_METHOD_UNAVAILABLE"
-  | "ORDER_DELIVERY_METHOD_UNAVAILABLE";
+  | "ORDER_DELIVERY_METHOD_UNAVAILABLE"
+  | "ORDER_DELIVERY_AREA_UNAVAILABLE"
+  | "ORDER_ACCEPTANCE_DISABLED";
 
 const text = (max: number, message: string) =>
   z
@@ -182,6 +192,8 @@ function orderErrorMessage(code: OrderErrorCode | string) {
     ORDER_DELIVERY_METHOD_DISABLED: "Ce mode de livraison n'est plus disponible.",
     ORDER_PAYMENT_METHOD_UNAVAILABLE: "Ce mode de paiement n'est plus disponible.",
     ORDER_DELIVERY_METHOD_UNAVAILABLE: "Ce mode de livraison n'est plus disponible.",
+    ORDER_DELIVERY_AREA_UNAVAILABLE: "La livraison n'est pas disponible pour cette zone.",
+    ORDER_ACCEPTANCE_DISABLED: "La boutique n'accepte pas de nouvelle commande pour le moment.",
   };
   return messages[code as OrderErrorCode] ?? messages.ORDER_CREATION_FAILED;
 }
@@ -226,6 +238,8 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
   const [idempotencyKey, setIdempotencyKey] = useState(createCheckoutIdempotencyKey);
   const [lastSubmittedIntent, setLastSubmittedIntent] = useState<string | null>(null);
   const [successfulOrder, setSuccessfulOrder] = useState<CheckoutOrderSuccess | null>(null);
+  const [deliveryQuote, setDeliveryQuote] = useState<CheckoutDeliveryQuote | null>(null);
+  const [deliveryQuotePending, setDeliveryQuotePending] = useState(false);
   const firstInvalidRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null);
   const submissionMessageRef = useRef<HTMLDivElement | null>(null);
   const lastCartSignatureRef = useRef<string>("empty");
@@ -310,25 +324,54 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     };
   }, [validateCart]);
 
+  useEffect(() => {
+    if (!settings.authoritativeDeliveryFees || !snapshot || snapshot.readiness !== "READY" || !form.city.trim() || !form.commune.trim()) {
+      queueMicrotask(() => setDeliveryQuote(null));
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setDeliveryQuotePending(true);
+      try {
+        const response = await fetch("/api/storefront/delivery-quote", {
+          method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store", signal: controller.signal,
+          body: JSON.stringify({ deliveryMethod: form.deliveryMethod, city: form.city, commune: form.commune, subtotalXof: snapshot.subtotalXof }),
+        });
+        const value = await response.json() as CheckoutDeliveryQuote;
+        if (!controller.signal.aborted) setDeliveryQuote(value);
+      } catch { if (!controller.signal.aborted) setDeliveryQuote({ status: "UNAVAILABLE", reason: "QUOTE_FAILED" }); }
+      finally { if (!controller.signal.aborted) setDeliveryQuotePending(false); }
+    }, 350);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [form.city, form.commune, form.deliveryMethod, settings.authoritativeDeliveryFees, snapshot]);
+
   const readiness = snapshot?.readiness ?? "VALIDATING";
   const hasConfiguredPaymentMethod = settings.enabledPaymentMethods.length > 0;
   const formValid = useMemo(() => checkoutFormSchema.safeParse(form).success, [form]);
   const checkoutBlocked =
+    settings.acceptingOrders === false ||
     !snapshot ||
     status === "validating" ||
     status === "submitting" ||
     status === "success" ||
     readiness !== "READY" ||
+    (settings.authoritativeDeliveryFees === true && (deliveryQuotePending || deliveryQuote?.status !== "AVAILABLE")) ||
     !hasConfiguredPaymentMethod ||
     !formValid;
   const orderableLines = snapshot?.lines ?? [];
   const checkoutDisabledReason =
-    status === "success"
+    settings.acceptingOrders === false
+      ? settings.orderUnavailableMessage || "La boutique n'accepte pas de nouvelle commande pour le moment."
+      : status === "success"
       ? "Commande enregistrée. Ouverture de la confirmation..."
       : status === "validating"
         ? "Vérification du panier en cours."
-        : readiness !== "READY"
+          : readiness !== "READY"
           ? "Corrigez le panier avant de commander."
+          : settings.authoritativeDeliveryFees && deliveryQuotePending
+            ? "Calcul des frais de livraison en cours."
+            : settings.authoritativeDeliveryFees && deliveryQuote?.status !== "AVAILABLE"
+              ? "La livraison n'est pas disponible pour ces informations."
           : !hasConfiguredPaymentMethod
             ? "Aucun mode de paiement n'est configuré pour le moment."
             : !formValid
@@ -518,6 +561,8 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
           </p>
         </div>
 
+        {settings.acceptingOrders === false ? <Alert><AlertTitle>Commandes en pause</AlertTitle><AlertDescription>{settings.orderUnavailableMessage || "La boutique reste consultable, mais les nouvelles commandes en ligne sont temporairement désactivées."}</AlertDescription></Alert> : null}
+
         {message && !successfulOrder ? (
           <Alert
             ref={submissionMessageRef}
@@ -656,7 +701,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
             >
               {settings.enabledDeliveryMethods.map((method) => (
                 <option key={method} value={method}>
-                  {deliveryMethodLabel(method)}
+                  {settings.deliveryMethodConfigs?.[method]?.label || deliveryMethodLabel(method)}
                 </option>
               ))}
             </select>
@@ -772,12 +817,13 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
           </div>
           <div className="flex justify-between">
             <span>Frais de livraison</span>
-            <span>À confirmer</span>
+            <span>{settings.authoritativeDeliveryFees ? (deliveryQuotePending ? "Calcul..." : deliveryQuote?.status === "AVAILABLE" ? formatXof(deliveryQuote.feeXof) : "Indisponible") : "À confirmer"}</span>
           </div>
           <div className="flex justify-between font-medium">
             <span>Total</span>
-            <span>À confirmer</span>
+            <span>{deliveryQuote?.status === "AVAILABLE" ? formatXof((snapshot?.subtotalXof ?? 0) + deliveryQuote.feeXof) : "À confirmer"}</span>
           </div>
+          {deliveryQuote?.status === "AVAILABLE" && deliveryQuote.freeDeliveryApplied ? <p className="text-xs text-muted-foreground">Livraison offerte: seuil atteint.</p> : null}
         </div>
       </aside>
     </div>

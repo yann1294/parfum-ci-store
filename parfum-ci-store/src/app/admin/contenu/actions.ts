@@ -12,17 +12,7 @@ import {
   type StoreContentPageKey,
   type StorefrontContent,
 } from "@/lib/storefront/content-schemas";
-import { updateStorefrontContent } from "@/lib/storefront/content";
-import {
-  defaultPaymentConfigs,
-  paymentMethodConfigSchema,
-  PaymentSettingsError,
-  supportedPaymentMethods,
-  updatePaymentSettings as persistPaymentSettings,
-  validatePaymentSettingsForSave,
-  type PaymentMethodConfig,
-} from "@/lib/orders/payment-settings";
-import type { PaymentMethod } from "@/lib/orders/display";
+import { getStorefrontContent, updateStorefrontContent } from "@/lib/storefront/content";
 
 export type ContentActionState = {
   ok: boolean;
@@ -30,12 +20,6 @@ export type ContentActionState = {
   pageKey?: StoreContentPageKey;
   value?: StorefrontContent[StoreContentPageKey];
   updatedAt?: string | null;
-};
-
-export type PaymentSettingsActionState = {
-  ok: boolean;
-  message: string;
-  value?: Record<PaymentMethod, PaymentMethodConfig>;
 };
 
 const pageKeySchema = z.enum(storeContentPageKeys);
@@ -65,7 +49,7 @@ function parseList(value: string, maxRows: number) {
     .slice(0, maxRows);
 }
 
-function valueForPage(pageKey: StoreContentPageKey, formData: FormData) {
+function valueForPage(pageKey: StoreContentPageKey, formData: FormData, current: StorefrontContent) {
   switch (pageKey) {
     case "home":
       return {
@@ -95,11 +79,11 @@ function valueForPage(pageKey: StoreContentPageKey, formData: FormData) {
       return {
         pageTitle: text(formData, "pageTitle"),
         introText: text(formData, "introText"),
-        telephone: text(formData, "telephone"),
-        whatsappNumber: text(formData, "whatsappNumber"),
-        email: text(formData, "email"),
-        address: text(formData, "address"),
-        openingHours: parseRows(text(formData, "openingHours"), ["label", "value"], 14),
+        telephone: current.contact.telephone,
+        whatsappNumber: current.contact.whatsappNumber,
+        email: current.contact.email,
+        address: current.contact.address,
+        openingHours: current.contact.openingHours,
         mapUrl: text(formData, "mapUrl"),
         whatsappCtaLabel: text(formData, "whatsappCtaLabel"),
         emailCtaLabel: text(formData, "emailCtaLabel"),
@@ -111,11 +95,11 @@ function valueForPage(pageKey: StoreContentPageKey, formData: FormData) {
       return {
         pageTitle: text(formData, "pageTitle"),
         introText: text(formData, "introText"),
-        zones: parseRows(text(formData, "zones"), ["name", "fee", "timeframe", "description"], 12),
-        freeDeliveryConditions: text(formData, "freeDeliveryConditions"),
+        zones: current.delivery.zones,
+        freeDeliveryConditions: current.delivery.freeDeliveryConditions,
         pickupInformation: text(formData, "pickupInformation"),
-        mobileMoneyDescription: text(formData, "mobileMoneyDescription"),
-        cashOnDeliveryConditions: text(formData, "cashOnDeliveryConditions"),
+        mobileMoneyDescription: current.delivery.mobileMoneyDescription,
+        cashOnDeliveryConditions: current.delivery.cashOnDeliveryConditions,
         orderConfirmationProcess: text(formData, "orderConfirmationProcess"),
         faq: parseRows(text(formData, "faq"), ["question", "answer"], 12),
         seoTitle: text(formData, "seoTitle"),
@@ -123,10 +107,10 @@ function valueForPage(pageKey: StoreContentPageKey, formData: FormData) {
       };
     case "social":
       return {
-        instagramUrl: text(formData, "instagramUrl"),
-        facebookUrl: text(formData, "facebookUrl"),
-        tiktokUrl: text(formData, "tiktokUrl"),
-        whatsappNumber: text(formData, "whatsappNumber"),
+        instagramUrl: current.social.instagramUrl,
+        facebookUrl: current.social.facebookUrl,
+        tiktokUrl: current.social.tiktokUrl,
+        whatsappNumber: current.social.whatsappNumber,
         socialCtaCopy: text(formData, "socialCtaCopy"),
       };
   }
@@ -171,7 +155,8 @@ export async function updateContentSection(
   }
 
   try {
-    const value = valueForPage(parsedPageKey.data, formData);
+    const current = await getStorefrontContent();
+    const value = valueForPage(parsedPageKey.data, formData, current);
     const saved = await updateStorefrontContent(parsedPageKey.data, value, staff.id);
     const savedValue = storeContentSchemas[parsedPageKey.data].parse(saved.content);
     await auditCatalogueEvent({
@@ -193,68 +178,5 @@ export async function updateContentSection(
       return { ok: false, message: "Vérifiez les champs de cette section." };
     }
     return { ok: false, message: "Le contenu n'a pas pu être enregistré." };
-  }
-}
-
-export async function updatePaymentSettings(
-  _previousState: PaymentSettingsActionState,
-  formData: FormData,
-): Promise<PaymentSettingsActionState> {
-  const staff = await requireRole(["OWNER", "ADMIN"]);
-  const configs = defaultPaymentConfigs([]);
-
-  try {
-    for (const method of supportedPaymentMethods) {
-      const raw = {
-        enabled: formData.get(`${method}.enabled`) === "on",
-        label: text(formData, `${method}.label`),
-        merchantNumber: text(formData, `${method}.merchantNumber`),
-        beneficiaryName: text(formData, `${method}.beneficiaryName`),
-        instructions: text(formData, `${method}.instructions`),
-        displayOrder: Number.parseInt(text(formData, `${method}.displayOrder`), 10) || 50,
-      };
-      configs[method] = paymentMethodConfigSchema.parse(raw);
-    }
-
-    const validationIssues = validatePaymentSettingsForSave(configs);
-    if (validationIssues.length > 0) {
-      return { ok: false, message: validationIssues[0]?.message ?? "Vérifiez les paramètres de paiement." };
-    }
-
-    const saved = await persistPaymentSettings(configs);
-    await auditCatalogueEvent({
-      actorId: staff.id,
-      action: "STOREFRONT_PAYMENT_SETTINGS_UPDATED",
-      resourceType: "store_settings",
-      metadata: {
-        enabled_payment_methods: saved.enabledPaymentMethods,
-      },
-    });
-    revalidatePath("/admin/contenu");
-    revalidatePath("/commande");
-    revalidatePath("/panier");
-
-    return {
-      ok: true,
-      message: "Paramètres de paiement enregistrés.",
-      value: saved.configs,
-    };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { ok: false, message: "Vérifiez les paramètres de paiement." };
-    }
-    if (error instanceof PaymentSettingsError) {
-      if (error.code === "PAYMENT_SETTINGS_MIGRATION_REQUIRED") {
-        return {
-          ok: false,
-          message:
-            "La migration des paramètres de paiement n'est pas appliquée. Appliquez la migration Phase 9 puis régénérez les types.",
-        };
-      }
-      if (error.code === "PAYMENT_SETTINGS_INVALID") {
-        return { ok: false, message: "Complétez les modes de paiement activés avant d'enregistrer." };
-      }
-    }
-    return { ok: false, message: "Les paramètres de paiement n'ont pas pu être enregistrés." };
   }
 }

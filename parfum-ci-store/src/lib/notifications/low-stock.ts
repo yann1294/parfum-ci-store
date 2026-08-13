@@ -8,7 +8,7 @@ async function adminRecipient() {
     .select("notification_email, contact_email")
     .eq("id", true)
     .single();
-  return process.env.ADMIN_NOTIFICATION_EMAIL || data?.notification_email || data?.contact_email || null;
+  return data?.notification_email || data?.contact_email || null;
 }
 
 export async function evaluateLowStockForVariants(variantIds: string[]) {

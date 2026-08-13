@@ -137,7 +137,7 @@ export function paymentInstructionForMethod(
       configuredBeneficiaryName || settings.legalName ? `Bénéficiaire: ${configuredBeneficiaryName || settings.legalName}` : null,
       orderNumber ? `Référence à indiquer si possible: ${orderNumber}` : null,
       "Ne partagez jamais votre PIN, OTP ou code secret.",
-    ].filter(Boolean);
+    ].filter((line): line is string => Boolean(line));
   }
 
   if (method === "CASH_ON_DELIVERY") {
@@ -162,7 +162,7 @@ export function paymentInstructionForMethod(
       configuredInstructions,
       configuredBeneficiaryName ? `Bénéficiaire: ${configuredBeneficiaryName}` : null,
       orderNumber ? `Référence à indiquer si possible: ${orderNumber}` : null,
-    ].filter(Boolean);
+    ].filter((line): line is string => Boolean(line));
   }
 
   return null;

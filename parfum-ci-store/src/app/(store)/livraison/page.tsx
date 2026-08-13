@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { PageContainer } from "@/components/shared/page-container";
 import { SectionHeading } from "@/components/shared/section-heading";
 import { getStorefrontContent } from "@/lib/storefront/content";
+import { getPublicDeliveryZones, getPublicStoreSettings } from "@/lib/settings/service";
+import { formatXof } from "@/lib/catalogue/format";
 
 export async function generateMetadata(): Promise<Metadata> {
   const content = await getStorefrontContent();
@@ -14,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DeliveryPage() {
-  const { delivery } = await getStorefrontContent();
+  const [{ delivery }, settings, zones] = await Promise.all([getStorefrontContent(), getPublicStoreSettings(), getPublicDeliveryZones()]);
   return (
     <PageContainer className="py-12">
       <SectionHeading
@@ -23,17 +25,17 @@ export default async function DeliveryPage() {
         description={delivery.introText || undefined}
       />
       <div className="mt-8 grid gap-5">
-        {delivery.zones.length > 0 ? (
+        {zones.length > 0 ? (
           <section className="grid gap-4">
             <h2 className="font-heading text-3xl">Zones de livraison</h2>
             <div className="grid gap-4 md:grid-cols-2">
-              {delivery.zones.map((zone) => (
-                <article key={zone.name} className="rounded-lg border bg-surface p-5">
+              {zones.map((zone) => (
+                <article key={`${zone.city}-${zone.commune}`} className="rounded-lg border bg-surface p-5">
                   <h3 className="font-medium">{zone.name}</h3>
-                  {zone.description ? <p className="mt-2 text-sm text-muted-foreground">{zone.description}</p> : null}
+                  <p className="mt-2 text-sm text-muted-foreground">{zone.city} · {zone.commune}</p>
                   <dl className="mt-3 grid gap-1 text-sm">
-                    {zone.fee ? <div><dt className="text-muted-foreground">Frais</dt><dd>{zone.fee}</dd></div> : null}
-                    {zone.timeframe ? <div><dt className="text-muted-foreground">Délai</dt><dd>{zone.timeframe}</dd></div> : null}
+                    <div><dt className="text-muted-foreground">Frais</dt><dd>{formatXof(zone.feeXof)}</dd></div>
+                    {zone.estimatedMinDays !== null || zone.estimatedMaxDays !== null ? <div><dt className="text-muted-foreground">Délai</dt><dd>{zone.estimatedMinDays ?? zone.estimatedMaxDays}–{zone.estimatedMaxDays ?? zone.estimatedMinDays} jours</dd></div> : null}
                   </dl>
                 </article>
               ))}
@@ -41,28 +43,16 @@ export default async function DeliveryPage() {
           </section>
         ) : null}
         <section className="grid gap-4 md:grid-cols-2">
-          {delivery.freeDeliveryConditions ? (
+          {settings.freeDeliveryEnabled && settings.freeDeliveryThresholdXof !== null ? (
             <div className="rounded-lg border bg-surface p-5">
               <h2 className="font-heading text-3xl">Livraison offerte</h2>
-              <p className="mt-3 text-muted-foreground">{delivery.freeDeliveryConditions}</p>
+              <p className="mt-3 text-muted-foreground">À partir de {formatXof(settings.freeDeliveryThresholdXof)} pour la livraison à domicile.</p>
             </div>
           ) : null}
           {delivery.pickupInformation ? (
             <div className="rounded-lg border bg-surface p-5">
               <h2 className="font-heading text-3xl">Retrait</h2>
               <p className="mt-3 text-muted-foreground">{delivery.pickupInformation}</p>
-            </div>
-          ) : null}
-          {delivery.mobileMoneyDescription ? (
-            <div className="rounded-lg border bg-surface p-5">
-              <h2 className="font-heading text-3xl">Mobile Money</h2>
-              <p className="mt-3 text-muted-foreground">{delivery.mobileMoneyDescription}</p>
-            </div>
-          ) : null}
-          {delivery.cashOnDeliveryConditions ? (
-            <div className="rounded-lg border bg-surface p-5">
-              <h2 className="font-heading text-3xl">Paiement à la livraison</h2>
-              <p className="mt-3 text-muted-foreground">{delivery.cashOnDeliveryConditions}</p>
             </div>
           ) : null}
         </section>

@@ -287,3 +287,11 @@ pnpm build
 ```
 
 Never report a command as passing unless it ran and exited successfully.
+
+## Phase 14 Settings Verification
+
+- Unit tests cover CI phone normalization, social URL safety, delivery-zone normalization/duplicates, payment configuration reuse and public projection redaction.
+- `supabase/tests/phase14_settings.sql` covers service-role grants, revision conflicts, idempotent audit, exact/default/pickup/free-threshold quotes, authoritative order totals and historical snapshots. Run it only after applying the Phase 14 migration to a disposable database.
+- Rerun `supabase/tests/phase8_guest_order_transaction.sql`; it explicitly configures a zero default fee so its historical subtotal assertions remain deterministic under the Phase 14 trigger.
+- Browser acceptance must test two simultaneous settings sessions, stored order totals before/after a zone edit, direct order API rejection while order acceptance is off, and maintenance exemptions for admin/auth/cron/API.
+- A legitimate zero delivery fee is not a pending fee after Phase 14. Assertions must inspect stored `delivery_fee_xof`, `total_xof` and `delivery_rule_snapshot`.

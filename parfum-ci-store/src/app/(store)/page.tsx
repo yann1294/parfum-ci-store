@@ -10,6 +10,7 @@ import { ProductCard } from "@/components/storefront/product-card";
 import { listFeaturedProducts, listHomeFragranceFamilyFacets } from "@/lib/catalogue/products";
 import { buildWhatsAppUrlForNumber, normalizeWhatsAppNumber, siteConfig } from "@/config/site";
 import { getStorefrontContent } from "@/lib/storefront/content";
+import { getPublicStoreSettings } from "@/lib/settings/service";
 
 export async function generateMetadata(): Promise<Metadata> {
   const content = await getStorefrontContent();
@@ -21,13 +22,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const [featured, familyFacets, content] = await Promise.all([
+  const [featured, familyFacets, content, settings] = await Promise.all([
     listFeaturedProducts(4),
     listHomeFragranceFamilyFacets(6),
     getStorefrontContent(),
+    getPublicStoreSettings(),
   ]);
   const whatsappUrl = buildWhatsAppUrlForNumber(
-    normalizeWhatsAppNumber(content.social.whatsappNumber) ?? siteConfig.whatsappNumber,
+    normalizeWhatsAppNumber(settings.whatsappNumber ?? undefined),
     siteConfig.whatsappDefaultText,
   );
 

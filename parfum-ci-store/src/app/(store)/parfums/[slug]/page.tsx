@@ -8,6 +8,7 @@ import { ProductCard } from "@/components/storefront/product-card";
 import { ProductDetailClient } from "@/components/storefront/product-detail-client";
 import { getActiveProductBySlug, listRelatedProducts } from "@/lib/catalogue/products";
 import { absoluteUrl, siteConfig } from "@/config/site";
+import { getPublicStoreSettings } from "@/lib/settings/service";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -48,7 +49,7 @@ export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const product = await getActiveProductBySlug(slug);
   if (!product) notFound();
-  const related = await listRelatedProducts(product, 4);
+  const [related, settings] = await Promise.all([listRelatedProducts(product, 4), getPublicStoreSettings()]);
   const minPrice = Math.min(...product.variants.map((variant) => variant.priceXof));
   const jsonLd = {
     "@context": "https://schema.org",
@@ -76,7 +77,7 @@ export default async function ProductPage({ params }: Props) {
       <nav aria-label="Fil d'Ariane" className="mb-6 text-sm text-muted-foreground">
         <Link href="/catalogue">Catalogue</Link> / <span className="text-foreground">{product.name}</span>
       </nav>
-      <ProductDetailClient product={product} />
+      <ProductDetailClient product={product} whatsappNumber={settings.whatsappNumber} />
       <section className="mt-12 grid gap-6">
         <SectionHeading eyebrow="Notes" title="Composition olfactive" />
         <div className="grid gap-4 md:grid-cols-3">
@@ -87,8 +88,8 @@ export default async function ProductPage({ params }: Props) {
       </section>
       <section className="mt-12 rounded-lg border bg-surface p-5">
         <h2 className="font-heading text-3xl">Livraison et paiement</h2>
-        <p className="mt-3 text-sm text-muted-foreground">{siteConfig.deliveryCopy}</p>
-        <p className="mt-2 text-sm text-muted-foreground">{siteConfig.paymentCopy}</p>
+        <p className="mt-3 text-sm text-muted-foreground">Les frais sont calculés selon la méthode et la zone choisies au moment de la commande.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Les modes de paiement disponibles et leurs instructions sont affichés au paiement.</p>
       </section>
       <section className="mt-12 grid gap-6">
         <SectionHeading eyebrow="À découvrir" title="Parfums associés" />

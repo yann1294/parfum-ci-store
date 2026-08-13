@@ -34,7 +34,7 @@ SUPABASE_SECRET_KEY=
 SUPABASE_STORAGE_BUCKET=
 ```
 
-Optional public storefront settings:
+Legacy Phase 6 environment inputs (Phase 14 contact/social consumers do not use these as operational fallbacks):
 
 - `NEXT_PUBLIC_WHATSAPP_NUMBER`
 - `NEXT_PUBLIC_INSTAGRAM_URL`
@@ -135,9 +135,11 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 - `/api/storefront/order-intents/whatsapp` must return `Cache-Control: no-store`, create only analytics intent rows from authoritative cart data, and must not create orders or inventory reservations.
 - `/admin/inventaire` must be accessible only to authorized staff. Manual inventory operations must call the transactional adjustment function, preserve reserved-stock invariants, create immutable ledger rows and audit rows, and refresh public availability.
 - `/admin/commandes` must be accessible only to authorized order staff. Status transitions must call the transactional transition function, cancellation must release reservations exactly once, delivery must convert reservations into `SOLD` exactly once, and returns must not automatically restock inventory.
-- Phase 12 notification delivery requires `EMAIL_FROM`, `ADMIN_NOTIFICATION_EMAIL`, `CRON_SECRET`, `NOTIFICATION_PROVIDER`, `NOTIFICATION_BATCH_SIZE`, and `NOTIFICATION_MAX_ATTEMPTS`. Production must set `NOTIFICATION_PROVIDER=resend` and `RESEND_API_KEY`; local/test may use `NOTIFICATION_PROVIDER=development`.
+- Phase 12 notification delivery requires `EMAIL_FROM`, `CRON_SECRET`, `NOTIFICATION_PROVIDER`, `NOTIFICATION_BATCH_SIZE`, and `NOTIFICATION_MAX_ATTEMPTS`. Production must set `NOTIFICATION_PROVIDER=resend` and `RESEND_API_KEY`; local/test may use `NOTIFICATION_PROVIDER=development`. Phase 14 moves the admin notification recipient to `store_settings.notification_email`; `ADMIN_NOTIFICATION_EMAIL` is no longer an application source.
 - Configure Vercel Cron or an equivalent scheduler to POST `/api/cron/notifications` with `Authorization: Bearer <CRON_SECRET>`. The route returns counts only and is safe for overlapping invocations because rows are claimed transactionally.
 - Phase 13 adds `20260804133000_phase13_customer_messages.sql`. Apply it manually, regenerate database types, then run `psql "$DATABASE_URL" -f supabase/tests/phase13_messages.sql` against a non-production database before enabling the public contact form in production.
+- Phase 14 adds `20260813090000_phase14_store_settings_delivery.sql`. Review it, then manually run `pnpm exec supabase db push` and regenerate `src/types/database.types.ts`; do not hand-edit generated types. Before enabling checkout, configure a default delivery fee or enabled zones, run `supabase/tests/phase14_settings.sql`, rerun the Phase 8 SQL regression, and verify a real order's stored fee/total/snapshot.
+- Phase 14 business configuration lives in the database. Environment-only values remain provider/Supabase/cron secrets. `NEXT_PUBLIC_*` contact/social values are legacy fallbacks and should not be treated as the operational source after rollout.
 - Do not deploy real email delivery until SPF/DKIM/domain setup and a Resend sandbox acceptance test are verified with non-customer data.
 - Test a controlled `/api/orders` HTTP 400 before launch. It must leave the cart intact and must not redirect to a confirmation route.
 - Admin routes require authentication.

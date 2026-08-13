@@ -61,6 +61,15 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - Phase 11 adds admin order management at `/admin/commandes` and `/admin/commandes/[id]`. Order lifecycle transitions and payment verification use private transactional database functions, reuse Phase 8 reservations and Phase 10 ledger conventions, and do not redesign checkout, cart, catalogue or manual inventory.
 - Phase 12 adds asynchronous transactional notification delivery and an admin notification center at `/admin/notifications`. It reuses the existing outbox intents created by order and payment transactions, sends email after business commits, and never makes email delivery a prerequisite for order, payment, or inventory success.
 - Phase 13 adds public contact submission and the admin message inbox at `/admin/messages`. It reuses `contact_messages`, Phase 12 notification intents, staff authorization and audit logs; manual social messages are staff-entered records, not API synchronization.
+- Phase 14 completes `/admin/parametres` as the single operational-settings surface. It reuses Phase 9 payment configuration, keeps editorial copy in `/admin/contenu`, centralizes identity/contact/social/SEO/notification/availability values, and adds authoritative delivery-zone pricing with immutable order-time snapshots.
+
+## Phase 14 Settings Boundaries
+
+- `/admin/contenu` owns editorial page copy and route-specific editorial SEO.
+- `/admin/parametres` owns structured business identity, coordinates, social URLs, payment methods, delivery economics, global SEO defaults, notification recipient and store availability.
+- Public consumers use an explicit safe projection; direct anonymous `store_settings` reads are not allowed.
+- Online checkout must obtain an authoritative delivery quote and Phase 8 order creation must recalculate and store the fee. Browser-submitted fees are never accepted.
+- Disabling online order acceptance leaves catalogue/cart/WhatsApp contact available. Maintenance replaces only public store routes; admin, auth and operational API routes remain available.
 
 ## Non-Goals for MVP
 

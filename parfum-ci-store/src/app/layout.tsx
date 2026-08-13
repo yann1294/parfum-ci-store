@@ -4,6 +4,7 @@ import { Cormorant_Garamond, Manrope } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { siteConfig } from "@/config/site";
+import { getPublicStoreSettings } from "@/lib/settings/service";
 import "./globals.css";
 
 const cormorant = Cormorant_Garamond({
@@ -19,14 +20,19 @@ const manrope = Manrope({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteConfig.siteUrl),
-  title: {
-    default: "Parfum CI",
-    template: "%s | Parfum CI",
-  },
-  description: "Parfumerie en ligne premium en Côte d'Ivoire.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getPublicStoreSettings();
+  const title = settings.seo.siteTitle || settings.storeName;
+  const description = settings.seo.siteDescription || siteConfig.description;
+  const base = settings.seo.canonicalSiteUrl || siteConfig.siteUrl;
+  return {
+    metadataBase: new URL(base),
+    title: { default: title, template: `%s | ${settings.storeName}` },
+    description,
+    openGraph: { title, description, images: settings.seo.ogImageUrl ? [{ url: settings.seo.ogImageUrl }] : undefined },
+    twitter: { card: "summary_large_image", title, description, images: settings.seo.ogImageUrl ? [settings.seo.ogImageUrl] : undefined },
+  };
+}
 
 export default function RootLayout({
   children,

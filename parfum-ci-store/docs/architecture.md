@@ -121,3 +121,13 @@ Order creation, payment state changes, fulfillment transitions, and inventory le
 ## Payment Abstraction
 
 Payment logic must use a provider interface under `lib/payments/` and server implementations under `server/payments/`. The MVP provider is `manual`, with methods for instructions, pending payment records, admin verification, and cash-on-delivery marking. A future gateway must be added behind the same interface.
+
+## Phase 14 Settings Architecture
+
+`src/lib/settings/service.ts` is the typed settings boundary. Its public, checkout and admin projections select or map only required fields. Section updates call the service-role-only `update_store_settings_server(jsonb)` RPC after application authorization and Zod validation. The database function rechecks the actor, locks the singleton, enforces `settings_revision`, applies only the named section, writes the bounded audit event and records the mutation identifier in one transaction.
+
+The logo field currently accepts only a bounded HTTPS URL because the established media pipeline has no dedicated branding bucket. Unsafe or invalid values are omitted from the public projection. A future branding upload flow should use Supabase Storage rather than permitting arbitrary browser uploads.
+
+`delivery_zones` stores queryable city/commune rules. `quote_delivery_server` and the `orders_apply_operational_settings` insert trigger share `app_private.quote_delivery`, so admin preview, checkout display and stored order economics use one rule implementation. The trigger rejects disabled ordering/maintenance and snapshots the fee, method, zone and estimate without replacing the applied Phase 8 function.
+
+Maintenance is rendered in the `(store)` layout rather than Proxy. This deliberately preserves `/admin`, `/connexion`, auth callbacks, cron and API routes.

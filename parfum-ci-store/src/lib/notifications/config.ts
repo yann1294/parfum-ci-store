@@ -6,13 +6,10 @@ const notificationProviderSchema = z.enum(["development", "resend"]).default(
   process.env.NODE_ENV === "production" ? "resend" : "development",
 );
 
-const emailAddressSchema = z.string().trim().email();
-
 const configSchema = z.object({
   provider: notificationProviderSchema,
   resendApiKey: z.string().trim().optional(),
   emailFrom: z.string().trim().min(3).optional(),
-  adminNotificationEmail: emailAddressSchema.optional(),
   cronSecret: z.string().trim().min(24).optional(),
   siteUrl: z.url().default("http://localhost:3000"),
   batchSize: z.coerce.number().int().min(1).max(50).default(10),
@@ -34,7 +31,6 @@ export function getNotificationConfig() {
     provider: process.env.NOTIFICATION_PROVIDER,
     resendApiKey: process.env.RESEND_API_KEY,
     emailFrom: process.env.EMAIL_FROM ?? process.env.RESEND_FROM_EMAIL,
-    adminNotificationEmail: process.env.ADMIN_NOTIFICATION_EMAIL,
     cronSecret: process.env.CRON_SECRET,
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL,
     batchSize: process.env.NOTIFICATION_BATCH_SIZE,

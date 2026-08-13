@@ -22,7 +22,9 @@ type TrackingPayload = {
     deliveryMethodLabel: string;
     paymentMethodLabel: string;
     subtotalXof: number;
-    deliveryFeePending: boolean;
+    deliveryFeeXof: number;
+    totalXof: number;
+    paymentInstructions: string[];
     items: Array<{ productName: string; variantLabel: string | null; quantity: number }>;
     timeline: Array<{ label: string; createdAt: string }>;
   };
@@ -138,8 +140,11 @@ function TrackingResult({ order }: { order: NonNullable<TrackingPayload["order"]
         <Info label="Livraison" value={order.deliveryMethodLabel} />
         <Info label="Mode de paiement" value={order.paymentMethodLabel} />
         <Info label="Sous-total" value={formatXof(order.subtotalXof)} />
-        <Info label="Frais de livraison" value={order.deliveryFeePending ? "À confirmer" : "Confirmés"} />
+        <Info label="Frais de livraison" value={formatXof(order.deliveryFeeXof)} />
+        <Info label="Total" value={formatXof(order.totalXof)} />
       </dl>
+
+      {order.paymentInstructions.length > 0 ? <section className="rounded-lg bg-surface-muted p-4"><h3 className="font-heading text-2xl">Instructions de paiement</h3><div className="mt-2 grid gap-1 text-sm text-muted-foreground">{order.paymentInstructions.map((line) => <p key={line}>{line}</p>)}</div></section> : null}
 
       <div>
         <h3 className="font-heading text-2xl">Articles</h3>

@@ -25,6 +25,16 @@
 - The privileged Supabase client is isolated in `src/lib/supabase/admin.ts` and imports `server-only`.
 - Proxy may preserve a safe current path and refresh cookies, but it is only an optimistic filter. Authorization must happen in Server Components, Server Actions, Route Handlers, or data-access code close to the protected data or mutation.
 - The admin layout also checks the current admin path against the role-aware route policy, so direct URL entry to unauthorized modules is denied server-side.
+- Phase 14 settings reads/writes use separate projections. Anonymous users execute only `get_public_store_settings()`/`get_public_delivery_zones()` and cannot select the singleton row directly. OWNER/ADMIN mutations pass through a service-role RPC that rechecks the actor and revision; other roles and anonymous users have no execute grant.
+
+## Phase 14 Operational Settings
+
+- Public settings exclude notification routing, audit metadata, revisions, environment variables and legacy private columns. Social/branding/SEO URLs are HTTPS validated; unsupported social hosts are hidden.
+- `RESEND_API_KEY`, `CRON_SECRET`, Supabase secrets and database credentials remain environment-only. The editable notification recipient is database business configuration; provider credentials are never shown in admin UI.
+- Delivery fees and order acceptance are enforced by a database insert trigger, not hidden controls or client calculations.
+- Delivery zones have RLS enabled, no anonymous writes and no application delete operation. Historical order labels/snapshots survive zone disablement or reference removal.
+- Settings audit metadata includes only section, changed field names and revision; it omits full phone/email values, instructions and request payloads.
+- Maintenance is not implemented as an indiscriminate Proxy interception. The public route-group layout is the allowlist boundary, preserving admin/auth/API/cron operations.
 - Admin navigation links point only to protected admin routes. Temporary module pages do not expose business data or mutations; they exist so navigation exercises the authorization boundary without adding storefront, inventory, order, or payment features.
 - Catalogue mutation services and catalogue Server Actions call `requireActiveStaff` and enforce `canManageProducts` internally.
 - Product image Storage writes are limited by `storage.objects` policies to authenticated active `OWNER` and `ADMIN` profiles for `bucket_id = 'product-images'`.

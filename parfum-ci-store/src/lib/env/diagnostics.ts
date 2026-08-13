@@ -10,7 +10,6 @@ const expectedEnvironmentVariables: Array<Omit<EnvironmentDiagnostic, "status">>
   { name: "SUPABASE_SECRET_KEY", scope: "server" },
   { name: "SUPABASE_STORAGE_BUCKET", scope: "server" },
   { name: "EMAIL_FROM", scope: "server" },
-  { name: "ADMIN_NOTIFICATION_EMAIL", scope: "server" },
   { name: "CRON_SECRET", scope: "server" },
   { name: "NOTIFICATION_PROVIDER", scope: "server" },
   { name: "NOTIFICATION_BATCH_SIZE", scope: "server" },

@@ -69,6 +69,19 @@
 - OWNER and ADMIN may edit public content. Other roles are read-only or denied for content editing.
 - Contact and Delivery pages display only configured fields. Do not invent delivery promises, guarantees, addresses, certifications, founding dates, or awards.
 - Content updates revalidate affected public routes so changes do not require a redeploy.
+- Structured contact/social values and delivery economics are Phase 14 operational settings. `/admin/contenu` preserves legacy JSON fields during editorial saves but no longer edits or consumes them as an operational source.
+
+## Store Settings And Delivery
+
+- Settings updates are section-scoped, idempotent and revision checked. Any stale revision fails with `SETTINGS_STALE_VERSION`; last-write-wins is not allowed.
+- Delivery precedence is exact enabled normalized zone, then configured default fee, otherwise unavailable. Pickup uses its configured pickup fee and does not receive the home-delivery free threshold.
+- The optional home-delivery threshold applies at `subtotal_xof >= threshold`, uses integer XOF, and is snapshotted at order creation.
+- Delivery estimates require non-negative days and `max >= min`.
+- Phase 8 order insert recalculates delivery server-side, replaces the legacy zero placeholder, includes the fee in `total_xof`, and snapshots the applied rule. A browser fee is never accepted.
+- `accepting_orders = false` blocks new online orders at the database insert boundary while catalogue, cart and WhatsApp contact remain available.
+- `maintenance_mode = true` also blocks new orders and renders a maintenance state only for public store routes. Admin, authentication and operational API/cron routes are outside that layout.
+- Payment instructions at checkout, confirmation, tracking and customer notification rendering use the same typed settings projection. Instructions never request PIN, OTP, CVV or card credentials.
+- Notification recipients are snapshotted into each new outbox intent. Existing pending intents keep their original recipient when settings change.
 
 ## Inventory
 

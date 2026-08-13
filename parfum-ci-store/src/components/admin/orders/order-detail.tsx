@@ -85,9 +85,9 @@ export function OrderDetail({
             <Info label="Statut paiement" value={paymentStatusLabel(order.paymentStatus)} />
             <Info label="Source" value={order.source} />
             <Info label="Sous-total" value={formatXof(order.subtotalXof)} />
-            <Info label="Frais de livraison" value={order.deliveryFeeXof === 0 ? "À confirmer" : formatXof(order.deliveryFeeXof)} />
+            <Info label="Frais de livraison" value={formatXof(order.deliveryFeeXof)} />
             <Info label="Remise" value={formatXof(order.discountXof)} />
-            <Info label="Total" value={order.deliveryFeeXof === 0 ? "À confirmer" : formatXof(order.totalXof)} />
+            <Info label="Total" value={formatXof(order.totalXof)} />
           </dl>
         </CardContent>
       </Card>

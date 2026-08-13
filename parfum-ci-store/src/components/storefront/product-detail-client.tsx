@@ -11,14 +11,14 @@ import { formatXof } from "@/lib/catalogue/format";
 import type { PublicProductDto, PublicVariantDto } from "@/lib/catalogue/types";
 import { addCartLine } from "@/lib/storefront/cart";
 import { readAttribution } from "@/lib/storefront/attribution";
-import { absoluteUrl, buildWhatsAppUrl } from "@/config/site";
+import { absoluteUrl, buildWhatsAppUrlForNumber, normalizeWhatsAppNumber } from "@/config/site";
 import { publicAvailabilityLabel } from "@/lib/catalogue/product-availability";
 
 function availabilityLabel(status: PublicVariantDto["availabilityStatus"]) {
   return publicAvailabilityLabel(status);
 }
 
-export function ProductDetailClient({ product }: { product: PublicProductDto }) {
+export function ProductDetailClient({ product, whatsappNumber }: { product: PublicProductDto; whatsappNumber?: string | null }) {
   const initialVariant = product.variants.find((variant) => variant.availableQuantity > 0) ?? product.variants[0];
   const [variantId, setVariantId] = useState(initialVariant?.id ?? "");
   const selectedVariant = product.variants.find((variant) => variant.id === variantId) ?? initialVariant;
@@ -30,7 +30,8 @@ export function ProductDetailClient({ product }: { product: PublicProductDto }) 
 
   const whatsappUrl = useMemo(() => {
     if (!selectedVariant) return null;
-    return buildWhatsAppUrl(
+    return buildWhatsAppUrlForNumber(
+      normalizeWhatsAppNumber(whatsappNumber ?? undefined),
       [
         `Bonjour, je souhaite des informations sur ${product.name}.`,
         `Concentration: ${selectedVariant.concentration ?? "Non renseignée"}`,
@@ -39,7 +40,7 @@ export function ProductDetailClient({ product }: { product: PublicProductDto }) 
         `Lien: ${absoluteUrl(`/parfums/${product.slug}`)}`,
       ].join("\n"),
     );
-  }, [product.name, product.slug, selectedVariant]);
+  }, [product.name, product.slug, selectedVariant, whatsappNumber]);
 
   const contactHref = selectedVariant
     ? `/contact?productId=${encodeURIComponent(product.id)}&variantId=${encodeURIComponent(selectedVariant.id)}&productSlug=${encodeURIComponent(product.slug)}`
@@ -168,7 +169,7 @@ export function ProductDetailClient({ product }: { product: PublicProductDto }) 
               Ajouter au panier
             </Button>
             {whatsappUrl ? (
-              <a href={whatsappUrl} className={buttonVariants({ variant: "outline" })} target="_blank" rel="noreferrer">
+              <a href={whatsappUrl} className={buttonVariants({ variant: "outline" })} target="_blank" rel="noopener noreferrer">
                 Demander sur WhatsApp
               </a>
             ) : null}

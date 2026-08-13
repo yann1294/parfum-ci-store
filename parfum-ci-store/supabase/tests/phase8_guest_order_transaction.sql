@@ -20,7 +20,10 @@ begin
   set
     enabled_payment_methods = array['CASH_ON_DELIVERY', 'ORANGE_MONEY']::public.payment_method[],
     enabled_delivery_methods = array['HOME_DELIVERY', 'PICKUP']::text[],
-    notification_email = 'orders-test@example.com'
+    notification_email = 'orders-test@example.com',
+    default_delivery_fee_xof = 0,
+    accepting_orders = true,
+    maintenance_mode = false
   where id is true;
 
   insert into public.brands (id, name, slug, active)
@@ -77,7 +80,7 @@ begin
   values (
     product_id,
     'product-images',
-    'products/10000000-0000-4000-8000-000000000003/phase8.webp',
+    'products/10000000-0000-4000-8000-000000000003/10000000-0000-4000-8000-000000000007.webp',
     'Phase 8 Product',
     true,
     true,
@@ -85,7 +88,7 @@ begin
     'image/webp',
     1024
   )
-  on conflict (object_path) do nothing;
+  on conflict do nothing;
 
   update public.products set status = 'ACTIVE' where id = product_id;
 
@@ -204,7 +207,8 @@ begin
   if not exists (
     select 1 from public.notifications
     where template_key = 'admin_order_created'
-      and payload->>'order_number' = first_order_number
+      and recipient = 'orders-test@example.com'
+      and public.notifications.payload->>'order_number' = first_order_number
   ) then
     raise exception 'Expected admin notification intent';
   end if;
@@ -234,6 +238,11 @@ begin
         raise;
       end if;
   end;
+
+  -- The production RPC commits between distinct requests, which drops this
+  -- per-request table. The outer test transaction must simulate that boundary.
+  drop table if exists pg_temp.phase8_locked_variants;
+  drop table if exists pg_temp.phase8_order_lines;
 
   begin
     perform public.create_guest_order_server(
@@ -307,7 +316,7 @@ begin
   values (
     rollback_product_id,
     'product-images',
-    'products/10000000-0000-4000-8000-000000000005/phase8.webp',
+    'products/10000000-0000-4000-8000-000000000005/10000000-0000-4000-8000-000000000008.webp',
     'Phase 8 Rollback Product',
     true,
     true,

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatXof } from "@/lib/catalogue/format";
-import { absoluteUrl, buildWhatsAppUrlForNumber, normalizeWhatsAppNumber, siteConfig } from "@/config/site";
+import { absoluteUrl, buildWhatsAppUrlForNumber, normalizeWhatsAppNumber } from "@/config/site";
 import { cartMaterialSignature, createWhatsAppOrderIntentKey } from "@/lib/orders/checkout-client";
 import {
   CART_RECONCILIATION_STALE_MS,
@@ -146,7 +146,7 @@ export function CartPageClient({ whatsappNumber }: { whatsappNumber?: string }) 
   }, [refreshCart]);
 
   const snapshot = validation.snapshot;
-  const normalizedWhatsAppNumber = normalizeWhatsAppNumber(whatsappNumber) ?? siteConfig.whatsappNumber;
+  const normalizedWhatsAppNumber = normalizeWhatsAppNumber(whatsappNumber);
   const hasUnavailable = snapshot?.lines.some((line) => !line.orderable) ?? false;
   const hasAdjustments = snapshot?.readiness === "HAS_QUANTITY_ADJUSTMENTS";
   const canOrder = Boolean(

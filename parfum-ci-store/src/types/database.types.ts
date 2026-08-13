@@ -488,6 +488,54 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_zones: {
+        Row: {
+          city: string
+          commune: string
+          created_at: string
+          display_order: number
+          enabled: boolean
+          estimated_max_days: number | null
+          estimated_min_days: number | null
+          fee_xof: number
+          id: string
+          name: string
+          normalized_city: string | null
+          normalized_commune: string | null
+          updated_at: string
+        }
+        Insert: {
+          city: string
+          commune: string
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          estimated_max_days?: number | null
+          estimated_min_days?: number | null
+          fee_xof: number
+          id?: string
+          name: string
+          normalized_city?: string | null
+          normalized_commune?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          commune?: string
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          estimated_max_days?: number | null
+          estimated_min_days?: number | null
+          fee_xof?: number
+          id?: string
+          name?: string
+          normalized_city?: string | null
+          normalized_commune?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory_transactions: {
         Row: {
           actor_id: string | null
@@ -984,10 +1032,16 @@ export type Database = {
           delivery_city: string
           delivery_commune: string | null
           delivery_country: string
+          delivery_estimated_max_days: number | null
+          delivery_estimated_min_days: number | null
           delivery_fee_xof: number
           delivery_instructions: string | null
           delivery_landmark: string | null
           delivery_method: string
+          delivery_quote_status: string
+          delivery_rule_snapshot: Json
+          delivery_zone_id: string | null
+          delivery_zone_name: string | null
           discount_xof: number
           id: string
           internal_note: string | null
@@ -1028,10 +1082,16 @@ export type Database = {
           delivery_city: string
           delivery_commune?: string | null
           delivery_country?: string
+          delivery_estimated_max_days?: number | null
+          delivery_estimated_min_days?: number | null
           delivery_fee_xof?: number
           delivery_instructions?: string | null
           delivery_landmark?: string | null
           delivery_method: string
+          delivery_quote_status?: string
+          delivery_rule_snapshot?: Json
+          delivery_zone_id?: string | null
+          delivery_zone_name?: string | null
           discount_xof?: number
           id?: string
           internal_note?: string | null
@@ -1072,10 +1132,16 @@ export type Database = {
           delivery_city?: string
           delivery_commune?: string | null
           delivery_country?: string
+          delivery_estimated_max_days?: number | null
+          delivery_estimated_min_days?: number | null
           delivery_fee_xof?: number
           delivery_instructions?: string | null
           delivery_landmark?: string | null
           delivery_method?: string
+          delivery_quote_status?: string
+          delivery_rule_snapshot?: Json
+          delivery_zone_id?: string | null
+          delivery_zone_name?: string | null
           discount_xof?: number
           id?: string
           internal_note?: string | null
@@ -1105,6 +1171,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_delivery_zone_id_fkey"
+            columns: ["delivery_zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
             referencedColumns: ["id"]
           },
         ]
@@ -1560,72 +1633,138 @@ export type Database = {
       }
       store_settings: {
         Row: {
+          accepting_orders: boolean
+          business_hours: Json
+          canonical_site_url: string | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string
+          default_delivery_fee_xof: number | null
           default_low_stock_threshold: number
+          delivery_estimated_max_days: number | null
+          delivery_estimated_min_days: number | null
           delivery_information: string | null
+          delivery_method_configs: Json
           enabled_delivery_methods: string[]
           enabled_payment_methods: Database["public"]["Enums"]["payment_method"][]
+          expected_reopening_at: string | null
           facebook_url: string | null
+          free_delivery_enabled: boolean
+          free_delivery_threshold_xof: number | null
           id: boolean
           instagram_url: string | null
           legal_name: string | null
+          logo_url: string | null
+          maintenance_message: string | null
+          maintenance_mode: boolean
           moov_money_number: string | null
           mtn_momo_number: string | null
           notification_email: string | null
+          og_image_url: string | null
           orange_money_number: string | null
           payment_method_configs: Json
+          pickup_fee_xof: number
+          primary_address: string | null
           public_readable: boolean
+          response_time_guidance: string | null
+          secondary_address: string | null
+          settings_revision: number
+          site_description: string | null
+          site_title: string | null
           store_name: string
+          support_email: string | null
           tiktok_url: string | null
           updated_at: string
           wave_number: string | null
           whatsapp_number: string | null
         }
         Insert: {
+          accepting_orders?: boolean
+          business_hours?: Json
+          canonical_site_url?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
+          default_delivery_fee_xof?: number | null
           default_low_stock_threshold?: number
+          delivery_estimated_max_days?: number | null
+          delivery_estimated_min_days?: number | null
           delivery_information?: string | null
+          delivery_method_configs?: Json
           enabled_delivery_methods?: string[]
           enabled_payment_methods?: Database["public"]["Enums"]["payment_method"][]
+          expected_reopening_at?: string | null
           facebook_url?: string | null
+          free_delivery_enabled?: boolean
+          free_delivery_threshold_xof?: number | null
           id?: boolean
           instagram_url?: string | null
           legal_name?: string | null
+          logo_url?: string | null
+          maintenance_message?: string | null
+          maintenance_mode?: boolean
           moov_money_number?: string | null
           mtn_momo_number?: string | null
           notification_email?: string | null
+          og_image_url?: string | null
           orange_money_number?: string | null
           payment_method_configs?: Json
+          pickup_fee_xof?: number
+          primary_address?: string | null
           public_readable?: boolean
+          response_time_guidance?: string | null
+          secondary_address?: string | null
+          settings_revision?: number
+          site_description?: string | null
+          site_title?: string | null
           store_name: string
+          support_email?: string | null
           tiktok_url?: string | null
           updated_at?: string
           wave_number?: string | null
           whatsapp_number?: string | null
         }
         Update: {
+          accepting_orders?: boolean
+          business_hours?: Json
+          canonical_site_url?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
+          default_delivery_fee_xof?: number | null
           default_low_stock_threshold?: number
+          delivery_estimated_max_days?: number | null
+          delivery_estimated_min_days?: number | null
           delivery_information?: string | null
+          delivery_method_configs?: Json
           enabled_delivery_methods?: string[]
           enabled_payment_methods?: Database["public"]["Enums"]["payment_method"][]
+          expected_reopening_at?: string | null
           facebook_url?: string | null
+          free_delivery_enabled?: boolean
+          free_delivery_threshold_xof?: number | null
           id?: boolean
           instagram_url?: string | null
           legal_name?: string | null
+          logo_url?: string | null
+          maintenance_message?: string | null
+          maintenance_mode?: boolean
           moov_money_number?: string | null
           mtn_momo_number?: string | null
           notification_email?: string | null
+          og_image_url?: string | null
           orange_money_number?: string | null
           payment_method_configs?: Json
+          pickup_fee_xof?: number
+          primary_address?: string | null
           public_readable?: boolean
+          response_time_guidance?: string | null
+          secondary_address?: string | null
+          settings_revision?: number
+          site_description?: string | null
+          site_title?: string | null
           store_name?: string
+          support_email?: string | null
           tiktok_url?: string | null
           updated_at?: string
           wave_number?: string | null
@@ -1917,6 +2056,19 @@ export type Database = {
         }
         Returns: Json
       }
+      get_public_delivery_zones: {
+        Args: never
+        Returns: {
+          city: string
+          commune: string
+          display_order: number
+          estimated_max_days: number
+          estimated_min_days: number
+          fee_xof: number
+          name: string
+        }[]
+      }
+      get_public_store_settings: { Args: never; Returns: Json }
       initialize_variant_inventory: {
         Args: {
           initial_stock: number
@@ -1924,6 +2076,15 @@ export type Database = {
           target_variant_id: string
         }
         Returns: undefined
+      }
+      quote_delivery_server: {
+        Args: {
+          requested_city: string
+          requested_commune: string
+          requested_method: string
+          requested_subtotal_xof: number
+        }
+        Returns: Json
       }
       record_order_payment_server: { Args: { request: Json }; Returns: Json }
       transition_contact_message_server: {
@@ -1936,6 +2097,7 @@ export type Database = {
         Returns: Json
       }
       transition_order_server: { Args: { request: Json }; Returns: Json }
+      update_store_settings_server: { Args: { request: Json }; Returns: Json }
     }
     Enums: {
       app_role:

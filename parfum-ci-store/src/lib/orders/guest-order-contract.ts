@@ -32,6 +32,8 @@ export const guestOrderErrorCodes = [
   "ORDER_DELIVERY_METHOD_DISABLED",
   "ORDER_PAYMENT_METHOD_UNAVAILABLE",
   "ORDER_DELIVERY_METHOD_UNAVAILABLE",
+  "ORDER_DELIVERY_AREA_UNAVAILABLE",
+  "ORDER_ACCEPTANCE_DISABLED",
 ] as const;
 
 export type GuestOrderErrorCode = (typeof guestOrderErrorCodes)[number];
@@ -209,6 +211,8 @@ export function publicOrderError(code: GuestOrderErrorCode, status = 400) {
               ? "Le numéro de téléphone n'est pas valide."
               : code === "ORDER_STORE_SETTINGS_UNAVAILABLE"
                 ? "La boutique ne peut pas recevoir de commande pour le moment."
+                : code === "ORDER_ACCEPTANCE_DISABLED"
+                  ? "La boutique n'accepte pas de nouvelle commande pour le moment."
                 : code === "ORDER_SERVER_MISCONFIGURED"
                   ? "La commande en ligne est temporairement indisponible."
               : code === "ORDER_CUSTOMER_CONFLICT"
@@ -217,6 +221,8 @@ export function publicOrderError(code: GuestOrderErrorCode, status = 400) {
                   ? "Ce mode de paiement n'est plus disponible."
                   : code === "ORDER_DELIVERY_METHOD_DISABLED" || code === "ORDER_DELIVERY_METHOD_UNAVAILABLE"
                     ? "Ce mode de livraison n'est plus disponible."
+                    : code === "ORDER_DELIVERY_AREA_UNAVAILABLE"
+                      ? "La livraison n'est pas disponible pour cette zone."
               : "La commande n'a pas pu être créée. Vérifiez le panier et réessayez.",
       },
     },

@@ -295,6 +295,16 @@ The intent tables are RLS-enabled. Anonymous users do not insert directly; `/api
 
 A WhatsApp intent means only: the customer clicked the WhatsApp ordering action after cart validation. It does not mean WhatsApp opened, the message was sent, an order was created, payment occurred, or stock was reserved. Intent retention defaults to 30 days through `expires_at`; operational cleanup should remove expired rows.
 
+## Phase 14 Store Settings And Delivery
+
+Migration `20260813090000_phase14_store_settings_delivery.sql` extends the existing boolean singleton rather than creating another settings table. New columns cover branding/contact structure, delivery defaults and estimates, global SEO defaults, availability toggles and `settings_revision`. Phase 9 `payment_method_configs` remains the payment source. Legacy provider-number/content fields are retained for forward compatibility, but new public consumers use the Phase 14 projection.
+
+`delivery_zones` stores normalized active city/commune rules with integer XOF fees and ordered day estimates. Normalization lowercases, trims, removes common French accents and collapses non-alphanumeric runs to one space. A partial unique index prevents two active rows for the same normalized location. Zones are disabled rather than deleted by the settings workflow.
+
+Orders add `delivery_zone_id`, `delivery_zone_name`, structured delivery estimates, `delivery_quote_status` and `delivery_rule_snapshot`. A `BEFORE INSERT` trigger recalculates the delivery fee from server settings, updates the authoritative total and writes the snapshot. Later zone/settings changes never update historical rows.
+
+`get_public_store_settings()` and `get_public_delivery_zones()` expose bounded safe projections. Anonymous/authenticated direct table selection is revoked from `store_settings`; notification routing, revision, audit fields and legacy internal values are excluded. `update_store_settings_server(jsonb)` and `quote_delivery_server(...)` are service-role-only.
+
 ## Phase 10 Inventory Adjustments
 
 Migration `20260803143000_phase10_inventory_adjustments.sql` adds:

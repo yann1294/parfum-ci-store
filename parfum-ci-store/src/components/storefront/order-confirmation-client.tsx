@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatXof } from "@/lib/catalogue/format";
-import { buildWhatsAppUrlForNumber, normalizeWhatsAppNumber, siteConfig } from "@/config/site";
+import { buildWhatsAppUrlForNumber, normalizeWhatsAppNumber } from "@/config/site";
 import { readSafeConfirmation } from "@/lib/orders/checkout-client";
 import {
   deliveryMethodLabel,
@@ -33,7 +33,7 @@ export function OrderConfirmationClient({ orderNumber, settings }: OrderConfirma
   }, [orderNumber]);
 
   const whatsappUrl = useMemo(() => {
-    const number = normalizeWhatsAppNumber(settings.whatsappNumber ?? undefined) ?? siteConfig.whatsappNumber;
+    const number = normalizeWhatsAppNumber(settings.whatsappNumber ?? undefined);
     return buildWhatsAppUrlForNumber(
       number,
       `Bonjour, j'ai une question concernant ma commande ${orderNumber}.`,
@@ -78,7 +78,7 @@ export function OrderConfirmationClient({ orderNumber, settings }: OrderConfirma
         <p className="text-sm font-medium text-muted-foreground">Commande {confirmation.orderNumber}</p>
         <h1 className="mt-2 font-heading text-5xl">Commande reçue</h1>
         <p className="mt-3 text-muted-foreground">
-          Votre demande est enregistrée. L&apos;équipe confirmera la disponibilité finale, les frais de livraison et les modalités de paiement.
+          Votre demande est enregistrée. Les frais affichés sont ceux enregistrés avec la commande; l&apos;équipe confirmera les prochaines étapes.
         </p>
 
         <dl className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -137,11 +137,11 @@ export function OrderConfirmationClient({ orderNumber, settings }: OrderConfirma
           </div>
           <div className="flex justify-between">
             <span>Frais de livraison</span>
-            <span>À confirmer</span>
+            <span>{formatXof(confirmation.deliveryFeeXof)}</span>
           </div>
           <div className="flex justify-between font-medium">
-            <span>Total final</span>
-            <span>À confirmer</span>
+            <span>Total</span>
+            <span>{formatXof(confirmation.totalXof)}</span>
           </div>
         </div>
       </aside>

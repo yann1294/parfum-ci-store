@@ -264,18 +264,6 @@ export function ContentEditor({ content }: { content: StorefrontContent }) {
         <>
           <Field name="pageTitle" label="Titre de page" value={fieldValue("pageTitle")} onChange={updateDraft} />
           <Field name="introText" label="Introduction" value={fieldValue("introText")} onChange={updateDraft} multiline />
-          <Field name="telephone" label="Téléphone" value={fieldValue("telephone")} onChange={updateDraft} />
-          <Field name="whatsappNumber" label="Numéro WhatsApp" value={fieldValue("whatsappNumber")} onChange={updateDraft} />
-          <Field name="email" label="E-mail" value={fieldValue("email")} onChange={updateDraft} />
-          <Field name="address" label="Adresse" value={fieldValue("address")} onChange={updateDraft} multiline />
-          <Field
-            name="openingHours"
-            label="Horaires"
-            value={fieldValue("openingHours")}
-            onChange={updateDraft}
-            multiline
-            help="Une ligne par horaire: Libellé | Valeur. Maximum 14."
-          />
           <Field name="mapUrl" label="Lien carte" value={fieldValue("mapUrl")} onChange={updateDraft} />
           <Field name="whatsappCtaLabel" label="Libellé WhatsApp" value={fieldValue("whatsappCtaLabel")} onChange={updateDraft} />
           <Field name="emailCtaLabel" label="Libellé e-mail" value={fieldValue("emailCtaLabel")} onChange={updateDraft} />
@@ -291,18 +279,7 @@ export function ContentEditor({ content }: { content: StorefrontContent }) {
         <>
           <Field name="pageTitle" label="Titre de page" value={fieldValue("pageTitle")} onChange={updateDraft} />
           <Field name="introText" label="Introduction" value={fieldValue("introText")} onChange={updateDraft} multiline />
-          <Field
-            name="zones"
-            label="Zones de livraison"
-            value={fieldValue("zones")}
-            onChange={updateDraft}
-            multiline
-            help="Une ligne par zone: Nom | Frais | Délai | Description. Maximum 12."
-          />
-          <Field name="freeDeliveryConditions" label="Conditions de livraison offerte" value={fieldValue("freeDeliveryConditions")} onChange={updateDraft} multiline />
           <Field name="pickupInformation" label="Retrait boutique" value={fieldValue("pickupInformation")} onChange={updateDraft} multiline />
-          <Field name="mobileMoneyDescription" label="Mobile Money" value={fieldValue("mobileMoneyDescription")} onChange={updateDraft} multiline />
-          <Field name="cashOnDeliveryConditions" label="Paiement à la livraison" value={fieldValue("cashOnDeliveryConditions")} onChange={updateDraft} multiline />
           <Field name="orderConfirmationProcess" label="Confirmation de commande" value={fieldValue("orderConfirmationProcess")} onChange={updateDraft} multiline />
           <Field name="faq" label="FAQ" value={fieldValue("faq")} onChange={updateDraft} multiline help="Une ligne par question: Question | Réponse. Maximum 12." />
           <Field name="seoTitle" label="Titre SEO" value={fieldValue("seoTitle")} onChange={updateDraft} />
@@ -313,10 +290,6 @@ export function ContentEditor({ content }: { content: StorefrontContent }) {
 
     return (
       <>
-        <Field name="instagramUrl" label="Instagram" value={fieldValue("instagramUrl")} onChange={updateDraft} />
-        <Field name="facebookUrl" label="Facebook" value={fieldValue("facebookUrl")} onChange={updateDraft} />
-        <Field name="tiktokUrl" label="TikTok" value={fieldValue("tiktokUrl")} onChange={updateDraft} />
-        <Field name="whatsappNumber" label="WhatsApp" value={fieldValue("whatsappNumber")} onChange={updateDraft} />
         <Field name="socialCtaCopy" label="Accroche sociale" value={fieldValue("socialCtaCopy")} onChange={updateDraft} multiline />
       </>
     );

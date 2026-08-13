@@ -10,8 +10,10 @@ import {
   maskPhone,
   orderStatusLabel,
   paymentMethodLabel,
+  paymentInstructionForMethod,
   paymentStatusLabel,
 } from "@/lib/orders/display";
+import { getCheckoutSettings } from "@/lib/settings/service";
 
 const orderNumberSchema = z
   .string()
@@ -42,7 +44,9 @@ export type PublicOrderTrackingResult = {
     deliveryMethodLabel: string;
     paymentMethodLabel: string;
     subtotalXof: number;
-    deliveryFeePending: boolean;
+    deliveryFeeXof: number;
+    totalXof: number;
+    paymentInstructions: string[];
     items: Array<{
       productName: string;
       variantLabel: string | null;
@@ -65,6 +69,7 @@ type OrderRow = {
   payment_method: string | null;
   subtotal_xof: number;
   delivery_fee_xof: number;
+  total_xof: number;
   created_at: string;
   updated_at: string;
 };
@@ -147,7 +152,7 @@ export async function lookupOrderForTracking(input: TrackOrderRequest): Promise<
     const { data: order, error } = await supabase
       .from("orders")
       .select(
-        "id, order_number, status, payment_status, customer_phone, delivery_method, payment_method, subtotal_xof, delivery_fee_xof, created_at, updated_at",
+        "id, order_number, status, payment_status, customer_phone, delivery_method, payment_method, subtotal_xof, delivery_fee_xof, total_xof, created_at, updated_at",
       )
       .eq("order_number", normalized.orderNumber)
       .maybeSingle();
@@ -169,6 +174,7 @@ export async function lookupOrderForTracking(input: TrackOrderRequest): Promise<
 
     if (itemError || historyError) return notFound();
 
+    const settings = await getCheckoutSettings();
     return {
       found: true,
       order: {
@@ -181,7 +187,9 @@ export async function lookupOrderForTracking(input: TrackOrderRequest): Promise<
         deliveryMethodLabel: deliveryMethodLabel(order.delivery_method),
         paymentMethodLabel: paymentMethodLabel(order.payment_method),
         subtotalXof: order.subtotal_xof,
-        deliveryFeePending: order.delivery_fee_xof === 0,
+        deliveryFeeXof: order.delivery_fee_xof,
+        totalXof: order.total_xof,
+        paymentInstructions: paymentInstructionForMethod(order.payment_method, settings, order.order_number) ?? [],
         items: (items ?? []).map((item) => ({
           productName: item.product_name,
           variantLabel: item.variant_name,
