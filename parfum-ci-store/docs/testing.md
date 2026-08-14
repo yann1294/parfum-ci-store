@@ -163,6 +163,8 @@ The cart is Phase 6 discovery state only. It stores variant snapshots and first-
 
 SEO checks should cover canonical URLs, hidden-product not-found behaviour, Product JSON-LD, sitemap, robots, and absence of staff-only fields in rendered HTML.
 
+Legal-route regression checks cover canonical metadata, footer and sitemap discovery, checkout/contact links, maintenance-mode availability, policy version constants, absence of arbitrary HTML rendering, proprietary `UNLICENSED` package posture and visible disclosure of unresolved owner/legal fields. These tests prove repository behavior, not legal approval. A deployed acceptance pass must inspect the final owner-supplied identity, contact, return and privacy values.
+
 ## Phase 6.5 Corrections
 
 Unit and integration coverage should include:

@@ -533,7 +533,7 @@ A catalogue CSV export is not a database backup. Managed PostgreSQL backups also
 
 ### Functional/legal
 
-- there are no dedicated privacy-policy, terms or legal-notice routes yet;
+- dedicated legal-notice, privacy and sales-terms routes are implemented, but missing registration/tax/publisher facts, returns rules, retention schedule and legal approval remain launch gates;
 - checkout requires terms acceptance in UI but does not snapshot a policy version/timestamp;
 - refunds have lifecycle statuses but no authoritative refunded-amount model, so dashboard revenue is gross paid revenue;
 - no automated payment gateway or webhook reconciliation exists;
@@ -645,7 +645,7 @@ Live import, fixture cleanup and acceptance are three separate approvals.
 - real catalogue/inventory onboarding;
 - database and Storage backups with restore evidence;
 - controlled production cancellation/SOLD/tracking/contact/email acceptance;
-- privacy, terms and legal content supplied by an appropriate reviewer.
+- final privacy, terms, return/refund and legal identity content approved by an appropriate reviewer; see `docs/legal-and-licensing.md`.
 
 ### Priority 1 — Improve operational reliability
 
@@ -760,7 +760,7 @@ Examples:
 - “Upgrade the existing Supabase project to Pro in place; no project migration.”
 - “Create isolated staging and enable destructive lifecycle E2E there.”
 - “Implement Phase 18A create-only catalogue import, without running it live.”
-- “Add privacy/legal routes using owner-supplied reviewed content.”
+- “Complete the legal owner fields and terms-acceptance snapshot using `docs/legal-and-licensing.md`.”
 - “Evaluate one hosted payment provider; planning only.”
 
 Avoid combining infrastructure migration, catalogue cleanup and a new payment gateway in one change.
@@ -837,6 +837,7 @@ These decisions should not be reversed accidentally:
 - UI/accessibility: `docs/design-system.md`
 - Test commands/evidence expectations: `docs/testing.md`
 - Deployment/backup/rollback: `docs/deployment.md`
+- Licensing, public policies and owner legal checklist: `docs/legal-and-licensing.md`
 - Phase 16 hardening evidence: `docs/phase-16-hardening-verification.md`
 - Phase 17 plan/evidence: `docs/phase-17-free-tier-deployment-plan.md`, `docs/phase-17-deployment-verification.md`
 - Infrastructure upgrades: `docs/production-upgrade-roadmap.md`

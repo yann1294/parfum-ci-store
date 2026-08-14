@@ -1,0 +1,14 @@
+import { PublicFooter } from "@/components/layout/public-footer";
+import { PublicHeader } from "@/components/layout/public-header";
+
+export default function LegalLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <PublicHeader />
+      <main id="contenu" className="flex-1">
+        {children}
+      </main>
+      <PublicFooter />
+    </div>
+  );
+}

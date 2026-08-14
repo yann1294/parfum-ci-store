@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -336,7 +337,17 @@ export function ContactMessageForm({ productContext }: ContactMessageFormProps) 
           className="mt-1 size-4"
         />
         <span>
-          J’accepte que les informations fournies soient utilisées pour répondre à ma demande.
+          J’accepte que les informations fournies soient utilisées pour répondre à ma demande,
+          conformément à la{" "}
+          <Link
+            href="/politique-de-confidentialite"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium underline underline-offset-4"
+          >
+            politique de confidentialité
+          </Link>
+          .
           {errors.consent ? (
             <span id="contact-consent-error" className="block text-destructive">
               {errors.consent}

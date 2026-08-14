@@ -159,7 +159,7 @@ const checkoutFormSchema = z
     ]),
     termsAccepted: z
       .boolean()
-      .refine((value) => value, "Vous devez accepter les conditions de livraison et de retour."),
+      .refine((value) => value, "Vous devez accepter les conditions générales de vente."),
     website: z.literal(""),
   })
   .strict();
@@ -856,15 +856,33 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
               className="mt-1 size-4"
             />
             <span>
-              J&apos;accepte les conditions de livraison et de retour.
+              J&apos;accepte les{" "}
+              <Link
+                href="/conditions-generales-de-vente"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium underline underline-offset-4"
+              >
+                conditions générales de vente
+              </Link>
+              , y compris les modalités de livraison, et j&apos;ai consulté la{" "}
+              <Link
+                href="/politique-de-confidentialite"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium underline underline-offset-4"
+              >
+                politique de confidentialité
+              </Link>
+              .
               <span className="block text-muted-foreground">
-                Les frais de livraison, la disponibilité finale et les modalités de paiement seront
-                confirmés par l&apos;équipe.
+                Les prix, la disponibilité et les frais de livraison sont vérifiés par le serveur
+                avant la création de la commande.
               </span>
               {errors.termsAccepted ? (
                 <span id="conditions-error" className="block text-destructive">
                   {errors.termsAccepted}
-              </span>
+                </span>
               ) : null}
             </span>
           </label>

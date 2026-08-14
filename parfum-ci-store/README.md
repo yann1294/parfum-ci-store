@@ -154,5 +154,10 @@ pnpm db:types:linked
 - Phase 17 free-tier deployment contract: `docs/phase-17-free-tier-deployment-plan.md`
 - Future production upgrade: `docs/production-upgrade-roadmap.md`
 - Manual acceptance test: `docs/manual-acceptance-test.md`
+- Legal and licensing handoff: `docs/legal-and-licensing.md`
 
 Read the relevant document before changing behavior. Read the matching Next.js guide in `node_modules/next/dist/docs/` before changing framework behavior.
+
+## License
+
+This project is proprietary and all rights are reserved. It is not open-source and `package.json` is marked `UNLICENSED`. See the repository-root [`LICENSE`](../LICENSE) and `docs/legal-and-licensing.md`. Third-party dependencies and assets remain subject to their own terms.

@@ -4,7 +4,16 @@ import { listActiveProducts } from "@/lib/catalogue/products";
 import { absoluteUrl } from "@/config/site";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const staticRoutes = ["/", "/catalogue", "/a-propos", "/livraison", "/contact"].map((path) => ({
+  const staticRoutes = [
+    "/",
+    "/catalogue",
+    "/a-propos",
+    "/livraison",
+    "/contact",
+    "/mentions-legales",
+    "/conditions-generales-de-vente",
+    "/politique-de-confidentialite",
+  ].map((path) => ({
     url: absoluteUrl(path),
     lastModified: new Date(),
   }));

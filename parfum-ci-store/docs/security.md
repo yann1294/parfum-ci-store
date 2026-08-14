@@ -191,6 +191,14 @@ The development notification provider logs only notification ID, subject/templat
 
 Public contact submissions go through `POST /api/contact/messages`, which validates bounded JSON, honeypot, rate limit, explicit consent, and the telephone-or-email contact rule before calling the service-role-only message transaction. Anonymous users cannot directly read or insert `contact_messages`; normal authenticated non-staff users cannot read messages. Admin list DTOs mask contacts and use excerpts, while full message content and internal notes are restricted to active OWNER, ADMIN and CUSTOMER_SUPPORT staff. Customer/manual message content is rendered as text only and is never passed through `dangerouslySetInnerHTML`.
 
+## Legal And Privacy Presentation
+
+`/mentions-legales`, `/politique-de-confidentialite` and `/conditions-generales-de-vente` render static version-controlled JSX plus the safe public Phase 14 identity/contact projection. They never render database HTML and remain available during storefront maintenance. Footer, checkout and contact links point to these routes.
+
+The privacy notice documents actual Vercel/Supabase/Resend processing boundaries, browser storage and present retention limitations. It does not establish that Côte d’Ivoire data-protection formalities, international-transfer authorization, processor contracts or a deletion schedule have been completed. These are external owner obligations. The application must not log or expose data-subject requests; establish a controlled staff procedure before commercial opening.
+
+The `termsAccepted` request field is validation state, not a versioned legal-consent record. Until a forward-only order snapshot change is reviewed and applied, do not claim immutable proof of which CGV version a customer accepted.
+
 ## Phase 15 Dashboard
 
 `/admin` authenticates an active staff profile before loading analytics. The application calls `get_admin_dashboard_server(jsonb)` only through the server-only Supabase client, and the database independently checks the supplied actor against the active `profiles` row. The RPC is revoked from `PUBLIC`, `anon` and `authenticated` and granted only to `service_role`.
