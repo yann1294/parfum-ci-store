@@ -142,6 +142,7 @@ pnpm db:types:linked
 
 ## Documentation
 
+- Developer handoff and roadmap: `docs/mvp-developer-handoff-and-roadmap.md`
 - Product requirements: `docs/product-requirements.md`
 - Architecture: `docs/architecture.md`
 - Database schema: `docs/database-schema.md`
