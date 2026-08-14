@@ -15,15 +15,89 @@ The MVP is French-first, uses XOF pricing, supports guest checkout, and accepts 
 - Playwright browser tests
 - Vercel deployment
 
+## Prerequisites
+
+- Node.js compatible with the version required by `package.json`
+- pnpm
+- Docker and the Supabase CLI for a local database, or access to a non-production Supabase project
+- PostgreSQL `psql` for the SQL integration suite
+
 ## Local Development
 
 ```bash
 pnpm install
 cp .env.example .env.local
+pnpm exec supabase start
+pnpm exec supabase db reset
+pnpm exec supabase gen types typescript --local > src/types/database.types.ts
 pnpm dev
 ```
 
 Open `http://localhost:3000`.
+
+`supabase db reset` destroys and rebuilds the local Supabase database. Never run it against a linked production project. The migrations create the `product-images` bucket and its policies; no separate manual bucket creation is required after a complete local reset.
+
+## Configuration
+
+Copy `.env.example` and replace placeholders locally. Never commit real values.
+
+- Required browser-safe values: `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- Required server values: `SUPABASE_SECRET_KEY`, `CRON_SECRET`, notification provider settings, and the configured mail sender.
+- Production-only provider setup: `RESEND_API_KEY` when `NOTIFICATION_PROVIDER=resend`, verified Resend sender/domain, Vercel Cron, Supabase Auth redirect URLs, and production staff accounts.
+- Optional local/E2E values: the `PLAYWRIGHT_*` role credentials and guarded fixture flags documented in `docs/testing.md`.
+
+Business contact, payment, delivery, SEO, notification-recipient, and availability settings live in the Phase 14 database singleton. Provider credentials remain environment-only.
+
+## Database And Staff Setup
+
+For an existing linked non-production project, review migration SQL before running:
+
+```bash
+pnpm exec supabase migration list
+pnpm exec supabase db push
+pnpm exec supabase gen types typescript --linked > src/types/database.types.ts
+```
+
+Do not hand-edit generated database types. Create staff users in Supabase Auth, then create matching active `profiles` rows with one of the established roles: `OWNER`, `ADMIN`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, or `CUSTOMER_SUPPORT`. Never seed a fabricated production owner UUID.
+
+Guarded catalogue fixtures are available for non-production environments:
+
+```bash
+ALLOW_E2E_SEED=true pnpm seed:phase5
+ALLOW_E2E_SEED=true pnpm cleanup:phase5
+```
+
+## Verification
+
+Run the application suite with:
+
+```bash
+pnpm format:check
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm test:e2e
+pnpm build
+```
+
+Run SQL tests only against a disposable local or staging database after its migrations are current:
+
+```bash
+for test_file in supabase/tests/schema_smoke.sql supabase/tests/phase4_catalogue_storage.sql supabase/tests/phase8_guest_order_transaction.sql supabase/tests/phase11_order_management.sql supabase/tests/phase12_notifications.sql supabase/tests/phase13_messages.sql supabase/tests/phase14_settings.sql supabase/tests/phase15_dashboard.sql supabase/tests/phase16_security_hardening.sql; do
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$test_file"
+done
+```
+
+Use a non-production connection string. The Playwright suite uses desktop Chromium for the complete suite and a focused Pixel 7 project for representative responsive and accessibility hardening checks.
+
+For a production-mode local smoke test:
+
+```bash
+pnpm build
+pnpm start
+```
+
+Then check the representative public and protected routes listed in `docs/phase-16-hardening-verification.md` and stop the server.
 
 ## Scripts
 

@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { InMemoryLoginRateLimiter, normalizeLoginRateLimitKey } from "@/lib/auth/rate-limit";
 
+vi.mock("server-only", () => ({}));
+
 describe("login rate limiter", () => {
   it("blocks after repeated failures in the same window", async () => {
     vi.useFakeTimers();
@@ -44,8 +46,9 @@ describe("login rate limiter", () => {
   });
 
   it("normalizes login identifiers", () => {
-    expect(normalizeLoginRateLimitKey(" 127.0.0.1:Admin@Example.COM ")).toBe(
-      "127.0.0.1:admin@example.com",
-    );
+    const key = normalizeLoginRateLimitKey(" 127.0.0.1:Admin@Example.COM ");
+    expect(key).toMatch(/^login:[a-f0-9]{64}$/);
+    expect(key).toBe(normalizeLoginRateLimitKey("127.0.0.1:admin@example.com"));
+    expect(key).not.toContain("admin@example.com");
   });
 });

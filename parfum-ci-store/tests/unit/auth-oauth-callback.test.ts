@@ -14,6 +14,7 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/audit/admin-auth", () => ({ auditAdminAuthEvent }));
 vi.mock("@/lib/env/public", () => ({
   getPublicEnv: () => ({
+    NEXT_PUBLIC_SITE_URL: "https://admin.example.test",
     NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co",
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "publishable",
   }),
@@ -51,7 +52,9 @@ describe("Google OAuth callback", () => {
     const { GET } = await import("@/app/auth/callback/route");
     const response = await GET(new NextRequest("http://localhost:3000/auth/callback"));
 
-    expect(response.headers.get("location")).toBe("http://localhost:3000/connexion?erreur=oauth");
+    expect(response.headers.get("location")).toBe(
+      "https://admin.example.test/connexion?erreur=oauth",
+    );
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
   });
 
@@ -62,7 +65,9 @@ describe("Google OAuth callback", () => {
       new NextRequest("http://localhost:3000/auth/callback?code=oauth-code"),
     );
 
-    expect(response.headers.get("location")).toBe("http://localhost:3000/connexion?erreur=oauth");
+    expect(response.headers.get("location")).toBe(
+      "https://admin.example.test/connexion?erreur=oauth",
+    );
     expect(auditAdminAuthEvent).toHaveBeenCalledWith({
       action: "ADMIN_GOOGLE_LOGIN_DENIED",
       reason: "exchange_failed",
@@ -81,7 +86,7 @@ describe("Google OAuth callback", () => {
       ),
     );
 
-    expect(response.headers.get("location")).toBe("http://localhost:3000/admin/design-system");
+    expect(response.headers.get("location")).toBe("https://admin.example.test/admin/design-system");
     expect(response.headers.getSetCookie().join("\n")).toContain("sb-test-auth-token=");
     expect(signOut).not.toHaveBeenCalled();
   });
@@ -96,7 +101,7 @@ describe("Google OAuth callback", () => {
       new NextRequest("http://localhost:3000/auth/callback?code=oauth-code"),
     );
 
-    expect(response.headers.get("location")).toBe("http://localhost:3000/acces-refuse");
+    expect(response.headers.get("location")).toBe("https://admin.example.test/acces-refuse");
     expect(response.headers.getSetCookie().join("\n")).toContain("Max-Age=0");
     expect(signOut).toHaveBeenCalled();
   });
@@ -111,7 +116,9 @@ describe("Google OAuth callback", () => {
       new NextRequest("http://localhost:3000/auth/callback?code=oauth-code"),
     );
 
-    expect(response.headers.get("location")).toBe("http://localhost:3000/connexion?erreur=oauth");
+    expect(response.headers.get("location")).toBe(
+      "https://admin.example.test/connexion?erreur=oauth",
+    );
     expect(signOut).not.toHaveBeenCalled();
   });
 
@@ -126,7 +133,7 @@ describe("Google OAuth callback", () => {
       new NextRequest("http://localhost:3000/auth/callback?code=oauth-code"),
     );
 
-    expect(response.headers.get("location")).toBe("http://localhost:3000/acces-refuse");
+    expect(response.headers.get("location")).toBe("https://admin.example.test/acces-refuse");
     expect(signOut).toHaveBeenCalled();
   });
 
@@ -142,6 +149,15 @@ describe("Google OAuth callback", () => {
       ),
     );
 
-    expect(response.headers.get("location")).toBe("http://localhost:3000/admin");
+    expect(response.headers.get("location")).toBe("https://admin.example.test/admin");
+  });
+
+  it("never derives redirects from an attacker-controlled request origin", async () => {
+    const { GET } = await import("@/app/auth/callback/route");
+    const response = await GET(new NextRequest("https://evil.example/auth/callback"));
+
+    expect(response.headers.get("location")).toBe(
+      "https://admin.example.test/connexion?erreur=oauth",
+    );
   });
 });

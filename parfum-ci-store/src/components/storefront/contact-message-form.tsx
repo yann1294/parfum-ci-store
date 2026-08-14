@@ -52,22 +52,38 @@ export function ContactMessageForm({ productContext }: ContactMessageFormProps) 
   const [status, setStatus] = useState<{ kind: "success" | "error"; message: string } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const keyRef = useRef(createIdempotencyKey());
+  const formRef = useRef<HTMLFormElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
   const hasProductContext = Boolean(productContext?.productId || productContext?.productSlug);
-  const defaultSubject = useMemo(() => hasProductContext ? "Demande d'information produit" : "", [hasProductContext]);
+  const defaultSubject = useMemo(
+    () => (hasProductContext ? "Demande d'information produit" : ""),
+    [hasProductContext],
+  );
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: "" }));
   }
 
+  function focusFirstInvalid() {
+    window.setTimeout(() => {
+      formRef.current?.querySelector<HTMLElement>("[aria-invalid='true']")?.focus();
+    }, 0);
+  }
+
   function validate() {
     const nextErrors: Record<string, string> = {};
     if (form.name.trim().length < 2) nextErrors.name = "Indiquez votre nom.";
-    if (!form.email.trim() && !form.phone.trim()) nextErrors.phone = "Ajoutez un téléphone ou un e-mail.";
-    if (form.subject.trim().length < 3 && !defaultSubject) nextErrors.subject = "Indiquez un sujet.";
-    if (form.message.trim().length < 10) nextErrors.message = "Votre message doit contenir au moins 10 caractères.";
-    if (!form.consent) nextErrors.consent = "Confirmez l'utilisation de ces informations pour vous répondre.";
+    if (!form.email.trim() && !form.phone.trim())
+      nextErrors.phone = "Ajoutez un téléphone ou un e-mail.";
+    if (form.subject.trim().length < 3 && !defaultSubject)
+      nextErrors.subject = "Indiquez un sujet.";
+    if (form.message.trim().length < 10)
+      nextErrors.message = "Votre message doit contenir au moins 10 caractères.";
+    if (!form.consent)
+      nextErrors.consent = "Confirmez l'utilisation de ces informations pour vous répondre.";
     setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) focusFirstInvalid();
     return Object.keys(nextErrors).length === 0;
   }
 
@@ -76,15 +92,25 @@ export function ContactMessageForm({ productContext }: ContactMessageFormProps) 
     setStatus(null);
     if (!validate() || pending) return;
     const normalizedPhone = form.phone.trim() ? normalizeCoteDIvoirePhoneResult(form.phone) : null;
-    const normalizedWhatsapp = form.whatsapp.trim() ? normalizeCoteDIvoirePhoneResult(form.whatsapp) : null;
+    const normalizedWhatsapp = form.whatsapp.trim()
+      ? normalizeCoteDIvoirePhoneResult(form.whatsapp)
+      : null;
     if (normalizedPhone && !normalizedPhone.ok) {
-      setErrors((current) => ({ ...current, phone: "Saisissez un numéro de téléphone ivoirien valide." }));
+      setErrors((current) => ({
+        ...current,
+        phone: "Saisissez un numéro de téléphone ivoirien valide.",
+      }));
       setStatus({ kind: "error", message: "Saisissez un numéro de téléphone ivoirien valide." });
+      focusFirstInvalid();
       return;
     }
     if (normalizedWhatsapp && !normalizedWhatsapp.ok) {
-      setErrors((current) => ({ ...current, whatsapp: "Saisissez un numéro WhatsApp ivoirien valide." }));
+      setErrors((current) => ({
+        ...current,
+        whatsapp: "Saisissez un numéro WhatsApp ivoirien valide.",
+      }));
       setStatus({ kind: "error", message: "Saisissez un numéro de téléphone ivoirien valide." });
+      focusFirstInvalid();
       return;
     }
     setPending(true);
@@ -110,23 +136,39 @@ export function ContactMessageForm({ productContext }: ContactMessageFormProps) 
           attribution: readAttribution() ?? undefined,
         }),
       });
-      const payload = await response.json().catch(() => null) as { message?: string; error?: { message?: string } } | null;
+      const payload = (await response.json().catch(() => null)) as {
+        message?: string;
+        error?: { message?: string };
+      } | null;
       if (!response.ok) {
-        setStatus({ kind: "error", message: payload?.error?.message ?? "Le message n’a pas pu être envoyé. Réessayez." });
+        setStatus({
+          kind: "error",
+          message: payload?.error?.message ?? "Le message n’a pas pu être envoyé. Réessayez.",
+        });
         return;
       }
-      setStatus({ kind: "success", message: payload?.message ?? "Votre message a bien été envoyé." });
+      setStatus({
+        kind: "success",
+        message: payload?.message ?? "Votre message a bien été envoyé.",
+      });
       setForm(initialFormState);
+      setErrors({});
       keyRef.current = createIdempotencyKey();
     } catch {
       setStatus({ kind: "error", message: "Le message n’a pas pu être envoyé. Réessayez." });
     } finally {
       setPending(false);
+      window.setTimeout(() => statusRef.current?.focus(), 0);
     }
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-5 rounded-lg border bg-surface p-5" noValidate>
+    <form
+      ref={formRef}
+      onSubmit={submit}
+      className="grid gap-5 rounded-lg border bg-surface p-5"
+      noValidate
+    >
       <div>
         <h2 className="font-heading text-3xl">Envoyer un message</h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -135,61 +177,171 @@ export function ContactMessageForm({ productContext }: ContactMessageFormProps) 
       </div>
 
       {status ? (
-        <Alert variant={status.kind === "error" ? "destructive" : "default"} role="status">
-          <AlertTitle>{status.kind === "error" ? "Message non envoyé" : "Message envoyé"}</AlertTitle>
+        <Alert
+          ref={statusRef}
+          tabIndex={-1}
+          variant={status.kind === "error" ? "destructive" : "default"}
+          role={status.kind === "error" ? "alert" : "status"}
+          aria-live={status.kind === "error" ? "assertive" : "polite"}
+        >
+          <AlertTitle>
+            {status.kind === "error" ? "Message non envoyé" : "Message envoyé"}
+          </AlertTitle>
           <AlertDescription>{status.message}</AlertDescription>
         </Alert>
       ) : null}
 
+      {Object.values(errors).some(Boolean) ? (
+        <Alert variant="destructive">
+          <AlertTitle>Formulaire à corriger</AlertTitle>
+          <AlertDescription>
+            Vérifiez les champs signalés avant d&apos;envoyer le message.
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       {hasProductContext ? (
-        <p className="rounded-md bg-muted p-3 text-sm">Votre demande inclut le contexte du produit consulté.</p>
+        <p className="rounded-md bg-muted p-3 text-sm">
+          Votre demande inclut le contexte du produit consulté.
+        </p>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Nom complet" error={errors.name}>
-          <input value={form.name} onChange={(event) => update("name", event.target.value)} autoComplete="name" className="h-10 rounded-lg border border-input bg-background px-3" />
+        <Field id="contact-name" label="Nom complet" error={errors.name} required>
+          <input
+            id="contact-name"
+            value={form.name}
+            onChange={(event) => update("name", event.target.value)}
+            autoComplete="name"
+            required
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? "contact-name-error" : undefined}
+            className="h-10 rounded-lg border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
         </Field>
-        <Field label="E-mail" error={errors.email}>
-          <input type="email" value={form.email} onChange={(event) => update("email", event.target.value)} autoComplete="email" className="h-10 rounded-lg border border-input bg-background px-3" />
+        <Field id="contact-email" label="E-mail" error={errors.email}>
+          <input
+            id="contact-email"
+            type="email"
+            value={form.email}
+            onChange={(event) => update("email", event.target.value)}
+            autoComplete="email"
+            aria-invalid={Boolean(errors.email)}
+            aria-describedby={errors.email ? "contact-email-error" : "contact-channel-help"}
+            className="h-10 rounded-lg border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
         </Field>
-        <Field label="Téléphone" error={errors.phone}>
-          <input value={form.phone} onChange={(event) => update("phone", event.target.value)} inputMode="tel" autoComplete="tel" className="h-10 rounded-lg border border-input bg-background px-3" />
+        <Field id="contact-phone" label="Téléphone" error={errors.phone}>
+          <input
+            id="contact-phone"
+            value={form.phone}
+            onChange={(event) => update("phone", event.target.value)}
+            inputMode="tel"
+            autoComplete="tel"
+            aria-invalid={Boolean(errors.phone)}
+            aria-describedby={errors.phone ? "contact-phone-error" : "contact-channel-help"}
+            className="h-10 rounded-lg border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
         </Field>
-        <Field label="Numéro WhatsApp" error={errors.whatsapp}>
-          <input value={form.whatsapp} onChange={(event) => update("whatsapp", event.target.value)} inputMode="tel" className="h-10 rounded-lg border border-input bg-background px-3" />
+        <Field id="contact-whatsapp" label="Numéro WhatsApp" error={errors.whatsapp}>
+          <input
+            id="contact-whatsapp"
+            value={form.whatsapp}
+            onChange={(event) => update("whatsapp", event.target.value)}
+            inputMode="tel"
+            autoComplete="tel"
+            aria-invalid={Boolean(errors.whatsapp)}
+            aria-describedby={errors.whatsapp ? "contact-whatsapp-error" : undefined}
+            className="h-10 rounded-lg border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          />
         </Field>
       </div>
+      <p id="contact-channel-help" className="text-xs text-muted-foreground">
+        Un téléphone ou un e-mail est requis.
+      </p>
 
-      <Field label="Moyen de réponse préféré">
-        <select value={form.preferredContactMethod} onChange={(event) => update("preferredContactMethod", event.target.value as FormState["preferredContactMethod"])} className="h-10 rounded-lg border border-input bg-background px-3">
+      <Field id="contact-method" label="Moyen de réponse préféré" required>
+        <select
+          id="contact-method"
+          value={form.preferredContactMethod}
+          onChange={(event) =>
+            update(
+              "preferredContactMethod",
+              event.target.value as FormState["preferredContactMethod"],
+            )
+          }
+          required
+          className="h-10 rounded-lg border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
           <option value="PHONE">Téléphone</option>
           <option value="EMAIL">E-mail</option>
           <option value="WHATSAPP">WhatsApp</option>
         </select>
       </Field>
 
-      <Field label="Numéro de commande (facultatif)">
-        <input value={form.orderNumber} onChange={(event) => update("orderNumber", event.target.value)} className="h-10 rounded-lg border border-input bg-background px-3" />
+      <Field id="contact-order-number" label="Numéro de commande (facultatif)">
+        <input
+          id="contact-order-number"
+          value={form.orderNumber}
+          onChange={(event) => update("orderNumber", event.target.value)}
+          className="h-10 rounded-lg border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        />
       </Field>
 
-      <Field label="Sujet" error={errors.subject}>
-        <input value={form.subject} onChange={(event) => update("subject", event.target.value)} placeholder={defaultSubject} className="h-10 rounded-lg border border-input bg-background px-3" />
+      <Field id="contact-subject" label="Sujet" error={errors.subject} required={!defaultSubject}>
+        <input
+          id="contact-subject"
+          value={form.subject}
+          onChange={(event) => update("subject", event.target.value)}
+          placeholder={defaultSubject}
+          required={!defaultSubject}
+          aria-invalid={Boolean(errors.subject)}
+          aria-describedby={errors.subject ? "contact-subject-error" : undefined}
+          className="h-10 rounded-lg border border-input bg-background px-3 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        />
       </Field>
 
-      <Field label="Message" error={errors.message}>
-        <textarea value={form.message} onChange={(event) => update("message", event.target.value)} rows={6} className="rounded-lg border border-input bg-background px-3 py-2" />
+      <Field id="contact-message" label="Message" error={errors.message} required>
+        <textarea
+          id="contact-message"
+          value={form.message}
+          onChange={(event) => update("message", event.target.value)}
+          rows={6}
+          required
+          aria-invalid={Boolean(errors.message)}
+          aria-describedby={errors.message ? "contact-message-error" : undefined}
+          className="rounded-lg border border-input bg-background px-3 py-2 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        />
       </Field>
 
       <label className="sr-only">
         Site web
-        <input value={form.honeypot} onChange={(event) => update("honeypot", event.target.value)} tabIndex={-1} autoComplete="off" />
+        <input
+          value={form.honeypot}
+          onChange={(event) => update("honeypot", event.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+        />
       </label>
 
       <label className="flex items-start gap-3 text-sm">
-        <input type="checkbox" checked={form.consent} onChange={(event) => update("consent", event.target.checked)} className="mt-1" />
+        <input
+          id="contact-consent"
+          type="checkbox"
+          checked={form.consent}
+          onChange={(event) => update("consent", event.target.checked)}
+          required
+          aria-invalid={Boolean(errors.consent)}
+          aria-describedby={errors.consent ? "contact-consent-error" : undefined}
+          className="mt-1 size-4"
+        />
         <span>
           J’accepte que les informations fournies soient utilisées pour répondre à ma demande.
-          {errors.consent ? <span className="block text-destructive">{errors.consent}</span> : null}
+          {errors.consent ? (
+            <span id="contact-consent-error" className="block text-destructive">
+              {errors.consent}
+            </span>
+          ) : null}
         </span>
       </label>
 
@@ -200,12 +352,31 @@ export function ContactMessageForm({ productContext }: ContactMessageFormProps) 
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({
+  id,
+  label,
+  error,
+  required,
+  children,
+}: {
+  id: string;
+  label: string;
+  error?: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <label className="grid gap-1 text-sm">
-      <span className="font-medium">{label}</span>
-      {children}
-      {error ? <span className="text-sm text-destructive">{error}</span> : null}
+    <div className="grid gap-1 text-sm">
+      <label htmlFor={id} className="font-medium">
+        {label}
+        {required ? <span aria-hidden="true"> *</span> : null}
     </label>
+      {children}
+      {error ? (
+        <p id={`${id}-error`} className="text-sm text-destructive">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

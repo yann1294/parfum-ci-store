@@ -7,6 +7,7 @@ import { loginAction, type LoginActionState } from "@/app/(auth)/connexion/actio
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { siteConfig } from "@/config/site";
 import { authDiagnostic } from "@/lib/auth/diagnostics";
 import { getSafeReturnPath } from "@/lib/auth/redirects";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -31,7 +32,7 @@ export function LoginForm({ returnPath }: { returnPath: string }) {
     setGoogleError(null);
 
     const safeReturnPath = getSafeReturnPath(returnPath);
-    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    const callbackUrl = new URL("/auth/callback", siteConfig.siteUrl);
     callbackUrl.searchParams.set("retour", safeReturnPath);
 
     const supabase = createSupabaseBrowserClient();

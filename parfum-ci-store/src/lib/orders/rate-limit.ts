@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { RateLimitResult } from "@/lib/auth/rate-limit";
+import { getRequestIp, hashRateLimitKey } from "@/lib/security/rate-limit-key";
 
 type AttemptState = {
   count: number;
@@ -53,8 +54,13 @@ export class InMemoryCheckoutRateLimiter implements CheckoutRateLimiter {
     const current = this.attempts.get(key);
     const count = current && current.windowExpiresAt > now ? current.count + 1 : 1;
     const windowExpiresAt =
-      current && current.windowExpiresAt > now ? current.windowExpiresAt : now + this.options.windowMs;
-    const blockedUntil = count >= this.options.maxAttempts ? now + this.options.windowMs : (current?.blockedUntil ?? 0);
+      current && current.windowExpiresAt > now
+        ? current.windowExpiresAt
+        : now + this.options.windowMs;
+    const blockedUntil =
+      count >= this.options.maxAttempts
+        ? now + this.options.windowMs
+        : (current?.blockedUntil ?? 0);
     this.attempts.set(key, { count, windowExpiresAt, blockedUntil });
   }
 
@@ -64,10 +70,7 @@ export class InMemoryCheckoutRateLimiter implements CheckoutRateLimiter {
 }
 
 export function checkoutRateLimitKey(request: Request, normalizedPhone?: string) {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const realIp = request.headers.get("x-real-ip")?.trim();
-  const ip = forwardedFor || realIp || "unknown";
-  return `checkout:${ip}:${normalizedPhone ?? "anonymous"}`.slice(0, 240);
+  return hashRateLimitKey("checkout", `${getRequestIp(request)}:${normalizedPhone ?? "anonymous"}`);
 }
 
 export const checkoutRateLimiter = new InMemoryCheckoutRateLimiter();

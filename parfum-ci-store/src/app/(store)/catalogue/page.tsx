@@ -46,12 +46,20 @@ export default async function CataloguePage({
           </p>
           {products.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {products.map((product) => <ProductCard key={product.id} product={product} />)}
+              {products.map((product, index) => (
+                <ProductCard key={product.id} product={product} priority={index === 0} />
+              ))}
             </div>
           ) : (
-            <EmptyState title="Aucun parfum trouvé" description="Essayez de retirer un filtre ou de modifier votre recherche." />
+            <EmptyState
+              title="Aucun parfum trouvé"
+              description="Essayez de retirer un filtre ou de modifier votre recherche."
+            />
           )}
-          <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Pagination catalogue">
+          <nav
+            className="flex flex-wrap items-center justify-between gap-3"
+            aria-label="Pagination catalogue"
+          >
             <Link
               href={buildCatalogueUrl({ ...filters, page: Math.max(result.page - 1, 1) })}
               className={buttonVariants({ variant: "outline" })}
@@ -75,7 +83,10 @@ export default async function CataloguePage({
               ))}
             </div>
             <Link
-              href={buildCatalogueUrl({ ...filters, page: Math.min(result.page + 1, result.totalPages) })}
+              href={buildCatalogueUrl({
+                ...filters,
+                page: Math.min(result.page + 1, result.totalPages),
+              })}
               className={buttonVariants({ variant: "outline" })}
               aria-disabled={result.page >= result.totalPages}
             >

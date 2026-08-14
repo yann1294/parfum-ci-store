@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { readBoundedJson } from "@/lib/http/read-bounded-json";
 import { InMemoryCheckoutRateLimiter } from "@/lib/orders/rate-limit";
 import {
   lookupOrderForTracking,
@@ -37,20 +38,10 @@ function genericNoResult(status = 200, retryAfterSeconds?: number) {
   );
 }
 
-async function readBoundedJson(request: Request) {
-  const contentType = request.headers.get("content-type") ?? "";
-  if (!contentType.toLowerCase().includes("application/json")) throw new Error("INVALID");
-  const contentLength = Number.parseInt(request.headers.get("content-length") ?? "0", 10);
-  if (Number.isFinite(contentLength) && contentLength > TRACKING_MAX_BODY_BYTES) throw new Error("INVALID");
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > TRACKING_MAX_BODY_BYTES) throw new Error("INVALID");
-  return JSON.parse(raw) as unknown;
-}
-
 export async function POST(request: Request) {
   let rawBody: unknown;
   try {
-    rawBody = await readBoundedJson(request);
+    rawBody = await readBoundedJson(request, TRACKING_MAX_BODY_BYTES);
   } catch {
     return genericNoResult(400);
   }
@@ -71,6 +62,10 @@ export async function POST(request: Request) {
   await trackingRateLimiter.recordAttempt(rateLimitKey);
 
   const result = await lookupOrderForTracking(parsed.data);
-  return NextResponse.json(result.found ? result : { found: false, message: "Aucune commande ne correspond aux informations fournies." }, noStore());
+  return NextResponse.json(
+    result.found
+      ? result
+      : { found: false, message: "Aucune commande ne correspond aux informations fournies." },
+    noStore(),
+  );
 }
-

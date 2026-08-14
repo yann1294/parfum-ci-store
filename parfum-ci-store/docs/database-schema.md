@@ -328,6 +328,17 @@ Revenue uses the earliest immutable `PAID` transaction per `order_id`, its `amou
 
 Daily trend buckets use `timezone('Africa/Abidjan', paid_at)`. Order channel uses `orders.source`; UTM fields and `storefront_order_intents` are deliberately excluded. Top products use `SOLD` inventory transactions joined to immutable `order_items.product_name` snapshots. Low stock continues to be derived as initialized, active and `stock_on_hand - reserved_quantity <= low_stock_threshold`.
 
+## Phase 16 Security Hardening
+
+Migration `20260814160000_phase16_security_hardening.sql` is forward-only. It does not change business data or historical economics.
+
+- `anon` and `authenticated` lose `TRUNCATE`, `REFERENCES`, and `TRIGGER` privileges on public base tables. Anonymous DML is removed; authenticated DML is removed from transactional and sensitive tables while the established policy-protected catalogue/content operations remain intact.
+- The accidentally callable private helper `app_private.contact_message_public_result(uuid)` is revoked from browser-facing roles.
+- `app_private.retry_notification(uuid, uuid)` locks the notification row, authorizes an active OWNER/ADMIN, permits only `FAILED -> PENDING`, resets claim/error state, and writes a bounded `NOTIFICATION_RETRY_REQUESTED` audit event atomically.
+- `public.retry_notification_server(uuid, uuid)` remains a service-role-only PostgREST wrapper. `PUBLIC`, `anon`, and `authenticated` have no execute grant.
+
+Run `supabase/tests/phase16_security_hardening.sql` after applying the migration to a disposable environment. `supabase/tests/phase16_query_plans.sql` is a read-only plan review and does not justify speculative indexes on tiny fixture tables.
+
 ## Local Reset, Seed, and Verification
 
 For local development only, run:

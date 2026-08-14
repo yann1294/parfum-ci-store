@@ -49,7 +49,10 @@ export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const product = await getActiveProductBySlug(slug);
   if (!product) notFound();
-  const [related, settings] = await Promise.all([listRelatedProducts(product, 4), getPublicStoreSettings()]);
+  const [related, settings] = await Promise.all([
+    listRelatedProducts(product, 4),
+    getPublicStoreSettings(),
+  ]);
   const minPrice = Math.min(...product.variants.map((variant) => variant.priceXof));
   const jsonLd = {
     "@context": "https://schema.org",
@@ -75,11 +78,12 @@ export default async function ProductPage({ params }: Props) {
   return (
     <PageContainer className="py-10">
       <nav aria-label="Fil d'Ariane" className="mb-6 text-sm text-muted-foreground">
-        <Link href="/catalogue">Catalogue</Link> / <span className="text-foreground">{product.name}</span>
+        <Link href="/catalogue">Catalogue</Link> /{" "}
+        <span className="text-foreground">{product.name}</span>
       </nav>
       <ProductDetailClient product={product} whatsappNumber={settings.whatsappNumber} />
       <section className="mt-12 grid gap-6">
-        <SectionHeading eyebrow="Notes" title="Composition olfactive" />
+        <SectionHeading as="h2" eyebrow="Notes" title="Composition olfactive" />
         <div className="grid gap-4 md:grid-cols-3">
           <NoteBlock title="Notes de tête" notes={product.topNotes} />
           <NoteBlock title="Notes de coeur" notes={product.heartNotes} />
@@ -88,17 +92,25 @@ export default async function ProductPage({ params }: Props) {
       </section>
       <section className="mt-12 rounded-lg border bg-surface p-5">
         <h2 className="font-heading text-3xl">Livraison et paiement</h2>
-        <p className="mt-3 text-sm text-muted-foreground">Les frais sont calculés selon la méthode et la zone choisies au moment de la commande.</p>
-        <p className="mt-2 text-sm text-muted-foreground">Les modes de paiement disponibles et leurs instructions sont affichés au paiement.</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Les frais sont calculés selon la méthode et la zone choisies au moment de la commande.
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Les modes de paiement disponibles et leurs instructions sont affichés au paiement.
+        </p>
       </section>
       <section className="mt-12 grid gap-6">
-        <SectionHeading eyebrow="À découvrir" title="Parfums associés" />
+        <SectionHeading as="h2" eyebrow="À découvrir" title="Parfums associés" />
         {related.length > 0 ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {related.map((item) => <ProductCard key={item.id} product={item} />)}
+            {related.map((item) => (
+              <ProductCard key={item.id} product={item} />
+            ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Aucune recommandation disponible pour le moment.</p>
+          <p className="text-sm text-muted-foreground">
+            Aucune recommandation disponible pour le moment.
+          </p>
         )}
       </section>
       <script
@@ -114,7 +126,9 @@ function NoteBlock({ title, notes }: { title: string; notes: string[] }) {
   return (
     <div className="rounded-lg border bg-surface p-4">
       <h2 className="font-medium">{title}</h2>
-      <p className="mt-2 text-sm text-muted-foreground">{notes.length > 0 ? notes.join(", ") : "Non renseignées"}</p>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {notes.length > 0 ? notes.join(", ") : "Non renseignées"}
+      </p>
     </div>
   );
 }

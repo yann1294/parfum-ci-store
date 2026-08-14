@@ -81,6 +81,16 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - Top products means units converted to `SOLD` in the immutable inventory ledger, grouped using order-item product snapshots.
 - Dashboard cards deep-link into existing admin workflows; the dashboard does not mutate orders, payments, stock, messages or notifications.
 
+## Phase 16 MVP Hardening
+
+- Phase 16 adds no business feature. It preserves the completed cart, order, inventory, payment, notification, message, settings, delivery and dashboard contracts.
+- Public JSON endpoints reject unsupported media types and stop reading once their route-specific byte limit is exceeded.
+- Authentication redirects use validated internal paths and the configured canonical site URL; request `Host`/origin values never choose an OAuth redirect destination.
+- Application responses include a practical CSP and defensive browser headers. Production additionally emits HSTS; development alone permits `unsafe-eval` for framework tooling.
+- Browser-facing database roles receive no direct destructive privileges on transactional or sensitive tables. Manual notification retries use one authorized, locked, audited database operation.
+- The representative public and admin surfaces provide one meaningful heading, keyboard-visible validation/focus behavior, responsive layouts, and serious/critical automated accessibility checks on desktop and mobile.
+- Rate-limit identifiers are one-way hashed before process-local storage. A distributed production limiter remains an explicit deployment requirement for multi-instance enforcement.
+
 ## Non-Goals for MVP
 
 - Stripe or online card processing

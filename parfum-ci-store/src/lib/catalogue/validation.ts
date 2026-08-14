@@ -10,8 +10,12 @@ import { normalizeSlugSource } from "@/lib/catalogue/slug";
 
 const trimmedString = z.string().trim();
 const nonEmptyString = trimmedString.min(1);
-const optionalText = trimmedString.transform((value) => value || null).nullable().optional();
-const uuid = z.uuid();
+const optionalText = trimmedString
+  .transform((value) => value || null)
+  .nullable()
+  .optional();
+export const catalogueEntityIdSchema = z.uuid();
+const uuid = catalogueEntityIdSchema;
 const xofAmount = z.number().int().min(0);
 
 const slug = z
@@ -103,10 +107,7 @@ export const createVariantSchema = z
   })
   .strict();
 
-export const updateVariantSchema = createVariantSchema
-  .omit({ productId: true })
-  .partial()
-  .strict();
+export const updateVariantSchema = createVariantSchema.omit({ productId: true }).partial().strict();
 
 export const prepareImageUploadSchema = z
   .object({
@@ -139,7 +140,12 @@ export const updateImageMetadataSchema = z
 export const catalogueQuerySchema = z
   .object({
     page: z.number().int().min(1).default(1),
-    pageSize: z.number().int().min(1).max(MAX_CATALOGUE_PAGE_SIZE).default(DEFAULT_CATALOGUE_PAGE_SIZE),
+    pageSize: z
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_CATALOGUE_PAGE_SIZE)
+      .default(DEFAULT_CATALOGUE_PAGE_SIZE),
     search: trimmedString.max(120).optional(),
     brandSlug: slug.optional(),
     categorySlug: slug.optional(),

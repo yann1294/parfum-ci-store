@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { readBoundedJson } from "@/lib/http/read-bounded-json";
 import { InMemoryCheckoutRateLimiter } from "@/lib/orders/rate-limit";
+import { getRequestIp, hashRateLimitKey } from "@/lib/security/rate-limit-key";
 import {
   createWhatsAppOrderIntent,
   WHATSAPP_INTENT_MAX_BODY_BYTES,
@@ -20,7 +22,11 @@ function noStore(status = 200) {
 }
 
 function safeError(
-  code: "WHATSAPP_INTENT_INVALID_REQUEST" | "WHATSAPP_INTENT_CART_NOT_READY" | "WHATSAPP_INTENT_VALIDATION_FAILED" | "WHATSAPP_INTENT_RATE_LIMITED",
+  code:
+    | "WHATSAPP_INTENT_INVALID_REQUEST"
+    | "WHATSAPP_INTENT_CART_NOT_READY"
+    | "WHATSAPP_INTENT_VALIDATION_FAILED"
+    | "WHATSAPP_INTENT_RATE_LIMITED",
   status = 400,
   retryAfterSeconds?: number,
 ) {
@@ -47,30 +53,15 @@ function safeError(
   );
 }
 
-async function readBoundedJson(request: Request) {
-  const contentType = request.headers.get("content-type") ?? "";
-  if (!contentType.toLowerCase().includes("application/json")) throw new Error("INVALID");
-
-  const contentLength = Number.parseInt(request.headers.get("content-length") ?? "0", 10);
-  if (Number.isFinite(contentLength) && contentLength > WHATSAPP_INTENT_MAX_BODY_BYTES) throw new Error("INVALID");
-
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > WHATSAPP_INTENT_MAX_BODY_BYTES) throw new Error("INVALID");
-  return JSON.parse(raw) as unknown;
-}
-
 function rateLimitKey(request: Request, intentKey: string) {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const realIp = request.headers.get("x-real-ip")?.trim();
-  const ip = forwardedFor || realIp || "unknown";
-  return `whatsapp-intent:${ip}:${intentKey.slice(0, 48)}`.slice(0, 240);
+  return hashRateLimitKey("whatsapp-intent", `${getRequestIp(request)}:${intentKey}`);
 }
 
 export async function POST(request: Request) {
   let rawBody: unknown;
 
   try {
-    rawBody = await readBoundedJson(request);
+    rawBody = await readBoundedJson(request, WHATSAPP_INTENT_MAX_BODY_BYTES);
   } catch {
     return safeError("WHATSAPP_INTENT_INVALID_REQUEST", 400);
   }
@@ -85,7 +76,8 @@ export async function POST(request: Request) {
   await whatsappIntentRateLimiter.recordAttempt(rateLimitKey(request, parsed.data.intentKey));
 
   const result = await createWhatsAppOrderIntent(parsed.data);
-  if (!result.ok) return safeError(result.code, result.code === "WHATSAPP_INTENT_CART_NOT_READY" ? 409 : 400);
+  if (!result.ok)
+    return safeError(result.code, result.code === "WHATSAPP_INTENT_CART_NOT_READY" ? 409 : 400);
 
   return NextResponse.json(
     {

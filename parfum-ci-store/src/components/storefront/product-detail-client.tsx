@@ -18,10 +18,18 @@ function availabilityLabel(status: PublicVariantDto["availabilityStatus"]) {
   return publicAvailabilityLabel(status);
 }
 
-export function ProductDetailClient({ product, whatsappNumber }: { product: PublicProductDto; whatsappNumber?: string | null }) {
-  const initialVariant = product.variants.find((variant) => variant.availableQuantity > 0) ?? product.variants[0];
+export function ProductDetailClient({
+  product,
+  whatsappNumber,
+}: {
+  product: PublicProductDto;
+  whatsappNumber?: string | null;
+}) {
+  const initialVariant =
+    product.variants.find((variant) => variant.availableQuantity > 0) ?? product.variants[0];
   const [variantId, setVariantId] = useState(initialVariant?.id ?? "");
-  const selectedVariant = product.variants.find((variant) => variant.id === variantId) ?? initialVariant;
+  const selectedVariant =
+    product.variants.find((variant) => variant.id === variantId) ?? initialVariant;
   const [quantity, setQuantity] = useState(1);
   const [imageId, setImageId] = useState(product.images[0]?.id ?? "");
   const selectedImage = product.images.find((image) => image.id === imageId) ?? product.images[0];
@@ -49,7 +57,9 @@ export function ProductDetailClient({ product, whatsappNumber }: { product: Publ
   function updateVariant(nextVariantId: string) {
     const nextVariant = product.variants.find((variant) => variant.id === nextVariantId);
     setVariantId(nextVariantId);
-    setQuantity((current) => Math.max(1, Math.min(current, Math.max(nextVariant?.availableQuantity ?? 1, 1))));
+    setQuantity((current) =>
+      Math.max(1, Math.min(current, Math.max(nextVariant?.availableQuantity ?? 1, 1))),
+    );
   }
 
   function addToCart() {
@@ -75,7 +85,7 @@ export function ProductDetailClient({ product, whatsappNumber }: { product: Publ
               alt={selectedImage.altText}
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
-              priority
+              loading="eager"
               className="object-cover"
             />
           ) : null}
@@ -103,7 +113,9 @@ export function ProductDetailClient({ product, whatsappNumber }: { product: Publ
         <div>
           <p className="text-sm text-muted-foreground">{product.brand?.name ?? "Parfum CI"}</p>
           <h1 className="font-heading text-5xl font-semibold">{product.name}</h1>
-          <p className="mt-4 text-muted-foreground">{product.shortDescription ?? product.description}</p>
+          <p className="mt-4 text-muted-foreground">
+            {product.shortDescription ?? product.description}
+          </p>
         </div>
 
         <dl className="grid grid-cols-2 gap-4 rounded-lg border bg-surface p-4 text-sm">
@@ -129,7 +141,8 @@ export function ProductDetailClient({ product, whatsappNumber }: { product: Publ
           >
             {product.variants.map((variant) => (
               <option key={variant.id} value={variant.id}>
-                {variant.sizeMl} ml · {variant.concentration ?? "Parfum"} · {availabilityLabel(variant.availabilityStatus)}
+                {variant.sizeMl} ml · {variant.concentration ?? "Parfum"} ·{" "}
+                {availabilityLabel(variant.availabilityStatus)}
               </option>
             ))}
           </select>
@@ -137,13 +150,21 @@ export function ProductDetailClient({ product, whatsappNumber }: { product: Publ
 
         {selectedVariant ? (
           <div className="grid gap-2">
-            <p className="font-heading text-4xl font-semibold">{formatXof(selectedVariant.priceXof)}</p>
-            {selectedVariant.compareAtPriceXof && selectedVariant.compareAtPriceXof > selectedVariant.priceXof ? (
+            <p className="font-heading text-4xl font-semibold">
+              {formatXof(selectedVariant.priceXof)}
+            </p>
+            {selectedVariant.compareAtPriceXof &&
+            selectedVariant.compareAtPriceXof > selectedVariant.priceXof ? (
               <p className="text-sm text-muted-foreground line-through">
                 {formatXof(selectedVariant.compareAtPriceXof)}
               </p>
             ) : null}
-            <Badge className="w-fit" variant={selectedVariant.availabilityStatus === "OUT_OF_STOCK" ? "destructive" : "secondary"}>
+            <Badge
+              className="w-fit"
+              variant={
+                selectedVariant.availabilityStatus === "OUT_OF_STOCK" ? "destructive" : "secondary"
+              }
+            >
               {availabilityLabel(selectedVariant.availabilityStatus)}
             </Badge>
           </div>
@@ -158,7 +179,15 @@ export function ProductDetailClient({ product, whatsappNumber }: { product: Publ
               max={Math.max(availableMax, 1)}
               value={quantity}
               onChange={(event) =>
-                setQuantity(Math.max(1, Math.min(Number.parseInt(event.currentTarget.value, 10) || 1, Math.max(availableMax, 1))))
+                setQuantity(
+                  Math.max(
+                    1,
+                    Math.min(
+                      Number.parseInt(event.currentTarget.value, 10) || 1,
+                      Math.max(availableMax, 1),
+                    ),
+                  ),
+                )
               }
               disabled={!canAdd}
               className="h-11 w-28 rounded-lg border border-input bg-background px-3"
@@ -169,7 +198,12 @@ export function ProductDetailClient({ product, whatsappNumber }: { product: Publ
               Ajouter au panier
             </Button>
             {whatsappUrl ? (
-              <a href={whatsappUrl} className={buttonVariants({ variant: "outline" })} target="_blank" rel="noopener noreferrer">
+              <a
+                href={whatsappUrl}
+                className={buttonVariants({ variant: "outline" })}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Demander sur WhatsApp
               </a>
             ) : null}

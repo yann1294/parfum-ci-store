@@ -51,6 +51,7 @@ const prefix = `E2E-P11-${Date.now()}`;
 const createdProductIds: string[] = [];
 const createdVariantIds: string[] = [];
 const createdOrderIds: string[] = [];
+const createdNotificationIds: string[] = [];
 let phoneCounter = 10000000;
 
 function requiredEnv(name: string) {
@@ -536,6 +537,13 @@ async function login(page: Page, actor: StaffActor) {
 }
 
 async function cleanup(supabase: SupabaseClient) {
+  if (createdNotificationIds.length > 0) {
+    await supabase
+      .from("notification_attempts")
+      .delete()
+      .in("notification_id", createdNotificationIds);
+    await supabase.from("notifications").delete().in("id", createdNotificationIds);
+  }
   if (createdOrderIds.length > 0) {
     await supabase
       .from("order_internal_notes" as never)
@@ -669,6 +677,100 @@ test.describe("Phase 11 order management real database verification", () => {
         false,
       );
     }
+  });
+
+  test("two simultaneous orders competing for the final unit reserve exactly once", async () => {
+    const catalogue = await createCatalogueFixture(supabase, 1);
+    const makeRequest = (suffix: string) => {
+      const payload = {
+        idempotencyKey: `phase16-final-unit-${suffix}-${randomUUID()}-${randomUUID()}`,
+        customer: {
+          fullName: `${prefix} Final Unit ${suffix}`,
+          phone: `+22507000016${suffix.padStart(2, "0")}`,
+          city: "Abidjan",
+          commune: "Cocody",
+        },
+        deliveryMethod: "HOME_DELIVERY",
+        paymentMethod: "CASH_ON_DELIVERY",
+        lines: [{ productId: catalogue.productId, variantId: catalogue.variantId, quantity: 1 }],
+      };
+      return { ...payload, requestFingerprint: orderFingerprint(payload) };
+    };
+
+    const [first, second] = await Promise.all([
+      supabase.rpc("create_guest_order_server" as never, { request: makeRequest("01") } as never),
+      supabase.rpc("create_guest_order_server" as never, { request: makeRequest("02") } as never),
+    ]);
+    const results = [first, second];
+    const successes = results.filter((result) => !result.error && result.data);
+    const failures = results.filter((result) => result.error);
+    expect(successes).toHaveLength(1);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]?.error?.message).toContain("ORDER_INSUFFICIENT_STOCK");
+
+    const confirmation = successes[0]?.data as unknown as { orderId: string };
+    createdOrderIds.push(confirmation.orderId);
+    const state = await variantState(supabase, catalogue.variantId);
+    expect(state).toMatchObject({ stockOnHand: 1, reservedQuantity: 1, availableQuantity: 0 });
+    expect(await ledgerCount(supabase, confirmation.orderId, "RESERVED")).toBe(1);
+  });
+
+  test("concurrent notification workers never claim the same notification", async () => {
+    const firstId = randomUUID();
+    const secondId = randomUUID();
+    createdNotificationIds.push(firstId, secondId);
+    const { error: insertError } = await supabase.from("notifications").insert([
+      {
+        id: firstId,
+        channel: "EMAIL",
+        status: "PENDING",
+        recipient: "phase16-claim-one@example.test",
+        subject: "Phase 16 claim one",
+        body: "Controlled test notification",
+        template_key: "phase16_claim_test",
+        scheduled_at: "1900-01-01T00:00:00.000Z",
+        next_attempt_at: "1900-01-01T00:00:00.000Z",
+      },
+      {
+        id: secondId,
+        channel: "EMAIL",
+        status: "PENDING",
+        recipient: "phase16-claim-two@example.test",
+        subject: "Phase 16 claim two",
+        body: "Controlled test notification",
+        template_key: "phase16_claim_test",
+        scheduled_at: "1900-01-01T00:00:00.001Z",
+        next_attempt_at: "1900-01-01T00:00:00.001Z",
+      },
+    ]);
+    expect(insertError).toBeNull();
+
+    const [firstClaim, secondClaim] = await Promise.all([
+      supabase.rpc(
+        "claim_notifications_server" as never,
+        {
+          batch_limit: 1,
+          worker_id: "phase16-worker-one",
+          stale_after_seconds: 900,
+        } as never,
+      ),
+      supabase.rpc(
+        "claim_notifications_server" as never,
+        {
+          batch_limit: 1,
+          worker_id: "phase16-worker-two",
+          stale_after_seconds: 900,
+        } as never,
+      ),
+    ]);
+    expect(firstClaim.error).toBeNull();
+    expect(secondClaim.error).toBeNull();
+    const claimedIds = [firstClaim.data, secondClaim.data].flatMap((claim) => {
+      const rows = (claim as unknown as { notifications: Array<{ id: string }> }).notifications;
+      return rows.map((row) => row.id);
+    });
+    expect(claimedIds.sort()).toEqual([firstId, secondId].sort());
+    expect(new Set(claimedIds).size).toBe(2);
   });
 
   test("cancellation releases reservations exactly once", async () => {

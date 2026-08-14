@@ -15,13 +15,22 @@ export function productPriceLabel(product: PublicProductDto) {
   return min === max ? formatXof(min) : `${formatXof(min)} - ${formatXof(max)}`;
 }
 
-export function ProductCard({ product, priority = false }: { product: PublicProductDto; priority?: boolean }) {
+export function ProductCard({
+  product,
+  priority = false,
+}: {
+  product: PublicProductDto;
+  priority?: boolean;
+}) {
   const image = product.images[0];
   const availability = getPublicProductAvailabilityLabel(product);
 
   return (
     <Card className="overflow-hidden p-0">
-      <Link href={`/parfums/${product.slug}`} className="block focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+      <Link
+        href={`/parfums/${product.slug}`}
+        className="block focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
         <div className="relative aspect-[4/5] bg-surface-muted">
           {image?.publicUrl ? (
             <Image
@@ -30,19 +39,23 @@ export function ProductCard({ product, priority = false }: { product: PublicProd
               fill
               sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
               className="object-cover"
-              priority={priority}
+              loading={priority ? "eager" : "lazy"}
             />
           ) : null}
         </div>
         <CardContent className="grid gap-2 p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm text-muted-foreground">{product.brand?.name ?? "Maison parfum"}</p>
+              <p className="text-sm text-muted-foreground">
+                {product.brand?.name ?? "Maison parfum"}
+              </p>
               <h2 className="font-heading text-2xl font-semibold">{product.name}</h2>
             </div>
             {product.featured ? <Badge variant="secondary">Sélection</Badge> : null}
           </div>
-          <p className="text-sm text-muted-foreground">{product.fragranceFamily ?? "Famille olfactive à découvrir"}</p>
+          <p className="text-sm text-muted-foreground">
+            {product.fragranceFamily ?? "Famille olfactive à découvrir"}
+          </p>
           <p className="font-medium">{productPriceLabel(product)}</p>
           <p className="text-sm text-muted-foreground">{availability}</p>
         </CardContent>

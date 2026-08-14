@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { auditCatalogueEvent } from "@/lib/audit/catalogue";
 import { requireCatalogueManager } from "@/lib/catalogue/authorization";
 import {
+  catalogueEntityIdSchema,
   createProductSchema,
   normalizePublicCatalogueQuery,
   updateProductSchema,
@@ -64,7 +65,8 @@ function mapPublicViewProduct(
     baseNotes: product.base_notes ?? [],
     genderCategory: product.gender_category,
     featured: Boolean(product.featured),
-    brand: product.brand_id && product.brand_name && product.brand_slug
+    brand:
+      product.brand_id && product.brand_name && product.brand_slug
       ? {
           id: product.brand_id,
           name: product.brand_name,
@@ -72,7 +74,8 @@ function mapPublicViewProduct(
           description: null,
         }
       : null,
-    category: product.category_id && product.category_name && product.category_slug
+    category:
+      product.category_id && product.category_name && product.category_slug
       ? {
           id: product.category_id,
           parentId: null,
@@ -114,12 +117,17 @@ function mapPublicViewProduct(
         publicUrl: getPublicProductImageUrl(image.object_path as string),
       }))
       .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.sortOrder - b.sortOrder),
-  } as PublicProductDto & { images: Array<PublicProductDto["images"][number] & { publicUrl: string }> };
+  } as PublicProductDto & {
+    images: Array<PublicProductDto["images"][number] & { publicUrl: string }>;
+  };
 }
 
 async function loadPublicProductRelations(productIds: string[]) {
   if (productIds.length === 0) {
-    return { variants: new Map<string, PublicVariantViewRow[]>(), images: new Map<string, PublicImageViewRow[]>() };
+    return {
+      variants: new Map<string, PublicVariantViewRow[]>(),
+      images: new Map<string, PublicImageViewRow[]>(),
+    };
   }
 
   const supabase = await createSupabaseServerClient();
@@ -133,7 +141,9 @@ async function loadPublicProductRelations(productIds: string[]) {
         .in("product_id", productIds),
       supabase
         .from("public_catalogue_images")
-        .select("id, product_id, bucket_id, object_path, alt_text, sort_order, is_primary, mime_type, byte_size, width, height, created_at")
+        .select(
+          "id, product_id, bucket_id, object_path, alt_text, sort_order, is_primary, mime_type, byte_size, width, height, created_at",
+        )
         .in("product_id", productIds),
     ]);
 
@@ -170,7 +180,9 @@ export type PublicCataloguePage = {
   rangeEnd: number;
 };
 
-export async function listActiveProductsPage(input: Partial<CatalogueQueryInput> = {}): Promise<PublicCataloguePage> {
+export async function listActiveProductsPage(
+  input: Partial<CatalogueQueryInput> = {},
+): Promise<PublicCataloguePage> {
   const filters = normalizePublicCatalogueQuery(input);
   const supabase = await createSupabaseServerClient();
   let query = supabase
@@ -227,7 +239,9 @@ export async function listActiveProductsPage(input: Partial<CatalogueQueryInput>
   const ids = (data ?? []).flatMap((row) => (row.id ? [row.id] : []));
   const { variants, images } = await loadPublicProductRelations(ids);
   let products = (data ?? [])
-    .map((row) => mapPublicViewProduct(row, variants.get(row.id ?? "") ?? [], images.get(row.id ?? "") ?? []))
+    .map((row) =>
+      mapPublicViewProduct(row, variants.get(row.id ?? "") ?? [], images.get(row.id ?? "") ?? []),
+    )
     .filter((product) => product.variants.length > 0 && product.images.length > 0);
 
   if (filters.concentration) {
@@ -236,7 +250,9 @@ export async function listActiveProductsPage(input: Partial<CatalogueQueryInput>
     );
   }
   if (filters.sizeMl) {
-    products = products.filter((product) => product.variants.some((variant) => variant.sizeMl === filters.sizeMl));
+    products = products.filter((product) =>
+      product.variants.some((variant) => variant.sizeMl === filters.sizeMl),
+    );
   }
   if (filters.availability) {
     products = products.filter((product) =>
@@ -259,13 +275,16 @@ export async function listActiveProductsPage(input: Partial<CatalogueQueryInput>
     total: pagination.total,
     totalPages: pagination.totalPages,
     rangeStart: products.length === 0 ? 0 : pagination.rangeStart,
-    rangeEnd: products.length === 0 ? 0 : Math.min(pagination.rangeStart + products.length - 1, pagination.rangeEnd),
+    rangeEnd:
+      products.length === 0
+        ? 0
+        : Math.min(pagination.rangeStart + products.length - 1, pagination.rangeEnd),
   };
 }
 
 export async function listFeaturedProducts(limit = 8) {
-  return listActiveProducts({ page: 1, pageSize: Math.min(limit, 8), sort: "newest" }).then((products) =>
-    products.filter((product) => product.featured),
+  return listActiveProducts({ page: 1, pageSize: Math.min(limit, 8), sort: "newest" }).then(
+    (products) => products.filter((product) => product.featured),
   );
 }
 
@@ -405,6 +424,7 @@ export async function createProduct(input: CreateProductInput) {
 
 export async function updateProduct(id: string, input: UpdateProductInput) {
   const staff = await requireCatalogueManager();
+  const productId = catalogueEntityIdSchema.parse(id);
   const parsed = updateProductSchema.parse(input);
   const update: Database["public"]["Tables"]["products"]["Update"] = {};
 
@@ -428,7 +448,7 @@ export async function updateProduct(id: string, input: UpdateProductInput) {
   const { data, error } = await supabase
     .from("products")
     .update(update)
-    .eq("id", id)
+    .eq("id", productId)
     .select(PRODUCT_PUBLIC_COLUMNS)
     .single();
 
@@ -445,7 +465,7 @@ export async function updateProduct(id: string, input: UpdateProductInput) {
           ? "CATALOGUE_PRODUCT_ARCHIVED"
           : "CATALOGUE_PRODUCT_UPDATED",
     resourceType: "product",
-    resourceId: id,
+    resourceId: productId,
     metadata: { changed_fields: Object.keys(update) },
   });
 

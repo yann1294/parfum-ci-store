@@ -26,7 +26,7 @@ describe("LoginForm Google OAuth", () => {
       expect(signInWithOAuth).toHaveBeenCalledWith({
         provider: "google",
         options: {
-          redirectTo: "http://localhost:3000/auth/callback?retour=%2Fadmin%2Fdesign-system",
+          redirectTo: "https://example.test/auth/callback?retour=%2Fadmin%2Fdesign-system",
         },
       });
     });
@@ -42,7 +42,7 @@ describe("LoginForm Google OAuth", () => {
       expect(signInWithOAuth).toHaveBeenCalledWith({
         provider: "google",
         options: {
-          redirectTo: "http://localhost:3000/auth/callback?retour=%2Fadmin",
+          redirectTo: "https://example.test/auth/callback?retour=%2Fadmin",
         },
       });
     });

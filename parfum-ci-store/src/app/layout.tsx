@@ -29,8 +29,17 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(base),
     title: { default: title, template: `%s | ${settings.storeName}` },
     description,
-    openGraph: { title, description, images: settings.seo.ogImageUrl ? [{ url: settings.seo.ogImageUrl }] : undefined },
-    twitter: { card: "summary_large_image", title, description, images: settings.seo.ogImageUrl ? [settings.seo.ogImageUrl] : undefined },
+    openGraph: {
+      title,
+      description,
+      images: settings.seo.ogImageUrl ? [{ url: settings.seo.ogImageUrl }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: settings.seo.ogImageUrl ? [settings.seo.ogImageUrl] : undefined,
+    },
   };
 }
 
@@ -40,7 +49,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className={`${cormorant.variable} ${manrope.variable}`}>
         <ThemeProvider
           attribute="class"

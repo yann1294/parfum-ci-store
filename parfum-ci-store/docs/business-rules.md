@@ -147,3 +147,13 @@
 - Contact-message notification delivery depends on a persisted contact-message flow. Phase 13 provides that flow and writes notification intents; external provider delivery remains asynchronous through Phase 12.
 - Phase 13 contact submissions require a name, subject, message, explicit contact-response consent for website submissions, and either a valid Côte d’Ivoire phone/WhatsApp number or a valid email. Message creation is idempotent and atomic with admin notification intents; notification delivery failure cannot delete or roll back the message. Manual social/phone/email messages are staff-entered records only and do not imply platform integration.
 - Resend webhooks are excluded until official signature verification, replay protection and sanitized event storage are implemented.
+
+## Phase 16 Hardening Rules
+
+- Phase 16 does not redefine any economic or lifecycle rule. Order totals, delivery snapshots, inventory effects, payment history, notification state, settings revisions and dashboard revenue remain authoritative at their existing transactional boundaries.
+- Public JSON actions require a JSON media type, enforce a route-specific byte ceiling while streaming, and reject unexpected fields through their existing strict schemas.
+- Rate-limit keys must not retain raw phone numbers, email addresses or caller identifiers. The process-local adapter stores namespace-scoped SHA-256 digests; multi-instance production requires a shared enforcement layer.
+- OAuth and login return navigation may use only validated internal paths. Absolute callback URLs are built from configured canonical application settings, not request headers.
+- Manual notification retry is valid only from `FAILED`, is restricted to active OWNER/ADMIN staff, and atomically returns the row to `PENDING` while recording one bounded audit event.
+- Every primary customer form must expose visible labels, connected field errors and keyboard-reachable summary feedback. A submit control must remain reachable when client validation is needed to reveal errors.
+- Public and admin pages must expose one meaningful `h1`; reusable section headings use subordinate levels. Dialogs and sheets must restore focus and release scroll lock when dismissed or navigated away.

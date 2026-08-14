@@ -7,6 +7,7 @@ import { toPublicCategoryDto } from "@/lib/catalogue/mappers";
 import type { PublicCategoryDto } from "@/lib/catalogue/types";
 import {
   createCategorySchema,
+  catalogueEntityIdSchema,
   updateCategorySchema,
   type CreateCategoryInput,
   type UpdateCategoryInput,
@@ -14,7 +15,8 @@ import {
 import { generateProductSlug } from "@/lib/catalogue/slug";
 import type { Database } from "@/types/database.types";
 
-const CATEGORY_PUBLIC_COLUMNS = "id, parent_id, name, slug, description, active, sort_order" as const;
+const CATEGORY_PUBLIC_COLUMNS =
+  "id, parent_id, name, slug, description, active, sort_order" as const;
 
 export async function listActiveCategories(): Promise<PublicCategoryDto[]> {
   const supabase = await createSupabaseServerClient();
@@ -58,7 +60,9 @@ export async function createCategory(input: CreateCategoryInput) {
     action: "CATALOGUE_CATEGORY_CREATED",
     resourceType: "category",
     resourceId: data.id,
-    metadata: { changed_fields: ["parent_id", "name", "slug", "description", "active", "sort_order"] },
+    metadata: {
+      changed_fields: ["parent_id", "name", "slug", "description", "active", "sort_order"],
+    },
   });
 
   return toPublicCategoryDto(data);
@@ -66,6 +70,7 @@ export async function createCategory(input: CreateCategoryInput) {
 
 export async function updateCategory(id: string, input: UpdateCategoryInput) {
   const staff = await requireCatalogueManager();
+  const categoryId = catalogueEntityIdSchema.parse(id);
   const parsed = updateCategorySchema.parse(input);
   const update: Database["public"]["Tables"]["categories"]["Update"] = {};
 
@@ -80,7 +85,7 @@ export async function updateCategory(id: string, input: UpdateCategoryInput) {
   const { data, error } = await supabase
     .from("categories")
     .update(update)
-    .eq("id", id)
+    .eq("id", categoryId)
     .select("id, parent_id, name, slug, description")
     .single();
 
@@ -92,7 +97,7 @@ export async function updateCategory(id: string, input: UpdateCategoryInput) {
     actorId: staff.id,
     action: "CATALOGUE_CATEGORY_UPDATED",
     resourceType: "category",
-    resourceId: id,
+    resourceId: categoryId,
     metadata: { changed_fields: Object.keys(update) },
   });
 

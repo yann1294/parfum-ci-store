@@ -208,3 +208,20 @@ Google OAuth is configured in two places:
 Do not configure the application to trust Google email domains, Google metadata, or Supabase Auth metadata for staff authorization. The only authorization source is the current `public.profiles` row after server-side identity verification.
 
 For local Supabase CLI provider testing, `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET` can be set outside source control. Production Google client ID and client secret belong in the Supabase Dashboard provider settings, not in browser-exposed variables.
+
+## Phase 16 Hardening Controls
+
+- `src/lib/http/read-bounded-json.ts` is the shared server-only body reader for public JSON routes. It validates JSON media types, rejects malformed UTF-8/JSON and stops reading at the configured byte limit instead of buffering an unbounded request first.
+- Rate-limit material is normalized and SHA-256 hashed before entering the process-local adapter. This prevents raw phone/email/IP values from becoming in-memory keys or diagnostic material. It does not make the adapter distributed; production must add a shared edge or durable limiter for reliable multi-instance enforcement.
+- `/auth/callback` uses `NEXT_PUBLIC_SITE_URL` as its canonical redirect origin after safe-path validation. Untrusted `Host`, forwarded-host and request-origin values do not select the OAuth redirect destination.
+- Application headers include CSP, `nosniff`, strict-origin referrer policy, a restrictive permissions policy and clickjacking denial. Production adds HSTS and excludes `unsafe-eval`; development alone permits `unsafe-eval` for Next.js tooling. The current static CSP retains `unsafe-inline` for scripts/styles because moving the entire application to request nonces is disproportionate for this MVP; inline JSON-LD escapes `<` and customer data is never injected as HTML.
+- The Phase 16 migration removes destructive/nonessential browser-role grants and makes notification retry a locked, active-staff-authorized, service-role-only operation. RLS remains required on every exposed table; application authentication never substitutes for database policy.
+- Cron authorization remains POST plus bearer secret, returns `no-store` safe counts only, and maps unexpected processor failures to a sanitized response. Provider errors, database details and customer payloads are never returned.
+- Production logs use stable event codes and bounded database codes only. They must not include raw request bodies, customer contacts, payment references, cookies, authorization headers, provider payloads or secret values.
+
+### Production security gates
+
+- Enable Supabase leaked-password protection before launch; the linked advisor currently reports it disabled.
+- Apply and verify `20260814160000_phase16_security_hardening.sql` before deployment.
+- Run linked Supabase lint/advisors after migration and classify intentional security-definer public projections separately from real privilege findings.
+- Configure a distributed rate-limit/WAF layer for public order, tracking, contact and WhatsApp-intent endpoints.

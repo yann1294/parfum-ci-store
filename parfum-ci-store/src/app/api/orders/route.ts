@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { readBoundedJson } from "@/lib/http/read-bounded-json";
 import {
   GUEST_ORDER_MAX_BODY_BYTES,
   guestOrderRequestSchema,
@@ -17,7 +18,11 @@ function noStore(status = 200) {
   return { status, headers: { "Cache-Control": "no-store" } };
 }
 
-function jsonError(code: Parameters<typeof publicOrderError>[0], status = 400, retryAfterSeconds?: number) {
+function jsonError(
+  code: Parameters<typeof publicOrderError>[0],
+  status = 400,
+  retryAfterSeconds?: number,
+) {
   const error = publicOrderError(code, status);
   return NextResponse.json(error.body, {
     ...noStore(error.status),
@@ -28,30 +33,11 @@ function jsonError(code: Parameters<typeof publicOrderError>[0], status = 400, r
   });
 }
 
-async function readBoundedJson(request: Request) {
-  const contentType = request.headers.get("content-type") ?? "";
-  if (!contentType.toLowerCase().includes("application/json")) {
-    throw new Error("ORDER_INVALID_REQUEST");
-  }
-
-  const contentLength = Number.parseInt(request.headers.get("content-length") ?? "0", 10);
-  if (Number.isFinite(contentLength) && contentLength > GUEST_ORDER_MAX_BODY_BYTES) {
-    throw new Error("ORDER_INVALID_REQUEST");
-  }
-
-  const raw = await request.text();
-  if (new TextEncoder().encode(raw).byteLength > GUEST_ORDER_MAX_BODY_BYTES) {
-    throw new Error("ORDER_INVALID_REQUEST");
-  }
-
-  return JSON.parse(raw) as unknown;
-}
-
 export async function POST(request: Request) {
   let rawBody: unknown;
 
   try {
-    rawBody = await readBoundedJson(request);
+    rawBody = await readBoundedJson(request, GUEST_ORDER_MAX_BODY_BYTES);
   } catch {
     return jsonError("ORDER_INVALID_REQUEST", 400);
   }
@@ -80,7 +66,9 @@ export async function POST(request: Request) {
   try {
     const confirmation = await createGuestOrder(parsed.data);
     const variantIds = parsed.data.lines.map((line) => line.variantId);
-    evaluateLowStockForVariants(variantIds).catch(() => console.error("LOW_STOCK_POST_ORDER_FAILED"));
+    evaluateLowStockForVariants(variantIds).catch(() =>
+      console.error("LOW_STOCK_POST_ORDER_FAILED"),
+    );
     processNotifications(2).catch(() => console.error("NOTIFICATION_POST_ORDER_PROCESS_FAILED"));
     return NextResponse.json(confirmation, noStore(201));
   } catch (error) {

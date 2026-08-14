@@ -180,3 +180,13 @@ Use semantic tokens instead:
 <Button className="bg-primary text-primary-foreground">Action</Button>
 <a className="text-foreground hover:text-muted-foreground">Lien</a>
 ```
+
+## Phase 16 Accessibility Baseline
+
+- Each route has one meaningful `h1`; section titles use logical subordinate heading levels rather than visual size alone.
+- Forms use visible associated labels, `required`, `aria-invalid`, `aria-describedby`, a section-level error summary and focus movement to the first invalid field where validation occurs after submit.
+- Pending/success/error feedback uses an appropriate live region or focusable status in addition to visual toast feedback.
+- Dialog and sheet close controls use French accessible names, support Escape, trap focus while open, return focus to the trigger and release body scroll lock.
+- Visible focus rings remain on links, buttons, controls and composite widgets. Color never replaces text labels for stock, order, payment, notification, validation or chart state.
+- Representative desktop and Pixel 7 routes are scanned with axe for WCAG 2 A/AA and 2.1 A/AA serious/critical violations. Automated scans supplement rather than replace keyboard, contrast, zoom and screen-reader review.
+- Storefront LCP candidates use eager loading selectively. Below-fold product images remain lazy, retain stable aspect ratios and declare responsive `sizes`.

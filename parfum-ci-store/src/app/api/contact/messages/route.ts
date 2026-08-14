@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 
-import { contactErrorMessage, normalizeContactMessageRequest, contactMessageRequestSchema } from "@/lib/messages/contract";
+import { BoundedJsonError, readBoundedJson } from "@/lib/http/read-bounded-json";
+import {
+  contactErrorMessage,
+  normalizeContactMessageRequest,
+  contactMessageRequestSchema,
+} from "@/lib/messages/contract";
 import { contactMessageRateLimiter, contactMessageRateLimitKey } from "@/lib/messages/rate-limit";
 import { createContactMessage } from "@/lib/messages/service";
 
 export const dynamic = "force-dynamic";
+const CONTACT_MESSAGE_MAX_BODY_BYTES = 12_000;
 
 function noStore(init?: ResponseInit) {
   return {
@@ -24,17 +30,16 @@ function jsonError(code: string, status: number, retryAfterSeconds?: number) {
 }
 
 export async function POST(request: Request) {
-  if (!request.headers.get("content-type")?.toLowerCase().includes("application/json")) {
-    return jsonError("MESSAGE_INVALID_REQUEST", 415);
-  }
-
-  const bodyText = await request.text();
-  if (bodyText.length > 12_000) return jsonError("MESSAGE_INVALID_REQUEST", 413);
-
   let body: unknown;
   try {
-    body = JSON.parse(bodyText);
-  } catch {
+    body = await readBoundedJson(request, CONTACT_MESSAGE_MAX_BODY_BYTES);
+  } catch (error) {
+    if (error instanceof BoundedJsonError && error.code === "UNSUPPORTED_MEDIA_TYPE") {
+      return jsonError("MESSAGE_INVALID_REQUEST", 415);
+    }
+    if (error instanceof BoundedJsonError && error.code === "PAYLOAD_TOO_LARGE") {
+      return jsonError("MESSAGE_INVALID_REQUEST", 413);
+    }
     return jsonError("MESSAGE_INVALID_REQUEST", 400);
   }
 
@@ -44,14 +49,20 @@ export async function POST(request: Request) {
   let contactKey = parsed.data.email ?? "anonymous";
   try {
     const normalized = normalizeContactMessageRequest(parsed.data);
-    contactKey = normalized.phone ?? normalized.email ?? normalized.whatsapp ?? normalized.externalHandle ?? "anonymous";
+    contactKey =
+      normalized.phone ??
+      normalized.email ??
+      normalized.whatsapp ??
+      normalized.externalHandle ??
+      "anonymous";
   } catch {
     if (parsed.data.phone || parsed.data.whatsapp) return jsonError("MESSAGE_INVALID_PHONE", 400);
   }
 
   const rateLimitKey = contactMessageRateLimitKey(request, contactKey);
   const rateLimit = await contactMessageRateLimiter.check(rateLimitKey);
-  if (!rateLimit.allowed) return jsonError("MESSAGE_RATE_LIMITED", 429, rateLimit.retryAfterSeconds);
+  if (!rateLimit.allowed)
+    return jsonError("MESSAGE_RATE_LIMITED", 429, rateLimit.retryAfterSeconds);
   await contactMessageRateLimiter.recordAttempt(rateLimitKey);
 
   const result = await createContactMessage(parsed.data);

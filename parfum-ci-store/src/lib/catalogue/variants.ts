@@ -7,6 +7,7 @@ import { toPublicVariantDto } from "@/lib/catalogue/mappers";
 import type { PublicVariantDto } from "@/lib/catalogue/types";
 import {
   createVariantSchema,
+  catalogueEntityIdSchema,
   updateVariantSchema,
   type CreateVariantInput,
   type UpdateVariantInput,
@@ -84,6 +85,7 @@ export async function createVariant(input: CreateVariantInput) {
 
 export async function updateVariant(id: string, input: UpdateVariantInput) {
   const staff = await requireCatalogueManager();
+  const variantId = catalogueEntityIdSchema.parse(id);
   const parsed = updateVariantSchema.parse(input);
   const update: Database["public"]["Tables"]["product_variants"]["Update"] = {};
 
@@ -91,7 +93,8 @@ export async function updateVariant(id: string, input: UpdateVariantInput) {
   if (parsed.sizeMl !== undefined) update.size_ml = parsed.sizeMl;
   if (parsed.concentration !== undefined) update.concentration = parsed.concentration;
   if (parsed.priceXof !== undefined) update.price_xof = parsed.priceXof;
-  if (parsed.compareAtPriceXof !== undefined) update.compare_at_price_xof = parsed.compareAtPriceXof;
+  if (parsed.compareAtPriceXof !== undefined)
+    update.compare_at_price_xof = parsed.compareAtPriceXof;
   if (parsed.costPriceXof !== undefined) update.cost_price_xof = parsed.costPriceXof;
   if (parsed.lowStockThreshold !== undefined) update.low_stock_threshold = parsed.lowStockThreshold;
   if (parsed.active !== undefined) update.active = parsed.active;
@@ -100,7 +103,7 @@ export async function updateVariant(id: string, input: UpdateVariantInput) {
   const { data, error } = await supabase
     .from("product_variants")
     .update(update)
-    .eq("id", id)
+    .eq("id", variantId)
     .select(VARIANT_PUBLIC_COLUMNS)
     .single();
 
@@ -112,7 +115,7 @@ export async function updateVariant(id: string, input: UpdateVariantInput) {
     actorId: staff.id,
     action: parsed.active === false ? "CATALOGUE_VARIANT_DEACTIVATED" : "CATALOGUE_VARIANT_UPDATED",
     resourceType: "product_variant",
-    resourceId: id,
+    resourceId: variantId,
     metadata: { changed_fields: Object.keys(update) },
   });
 

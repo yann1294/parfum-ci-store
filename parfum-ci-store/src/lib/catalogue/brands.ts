@@ -7,6 +7,7 @@ import { toPublicBrandDto } from "@/lib/catalogue/mappers";
 import type { PublicBrandDto } from "@/lib/catalogue/types";
 import {
   createBrandSchema,
+  catalogueEntityIdSchema,
   updateBrandSchema,
   type CreateBrandInput,
   type UpdateBrandInput,
@@ -66,6 +67,7 @@ export async function createBrand(input: CreateBrandInput) {
 
 export async function updateBrand(id: string, input: UpdateBrandInput) {
   const staff = await requireCatalogueManager();
+  const brandId = catalogueEntityIdSchema.parse(id);
   const parsed = updateBrandSchema.parse(input);
   const update: Database["public"]["Tables"]["brands"]["Update"] = {};
 
@@ -80,7 +82,7 @@ export async function updateBrand(id: string, input: UpdateBrandInput) {
   const { data, error } = await supabase
     .from("brands")
     .update(update)
-    .eq("id", id)
+    .eq("id", brandId)
     .select("id, name, slug, description")
     .single();
 
@@ -92,7 +94,7 @@ export async function updateBrand(id: string, input: UpdateBrandInput) {
     actorId: staff.id,
     action: "CATALOGUE_BRAND_UPDATED",
     resourceType: "brand",
-    resourceId: id,
+    resourceId: brandId,
     metadata: { changed_fields: Object.keys(update) },
   });
 

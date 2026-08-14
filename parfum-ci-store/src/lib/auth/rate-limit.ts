@@ -1,3 +1,7 @@
+import "server-only";
+
+import { hashRateLimitKey } from "@/lib/security/rate-limit-key";
+
 export type RateLimitResult = {
   allowed: boolean;
   retryAfterSeconds?: number;
@@ -87,7 +91,7 @@ export class InMemoryLoginRateLimiter implements LoginRateLimiter {
 }
 
 export function normalizeLoginRateLimitKey(identifier: string) {
-  return identifier.trim().toLowerCase().replace(/\s+/g, "");
+  return hashRateLimitKey("login", identifier.replace(/\s+/g, ""));
 }
 
 export const loginRateLimiter = new InMemoryLoginRateLimiter();

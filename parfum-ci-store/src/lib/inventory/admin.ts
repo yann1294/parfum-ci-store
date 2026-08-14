@@ -13,7 +13,13 @@ export const INVENTORY_DEFAULT_PAGE_SIZE = 20;
 export const INVENTORY_LEDGER_DEFAULT_PAGE_SIZE = 20;
 export const INVENTORY_MAX_PAGE_SIZE = 100;
 
-export const manualInventoryOperationTypes = ["INITIALIZE", "RECEIVED", "DAMAGED", "ADJUSTMENT", "RETURNED"] as const;
+export const manualInventoryOperationTypes = [
+  "INITIALIZE",
+  "RECEIVED",
+  "DAMAGED",
+  "ADJUSTMENT",
+  "RETURNED",
+] as const;
 export const inventoryAdjustmentDirections = ["INCREASE", "DECREASE"] as const;
 
 export type ManualInventoryOperationType = (typeof manualInventoryOperationTypes)[number];
@@ -23,8 +29,7 @@ export type ProductStatus = Database["public"]["Enums"]["product_status"];
 export type InventoryTransactionType = Database["public"]["Enums"]["inventory_transaction_type"];
 
 export type InventoryActionResult<T = unknown> =
-  | { ok: true; data: T }
-  | { ok: false; code: InventoryErrorCode; message: string };
+  { ok: true; data: T } | { ok: false; code: InventoryErrorCode; message: string };
 
 export type InventoryErrorCode =
   | "INVENTORY_INVALID_REQUEST"
@@ -47,20 +52,36 @@ export const inventoryAdjustmentSchema = z
     adjustmentDirection: z.enum(inventoryAdjustmentDirections).optional(),
     reason: z.string().trim().max(300).optional(),
     reference: z.string().trim().max(120).optional(),
-    idempotencyKey: z.string().trim().min(32).max(180).regex(/^[A-Za-z0-9._:-]+$/),
+    idempotencyKey: z
+      .string()
+      .trim()
+      .min(32)
+      .max(180)
+      .regex(/^[A-Za-z0-9._:-]+$/),
   })
   .strict()
   .superRefine((value, context) => {
     if (value.operationType !== "INITIALIZE" && value.quantity <= 0) {
-      context.addIssue({ code: "custom", path: ["quantity"], message: "La quantité doit être positive." });
+      context.addIssue({
+        code: "custom",
+        path: ["quantity"],
+        message: "La quantité doit être positive.",
+      });
     }
 
-    if (["INITIALIZE", "DAMAGED", "ADJUSTMENT", "RETURNED"].includes(value.operationType) && !value.reason?.trim()) {
+    if (
+      ["INITIALIZE", "DAMAGED", "ADJUSTMENT", "RETURNED"].includes(value.operationType) &&
+      !value.reason?.trim()
+    ) {
       context.addIssue({ code: "custom", path: ["reason"], message: "Le motif est requis." });
     }
 
     if (value.operationType === "ADJUSTMENT" && !value.adjustmentDirection) {
-      context.addIssue({ code: "custom", path: ["adjustmentDirection"], message: "Le sens de correction est requis." });
+      context.addIssue({
+        code: "custom",
+        path: ["adjustmentDirection"],
+        message: "Le sens de correction est requis.",
+      });
     }
   });
 
@@ -186,9 +207,11 @@ type InventoryRpcClient = {
 };
 
 type InventoryLedgerQuery = PromiseLike<{
-  data:
-    | Array<Database["public"]["Tables"]["inventory_transactions"]["Row"] & { profiles: { full_name: string } | null }>
-    | null;
+  data: Array<
+    Database["public"]["Tables"]["inventory_transactions"]["Row"] & {
+      profiles: { full_name: string } | null;
+    }
+  > | null;
   error: { message?: string } | null;
   count: number | null;
 }> & {
@@ -227,16 +250,22 @@ export function normalizeInventoryFilters(input: Record<string, unknown> = {}): 
     brandId: z.uuid().safeParse(input.brandId).success ? String(input.brandId) : undefined,
     categoryId: z.uuid().safeParse(input.categoryId).success ? String(input.categoryId) : undefined,
     active: active === "ACTIVE" || active === "INACTIVE" ? active : "ALL",
-    initialized: initialized === "INITIALIZED" || initialized === "UNINITIALIZED" ? initialized : "ALL",
+    initialized:
+      initialized === "INITIALIZED" || initialized === "UNINITIALIZED" ? initialized : "ALL",
     status:
-      status === "RESERVED" || status === "LOW_OR_OUT" || (inventoryStatuses as readonly string[]).includes(status ?? "")
+      status === "RESERVED" ||
+      status === "LOW_OR_OUT" ||
+      (inventoryStatuses as readonly string[]).includes(status ?? "")
         ? (status as InventoryFilters["status"])
         : "ALL",
     productStatus: (productStatuses as readonly string[]).includes(productStatus ?? "")
       ? (productStatus as InventoryFilters["productStatus"])
       : "ALL",
     sort:
-      sort === "sku_asc" || sort === "available_asc" || sort === "available_desc" || sort === "updated_desc"
+      sort === "sku_asc" ||
+      sort === "available_asc" ||
+      sort === "available_desc" ||
+      sort === "updated_desc"
         ? sort
         : "product_asc",
     page,
@@ -251,7 +280,8 @@ export function normalizeLedgerFilters(input: Record<string, unknown> = {}): Led
   const page = Math.max(Number.parseInt(optional(input.page) ?? "1", 10) || 1, 1);
 
   return {
-    operationType: ([
+    operationType: (
+      [
       "RECEIVED",
       "RESERVED",
       "RELEASED",
@@ -259,7 +289,8 @@ export function normalizeLedgerFilters(input: Record<string, unknown> = {}): Led
       "RETURNED",
       "DAMAGED",
       "ADJUSTMENT",
-    ] as readonly string[]).includes(operationType ?? "")
+      ] as readonly string[]
+    ).includes(operationType ?? "")
       ? (operationType as InventoryTransactionType)
       : "ALL",
     dateFrom: dateFrom && /^\d{4}-\d{2}-\d{2}$/.test(dateFrom) ? dateFrom : undefined,
@@ -300,7 +331,12 @@ function mapInventoryRow(row: AdminInventoryVariantViewRow): InventoryVariantRow
     reservedQuantity: row.reserved_quantity,
     availableQuantity,
     lowStockThreshold: row.low_stock_threshold,
-    inventoryStatus: getAvailabilityStatus(row.stock_on_hand, row.reserved_quantity, row.low_stock_threshold, stockInitialized),
+    inventoryStatus: getAvailabilityStatus(
+      row.stock_on_hand,
+      row.reserved_quantity,
+      row.low_stock_threshold,
+      stockInitialized,
+    ),
     updatedAt: row.updated_at,
     lastMovementAt: row.last_movement_at,
     lastMovementType: row.last_movement_type,
@@ -318,7 +354,9 @@ function applyInventoryFilters(query: unknown, filters: InventoryFilters) {
 
   if (filters.q) {
     const escaped = filters.q.replace(/[%,()]/g, " ");
-    next = next.or(`product_name.ilike.%${escaped}%,sku.ilike.%${escaped}%,brand_name.ilike.%${escaped}%`);
+    next = next.or(
+      `product_name.ilike.%${escaped}%,sku.ilike.%${escaped}%,brand_name.ilike.%${escaped}%`,
+    );
   }
   if (filters.brandId) next = next.eq("brand_id", filters.brandId);
   if (filters.categoryId) next = next.eq("category_id", filters.categoryId);
@@ -326,10 +364,12 @@ function applyInventoryFilters(query: unknown, filters: InventoryFilters) {
   if (filters.active === "INACTIVE") next = next.eq("variant_active", false);
   if (filters.initialized === "INITIALIZED") next = next.eq("stock_initialized", true);
   if (filters.initialized === "UNINITIALIZED") next = next.eq("stock_initialized", false);
-  if (filters.productStatus && filters.productStatus !== "ALL") next = next.eq("product_status", filters.productStatus);
+  if (filters.productStatus && filters.productStatus !== "ALL")
+    next = next.eq("product_status", filters.productStatus);
   if (filters.status && filters.status !== "ALL") {
     if (filters.status === "RESERVED") next = next.gt("reserved_quantity", 0);
-    else if (filters.status === "LOW_OR_OUT") next = next.in("inventory_status", ["LOW_STOCK", "OUT_OF_STOCK"]);
+    else if (filters.status === "LOW_OR_OUT")
+      next = next.in("inventory_status", ["LOW_STOCK", "OUT_OF_STOCK"]);
     else next = next.eq("inventory_status", filters.status);
   }
 
@@ -359,12 +399,40 @@ function applyInventorySort(query: unknown, sort: InventoryFilters["sort"]) {
   return next.order("variant_id", { ascending: true });
 }
 
-export async function listInventoryVariants(input: Record<string, unknown> = {}): Promise<PaginatedInventory<InventoryVariantRow>> {
+const ADMIN_INVENTORY_COLUMNS = [
+  "variant_id",
+  "product_id",
+  "product_name",
+  "product_slug",
+  "product_status",
+  "brand_id",
+  "brand_name",
+  "category_id",
+  "category_name",
+  "sku",
+  "size_ml",
+  "concentration",
+  "variant_active",
+  "inventory_initialized_at",
+  "stock_initialized",
+  "stock_on_hand",
+  "reserved_quantity",
+  "available_quantity",
+  "low_stock_threshold",
+  "inventory_status",
+  "updated_at",
+  "last_movement_at",
+  "last_movement_type",
+].join(", ");
+
+export async function listInventoryVariants(
+  input: Record<string, unknown> = {},
+): Promise<PaginatedInventory<InventoryVariantRow>> {
   const filters = normalizeInventoryFilters(input);
   const { page, pageSize, from, to } = normalizePage(filters.page, INVENTORY_DEFAULT_PAGE_SIZE);
   let query = createSupabaseAdminClient()
     .from("admin_inventory_variants" as never)
-    .select("*", { count: "exact" })
+    .select(ADMIN_INVENTORY_COLUMNS, { count: "exact" })
     .range(from, to) as never;
 
   query = applyInventoryFilters(query, filters) as never;
@@ -379,11 +447,21 @@ export async function listInventoryVariants(input: Record<string, unknown> = {})
   if (error) throw new Error("INVENTORY_LIST_FAILED");
 
   const items = (data ?? []).map(mapInventoryRow);
-  return { items, page, pageSize, total: count ?? items.length, totalPages: Math.max(Math.ceil((count ?? items.length) / pageSize), 1) };
+  return {
+    items,
+    page,
+    pageSize,
+    total: count ?? items.length,
+    totalPages: Math.max(Math.ceil((count ?? items.length) / pageSize), 1),
+  };
 }
 
 export async function listLowStockVariants(input: Record<string, unknown> = {}) {
-  return listInventoryVariants({ ...input, initialized: "INITIALIZED", status: optional(input.status) ?? "LOW_OR_OUT" });
+  return listInventoryVariants({
+    ...input,
+    initialized: "INITIALIZED",
+    status: optional(input.status) ?? "LOW_OR_OUT",
+  });
 }
 
 export async function getInventoryVariant(variantId: string): Promise<InventoryVariantRow | null> {
@@ -391,9 +469,12 @@ export async function getInventoryVariant(variantId: string): Promise<InventoryV
   if (!parsed.success) return null;
   const { data, error } = (await createSupabaseAdminClient()
     .from("admin_inventory_variants" as never)
-    .select("*")
+    .select(ADMIN_INVENTORY_COLUMNS)
     .eq("variant_id", parsed.data)
-    .maybeSingle()) as { data: AdminInventoryVariantViewRow | null; error: { message?: string } | null };
+    .maybeSingle()) as {
+    data: AdminInventoryVariantViewRow | null;
+    error: { message?: string } | null;
+  };
 
   if (error) throw new Error("INVENTORY_DETAIL_FAILED");
   return data ? mapInventoryRow(data) : null;
@@ -405,14 +486,21 @@ export async function listInventoryLedger(
 ): Promise<PaginatedInventory<InventoryLedgerRow>> {
   const parsedVariantId = z.uuid().parse(variantId);
   const filters = normalizeLedgerFilters(input);
-  const { page, pageSize, from, to } = normalizePage(filters.page, INVENTORY_LEDGER_DEFAULT_PAGE_SIZE);
+  const { page, pageSize, from, to } = normalizePage(
+    filters.page,
+    INVENTORY_LEDGER_DEFAULT_PAGE_SIZE,
+  );
   let query = createSupabaseAdminClient()
     .from("inventory_transactions")
-    .select("id, variant_id, type, quantity_delta, stock_before, stock_after, reserved_before, reserved_after, order_id, actor_id, reason, metadata, created_at, profiles(full_name)", { count: "exact" })
+    .select(
+      "id, variant_id, type, quantity_delta, stock_before, stock_after, reserved_before, reserved_after, order_id, actor_id, reason, metadata, created_at, profiles(full_name)",
+      { count: "exact" },
+    )
     .eq("variant_id", parsedVariantId)
     .range(from, to) as unknown as InventoryLedgerQuery;
 
-  if (filters.operationType && filters.operationType !== "ALL") query = query.eq("type", filters.operationType);
+  if (filters.operationType && filters.operationType !== "ALL")
+    query = query.eq("type", filters.operationType);
   if (filters.dateFrom) query = query.gte("created_at", `${filters.dateFrom}T00:00:00.000Z`);
   if (filters.dateTo) query = query.lte("created_at", `${filters.dateTo}T23:59:59.999Z`);
   query = query.order("created_at", { ascending: false }).order("id", { ascending: false });
@@ -433,11 +521,20 @@ export async function listInventoryLedger(
     orderId: row.order_id,
     actorId: row.actor_id,
     actorName: row.profiles?.full_name ?? null,
-    metadata: typeof row.metadata === "object" && row.metadata && !Array.isArray(row.metadata) ? row.metadata as Record<string, unknown> : {},
+    metadata:
+      typeof row.metadata === "object" && row.metadata && !Array.isArray(row.metadata)
+        ? (row.metadata as Record<string, unknown>)
+        : {},
     createdAt: row.created_at,
   }));
 
-  return { items, page, pageSize, total: count ?? items.length, totalPages: Math.max(Math.ceil((count ?? items.length) / pageSize), 1) };
+  return {
+    items,
+    page,
+    pageSize,
+    total: count ?? items.length,
+    totalPages: Math.max(Math.ceil((count ?? items.length) / pageSize), 1),
+  };
 }
 
 function inventoryErrorMessage(code: InventoryErrorCode) {
@@ -450,7 +547,8 @@ function inventoryErrorMessage(code: InventoryErrorCode) {
     INVENTORY_NOT_INITIALIZED: "Initialisez le stock avant d'effectuer cette opération.",
     INVENTORY_NEGATIVE_STOCK: "L'opération rendrait le stock négatif.",
     INVENTORY_RESERVED_INVARIANT: "L'opération ferait passer le stock sous la quantité réservée.",
-    INVENTORY_IDEMPOTENCY_CONFLICT: "Cette opération a déjà été utilisée avec un contenu différent.",
+    INVENTORY_IDEMPOTENCY_CONFLICT:
+      "Cette opération a déjà été utilisée avec un contenu différent.",
     INVENTORY_UNAUTHORIZED: "Vous n'êtes pas autorisé à modifier l'inventaire.",
     INVENTORY_UPDATE_FAILED: "L'opération d'inventaire n'a pas pu être enregistrée.",
   };
@@ -458,7 +556,8 @@ function inventoryErrorMessage(code: InventoryErrorCode) {
 }
 
 function mapInventoryDbError(error?: { code?: string; message?: string }): InventoryErrorCode {
-  const raised = error?.message?.match(/\bINVENTORY_[A-Z_]+\b/)?.[0] as InventoryErrorCode | undefined;
+  const raised = error?.message?.match(/\bINVENTORY_[A-Z_]+\b/)?.[0] as
+    InventoryErrorCode | undefined;
   if (raised) return raised;
   if (error?.code === "42501") return "INVENTORY_UNAUTHORIZED";
   if (error?.code === "23514") return "INVENTORY_RESERVED_INVARIANT";
@@ -466,7 +565,9 @@ function mapInventoryDbError(error?: { code?: string; message?: string }): Inven
   return "INVENTORY_UPDATE_FAILED";
 }
 
-export function createInventoryAdjustmentFingerprint(input: Omit<InventoryAdjustmentInput, "idempotencyKey"> & { actorId: string }) {
+export function createInventoryAdjustmentFingerprint(
+  input: Omit<InventoryAdjustmentInput, "idempotencyKey"> & { actorId: string },
+) {
   return createHash("sha256")
     .update(
       JSON.stringify({
@@ -482,17 +583,31 @@ export function createInventoryAdjustmentFingerprint(input: Omit<InventoryAdjust
     .digest("hex");
 }
 
-export async function adjustInventory(input: InventoryAdjustmentInput, staff: StaffProfile): Promise<InventoryActionResult<InventoryAdjustmentResult>> {
+export async function adjustInventory(
+  input: InventoryAdjustmentInput,
+  staff: StaffProfile,
+): Promise<InventoryActionResult<InventoryAdjustmentResult>> {
   if (!canManageInventory(staff)) {
-    return { ok: false, code: "INVENTORY_UNAUTHORIZED", message: inventoryErrorMessage("INVENTORY_UNAUTHORIZED") };
+    return {
+      ok: false,
+      code: "INVENTORY_UNAUTHORIZED",
+      message: inventoryErrorMessage("INVENTORY_UNAUTHORIZED"),
+    };
   }
 
   const parsed = inventoryAdjustmentSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, code: "INVENTORY_INVALID_REQUEST", message: inventoryErrorMessage("INVENTORY_INVALID_REQUEST") };
+    return {
+      ok: false,
+      code: "INVENTORY_INVALID_REQUEST",
+      message: inventoryErrorMessage("INVENTORY_INVALID_REQUEST"),
+    };
   }
 
-  const requestFingerprint = createInventoryAdjustmentFingerprint({ ...parsed.data, actorId: staff.id });
+  const requestFingerprint = createInventoryAdjustmentFingerprint({
+    ...parsed.data,
+    actorId: staff.id,
+  });
   const rpcPayload = {
     ...parsed.data,
     reason: parsed.data.reason?.trim() || undefined,
@@ -505,7 +620,10 @@ export async function adjustInventory(input: InventoryAdjustmentInput, staff: St
   const { data, error } = await supabase.rpc("adjust_inventory_server", { request: rpcPayload });
   if (error || !data) {
     const code = mapInventoryDbError(error ?? undefined);
-    console.error("INVENTORY_DATABASE_FAILURE", { dbCode: error?.code ?? "unknown", mappedCode: code });
+    console.error("INVENTORY_DATABASE_FAILURE", {
+      dbCode: error?.code ?? "unknown",
+      mappedCode: code,
+    });
     return { ok: false, code, message: inventoryErrorMessage(code) };
   }
 
@@ -513,7 +631,15 @@ export async function adjustInventory(input: InventoryAdjustmentInput, staff: St
     .object({
       variantId: z.uuid(),
       operationType: z.enum(manualInventoryOperationTypes),
-      transactionType: z.enum(["RECEIVED", "RESERVED", "RELEASED", "SOLD", "RETURNED", "DAMAGED", "ADJUSTMENT"]),
+      transactionType: z.enum([
+        "RECEIVED",
+        "RESERVED",
+        "RELEASED",
+        "SOLD",
+        "RETURNED",
+        "DAMAGED",
+        "ADJUSTMENT",
+      ]),
       quantityDelta: z.number().int(),
       stockBefore: z.number().int().min(0),
       stockAfter: z.number().int().min(0),
@@ -526,7 +652,11 @@ export async function adjustInventory(input: InventoryAdjustmentInput, staff: St
     .safeParse(data);
 
   if (!result.success) {
-    return { ok: false, code: "INVENTORY_UPDATE_FAILED", message: inventoryErrorMessage("INVENTORY_UPDATE_FAILED") };
+    return {
+      ok: false,
+      code: "INVENTORY_UPDATE_FAILED",
+      message: inventoryErrorMessage("INVENTORY_UPDATE_FAILED"),
+    };
   }
 
   return { ok: true, data: result.data };
@@ -541,7 +671,9 @@ export function inventoryStatusLabel(status: InventoryStatus) {
   }[status];
 }
 
-export function inventoryOperationLabel(type: ManualInventoryOperationType | InventoryTransactionType) {
+export function inventoryOperationLabel(
+  type: ManualInventoryOperationType | InventoryTransactionType,
+) {
   return {
     INITIALIZE: "Initialisation",
     RECEIVED: "Réception",
@@ -575,7 +707,21 @@ export function rowsToCsv(headers: string[], rows: unknown[][]) {
 
 export function inventoryRowsToCsv(rows: InventoryVariantRow[]) {
   return rowsToCsv(
-    ["Produit", "Marque", "SKU", "Taille", "Concentration", "Variante active", "Stock initialisé", "Stock physique", "Réservé", "Disponible", "Seuil", "Statut", "Mis à jour"],
+    [
+      "Produit",
+      "Marque",
+      "SKU",
+      "Taille",
+      "Concentration",
+      "Variante active",
+      "Stock initialisé",
+      "Stock physique",
+      "Réservé",
+      "Disponible",
+      "Seuil",
+      "Statut",
+      "Mis à jour",
+    ],
     rows.map((row) => [
       row.productName,
       row.brandName ?? "",
@@ -596,7 +742,20 @@ export function inventoryRowsToCsv(rows: InventoryVariantRow[]) {
 
 export function ledgerRowsToCsv(variant: InventoryVariantRow, rows: InventoryLedgerRow[]) {
   return rowsToCsv(
-    ["Date", "Produit", "SKU", "Opération", "Delta", "Stock avant", "Stock après", "Réservé avant", "Réservé après", "Motif", "Référence", "Acteur"],
+    [
+      "Date",
+      "Produit",
+      "SKU",
+      "Opération",
+      "Delta",
+      "Stock avant",
+      "Stock après",
+      "Réservé avant",
+      "Réservé après",
+      "Motif",
+      "Référence",
+      "Acteur",
+    ],
     rows.map((row) => [
       row.createdAt,
       variant.productName,
@@ -608,7 +767,7 @@ export function ledgerRowsToCsv(variant: InventoryVariantRow, rows: InventoryLed
       row.reservedBefore,
       row.reservedAfter,
       row.reason,
-      typeof row.metadata.reference === "string" ? row.metadata.reference : row.orderId ?? "",
+      typeof row.metadata.reference === "string" ? row.metadata.reference : (row.orderId ?? ""),
       row.actorName ?? "Système",
     ]),
   );

@@ -1,10 +1,10 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { normalizeCoteDIvoirePhone } from "@/lib/orders/phone";
+import { getRequestIp, hashRateLimitKey } from "@/lib/security/rate-limit-key";
 import {
   deliveryMethodLabel,
   maskPhone,
@@ -88,16 +88,28 @@ type HistoryRow = {
 type TrackingClient = {
   from(table: "orders"): {
     select(columns: string): {
-      eq(column: string, value: string): {
-        maybeSingle(): Promise<{ data: OrderRow | null; error: { code?: string; message?: string } | null }>;
+      eq(
+        column: string,
+        value: string,
+      ): {
+        maybeSingle(): Promise<{
+          data: OrderRow | null;
+          error: { code?: string; message?: string } | null;
+        }>;
       };
     };
   };
 } & {
   from(table: "order_items"): {
     select(columns: string): {
-      eq(column: "order_id", value: string): {
-        order(column: "created_at", options: { ascending: boolean }): Promise<{
+      eq(
+        column: "order_id",
+        value: string,
+      ): {
+        order(
+          column: "created_at",
+          options: { ascending: boolean },
+        ): Promise<{
           data: OrderItemRow[] | null;
           error: { code?: string; message?: string } | null;
         }>;
@@ -107,8 +119,14 @@ type TrackingClient = {
 } & {
   from(table: "order_status_history"): {
     select(columns: string): {
-      eq(column: "order_id", value: string): {
-        order(column: "created_at", options: { ascending: boolean }): Promise<{
+      eq(
+        column: "order_id",
+        value: string,
+      ): {
+        order(
+          column: "created_at",
+          options: { ascending: boolean },
+        ): Promise<{
           data: HistoryRow[] | null;
           error: { code?: string; message?: string } | null;
         }>;
@@ -117,13 +135,15 @@ type TrackingClient = {
   };
 };
 
-export function trackingRateLimitKey(request: Request, orderNumber?: string, normalizedPhone?: string) {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const realIp = request.headers.get("x-real-ip")?.trim();
-  const ip = forwardedFor || realIp || "unknown";
-  const material = `${orderNumber ?? "unknown"}:${normalizedPhone ?? "unknown"}`;
-  const hash = createHash("sha256").update(material).digest("hex").slice(0, 24);
-  return `tracking:${ip}:${hash}`.slice(0, 240);
+export function trackingRateLimitKey(
+  request: Request,
+  orderNumber?: string,
+  normalizedPhone?: string,
+) {
+  return hashRateLimitKey(
+    "tracking",
+    `${getRequestIp(request)}:${orderNumber ?? "unknown"}:${normalizedPhone ?? "unknown"}`,
+  );
 }
 
 export function normalizeTrackingRequest(input: TrackOrderRequest) {
@@ -139,7 +159,9 @@ function notFound(): PublicOrderTrackingResult {
   return { found: false };
 }
 
-export async function lookupOrderForTracking(input: TrackOrderRequest): Promise<PublicOrderTrackingResult> {
+export async function lookupOrderForTracking(
+  input: TrackOrderRequest,
+): Promise<PublicOrderTrackingResult> {
   let normalized: ReturnType<typeof normalizeTrackingRequest>;
   try {
     normalized = normalizeTrackingRequest(input);
@@ -159,7 +181,8 @@ export async function lookupOrderForTracking(input: TrackOrderRequest): Promise<
 
     if (error || !order || order.customer_phone !== normalized.phone) return notFound();
 
-    const [{ data: items, error: itemError }, { data: history, error: historyError }] = await Promise.all([
+    const [{ data: items, error: itemError }, { data: history, error: historyError }] =
+      await Promise.all([
       supabase
         .from("order_items")
         .select("product_name, variant_name, quantity, created_at")
@@ -189,7 +212,8 @@ export async function lookupOrderForTracking(input: TrackOrderRequest): Promise<
         subtotalXof: order.subtotal_xof,
         deliveryFeeXof: order.delivery_fee_xof,
         totalXof: order.total_xof,
-        paymentInstructions: paymentInstructionForMethod(order.payment_method, settings, order.order_number) ?? [],
+        paymentInstructions:
+          paymentInstructionForMethod(order.payment_method, settings, order.order_number) ?? [],
         items: (items ?? []).map((item) => ({
           productName: item.product_name,
           variantLabel: item.variant_name,

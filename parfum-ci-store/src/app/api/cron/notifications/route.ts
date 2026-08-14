@@ -24,8 +24,19 @@ export async function POST(request: Request) {
     );
   }
 
+  try {
   const summary = await processNotifications(config.batchSize);
-  return NextResponse.json({ ok: true, ...summary }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { ok: true, ...summary },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch {
+    console.error("CRON_NOTIFICATION_PROCESSING_FAILED");
+    return NextResponse.json(
+      { ok: false, code: "CRON_PROCESSING_FAILED" },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 }
 
 export function GET() {

@@ -1,13 +1,12 @@
 import { Bell, UserCircle } from "lucide-react";
 
-import { logoutAction } from "@/app/admin/actions";
+import { AdminLogoutMenuItem } from "@/components/layout/admin-logout-menu-item";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -45,15 +44,7 @@ export function AdminTopBar({ staff }: { staff: StaffProfile }) {
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <form action={logoutAction}>
-                  <DropdownMenuItem
-                    nativeButton
-                    closeOnClick={false}
-                    render={<button type="submit" className="w-full" />}
-                  >
-                    Déconnexion
-                  </DropdownMenuItem>
-                </form>
+                <AdminLogoutMenuItem />
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>

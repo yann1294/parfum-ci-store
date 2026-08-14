@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getPublicProductImageUrl } from "@/lib/catalogue/public-images";
+import { readBoundedJson } from "@/lib/http/read-bounded-json";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   reconcileCartRequestSchema,
@@ -9,11 +10,15 @@ import {
 } from "@/lib/storefront/cart-reconciliation-core";
 
 export const dynamic = "force-dynamic";
+const CART_RECONCILIATION_MAX_BODY_BYTES = 16_000;
 
 type PublicCartClient = {
   from(table: "public_catalogue_products"): {
     select(columns: string): {
-      in(column: string, values: string[]): Promise<{
+      in(
+        column: string,
+        values: string[],
+      ): Promise<{
         data: CartReconciliationRows["products"] | null;
         error: { code?: string; message?: string } | null;
       }>;
@@ -22,7 +27,10 @@ type PublicCartClient = {
 } & {
   from(table: "public_catalogue_variants"): {
     select(columns: string): {
-      in(column: string, values: string[]): Promise<{
+      in(
+        column: string,
+        values: string[],
+      ): Promise<{
         data: CartReconciliationRows["variants"] | null;
         error: { code?: string; message?: string } | null;
       }>;
@@ -31,7 +39,10 @@ type PublicCartClient = {
 } & {
   from(table: "public_catalogue_images"): {
     select(columns: string): {
-      in(column: string, values: string[]): Promise<{
+      in(
+        column: string,
+        values: string[],
+      ): Promise<{
         data: CartReconciliationRows["images"] | null;
         error: { code?: string; message?: string } | null;
       }>;
@@ -55,7 +66,7 @@ export async function POST(request: Request) {
   let body: unknown;
 
   try {
-    body = await request.json();
+    body = await readBoundedJson(request, CART_RECONCILIATION_MAX_BODY_BYTES);
   } catch {
     return safeError();
   }
@@ -66,7 +77,12 @@ export async function POST(request: Request) {
   const items = parsed.data.items;
   if (items.length === 0) {
     return NextResponse.json(
-      reconcileCartRows([], { products: [], variants: [], images: [], imageUrl: getPublicProductImageUrl }),
+      reconcileCartRows([], {
+        products: [],
+        variants: [],
+        images: [],
+        imageUrl: getPublicProductImageUrl,
+      }),
       { headers: { "Cache-Control": "no-store" } },
     );
   }
@@ -92,7 +108,9 @@ export async function POST(request: Request) {
 
     if (productError || variantError) return safeError();
 
-    const publicProductIds = [...new Set((products ?? []).flatMap((product) => (product.id ? [product.id] : [])))];
+    const publicProductIds = [
+      ...new Set((products ?? []).flatMap((product) => (product.id ? [product.id] : []))),
+    ];
     const { data: images, error: imageError } =
       publicProductIds.length > 0
         ? await supabase

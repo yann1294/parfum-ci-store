@@ -170,7 +170,15 @@ describe("Phase 9 checkout helpers", () => {
         deliveryFeeXof: 0,
         totalXof: 95000,
         createdAt: "2026-07-27T00:00:00.000Z",
-        items: [{ productName: "Sauvage", variantLabel: "100 ml · EDP", quantity: 1, unitPriceXof: 95000, lineTotalXof: 95000 }],
+        items: [
+          {
+            productName: "Sauvage",
+            variantLabel: "100 ml · EDP",
+            quantity: 1,
+            unitPriceXof: 95000,
+            lineTotalXof: 95000,
+          },
+        ],
         nextStepCode: "PENDING_CONFIRMATION",
       },
       deliveryMethod: "HOME_DELIVERY",
@@ -193,14 +201,23 @@ describe("Phase 9 checkout helpers", () => {
   });
 
   it("filters enabled payment methods through structured public configuration", () => {
-    const configs = defaultPaymentConfigs(["CASH_ON_DELIVERY", "ORANGE_MONEY", "BANK_TRANSFER", "PAY_IN_STORE"]);
+    const configs = defaultPaymentConfigs([
+      "CASH_ON_DELIVERY",
+      "ORANGE_MONEY",
+      "BANK_TRANSFER",
+      "PAY_IN_STORE",
+    ]);
     configs.ORANGE_MONEY = {
       ...configs.ORANGE_MONEY,
       merchantNumber: "0700000000",
       instructions: "Paiement Orange Money après confirmation.",
     };
     configs.BANK_TRANSFER = { ...configs.BANK_TRANSFER, instructions: "RIB public." };
-    configs.PAY_IN_STORE = { ...configs.PAY_IN_STORE, enabled: false, instructions: "Retrait boutique." };
+    configs.PAY_IN_STORE = {
+      ...configs.PAY_IN_STORE,
+      enabled: false,
+      instructions: "Retrait boutique.",
+    };
 
     expect(configuredPaymentMethods(configs)).toEqual(["CASH_ON_DELIVERY", "ORANGE_MONEY"]);
   });
@@ -217,11 +234,23 @@ describe("Phase 9 checkout helpers", () => {
 
   it("rejects incomplete enabled manual methods but allows cash on delivery without merchant number", () => {
     const configs = defaultPaymentConfigs(["CASH_ON_DELIVERY", "ORANGE_MONEY"]);
-    configs.CASH_ON_DELIVERY = { ...configs.CASH_ON_DELIVERY, merchantNumber: "", instructions: "" };
-    configs.ORANGE_MONEY = { ...configs.ORANGE_MONEY, merchantNumber: "", instructions: "Instructions publiques." };
+    configs.CASH_ON_DELIVERY = {
+      ...configs.CASH_ON_DELIVERY,
+      merchantNumber: "",
+      instructions: "",
+    };
+    configs.ORANGE_MONEY = {
+      ...configs.ORANGE_MONEY,
+      merchantNumber: "",
+      instructions: "Instructions publiques.",
+    };
 
     const issues = validatePaymentSettingsForSave(configs);
-    expect(issues.some((issue) => issue.method === "CASH_ON_DELIVERY" && issue.field === "merchantNumber")).toBe(false);
+    expect(
+      issues.some(
+        (issue) => issue.method === "CASH_ON_DELIVERY" && issue.field === "merchantNumber",
+      ),
+    ).toBe(false);
     expect(issues).toContainEqual({
       method: "ORANGE_MONEY",
       field: "merchantNumber",
@@ -236,6 +265,26 @@ describe("Phase 9 checkout form", () => {
     window.sessionStorage.clear();
     push.mockClear();
     replace.mockClear();
+  });
+
+  it("keeps validation reachable and focuses the first invalid field", async () => {
+    seedCart();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url === "/api/cart/reconcile") return Response.json(readySnapshot);
+        throw new Error(`Unexpected ${url}`);
+      }),
+    );
+
+    render(<CheckoutPageClient settings={settings} />);
+    expect(await screen.findByText("Sauvage")).toBeDefined();
+    const submit = screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement;
+    await waitFor(() => expect(submit.disabled).toBe(false));
+    fireEvent.click(submit);
+
+    expect(await screen.findByText("Formulaire à corriger")).toBeDefined();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Nom complet")));
   });
 
   it("submits only the Phase 8 intent contract and clears the cart after success", async () => {
@@ -387,7 +436,9 @@ describe("Phase 9 checkout form", () => {
     expect(await screen.findByText("Sauvage")).toBeDefined();
     await fillRequiredCheckoutFields();
     await waitFor(() =>
-      expect((screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled).toBe(false),
+      expect(
+        (screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled,
+      ).toBe(false),
     );
     fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
 
@@ -417,7 +468,9 @@ describe("Phase 9 checkout form", () => {
     expect(await screen.findByText("Sauvage")).toBeDefined();
     await fillRequiredCheckoutFields();
     await waitFor(() =>
-      expect((screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled).toBe(false),
+      expect(
+        (screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled,
+      ).toBe(false),
     );
     fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
 
@@ -446,7 +499,9 @@ describe("Phase 9 checkout form", () => {
     expect(await screen.findByText("Sauvage")).toBeDefined();
     await fillRequiredCheckoutFields();
     await waitFor(() =>
-      expect((screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled).toBe(false),
+      expect(
+        (screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled,
+      ).toBe(false),
     );
     fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
 
@@ -471,7 +526,9 @@ describe("Phase 9 checkout form", () => {
     expect(await screen.findByText("Sauvage")).toBeDefined();
     await fillRequiredCheckoutFields();
     await waitFor(() =>
-      expect((screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled).toBe(false),
+      expect(
+        (screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled,
+      ).toBe(false),
     );
     fireEvent.click(screen.getByRole("button", { name: "Envoyer la commande" }));
 
@@ -514,7 +571,9 @@ describe("Phase 9 checkout form", () => {
       updatedAt: "2026-07-27T00:00:00.000Z",
     });
 
-    await waitFor(() => expect(fetchMock.mock.calls.filter(([url]) => url === "/api/cart/reconcile")).toHaveLength(2));
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([url]) => url === "/api/cart/reconcile")).toHaveLength(2),
+    );
   });
 
   it("blocks checkout when the authoritative cart is not ready", async () => {
@@ -533,14 +592,18 @@ describe("Phase 9 checkout form", () => {
     render(<CheckoutPageClient settings={settings} />);
 
     expect(await screen.findByText(/Panier à vérifier/i)).toBeDefined();
-    expect((screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "Envoyer la commande" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
   });
 
   it("renders generic confirmation on direct visit without session proof", async () => {
     render(<OrderConfirmationClient orderNumber="CMD-2026-A1B2C3" settings={settings} />);
 
     expect(await screen.findByText(/conservez votre numéro de commande/i)).toBeDefined();
-    expect(screen.getByRole("link", { name: "Suivre ma commande" }).getAttribute("href")).toBe("/suivi-commande");
+    expect(screen.getByRole("link", { name: "Suivre ma commande" }).getAttribute("href")).toBe(
+      "/suivi-commande",
+    );
   });
 });
 
@@ -562,7 +625,9 @@ describe("Phase 9 WhatsApp order intent", () => {
     render(<CartPageClient whatsappNumber="2250700000000" />);
     expect(await screen.findByText("Sauvage")).toBeDefined();
 
-    expect(fetchMock.mock.calls.some(([url]) => url === "/api/storefront/order-intents/whatsapp")).toBe(false);
+    expect(
+      fetchMock.mock.calls.some(([url]) => url === "/api/storefront/order-intents/whatsapp"),
+    ).toBe(false);
   });
 
   it("creates an intent only after an intentional WhatsApp click and uses authoritative message data", async () => {
@@ -575,7 +640,12 @@ describe("Phase 9 WhatsApp order intent", () => {
         expect(body.items).toEqual([{ productId, variantId, quantity: 1 }]);
         expect(JSON.stringify(body)).not.toContain("Sauvage");
         expect(JSON.stringify(body)).not.toContain("95000");
-        return Response.json({ ok: true, tracked: true, intentReference: "WA-ABC123", snapshot: readySnapshot });
+        return Response.json({
+          ok: true,
+          tracked: true,
+          intentReference: "WA-ABC123",
+          snapshot: readySnapshot,
+        });
       }
       if (url === "/api/orders") throw new Error("WhatsApp must not create an order");
       throw new Error(`Unexpected ${url}`);
@@ -602,7 +672,12 @@ describe("Phase 9 WhatsApp order intent", () => {
       vi.fn(async (url: string) => {
         if (url === "/api/cart/reconcile") return Response.json(readySnapshot);
         if (url === "/api/storefront/order-intents/whatsapp") {
-          return Response.json({ ok: true, tracked: false, intentReference: null, snapshot: readySnapshot });
+          return Response.json({
+            ok: true,
+            tracked: false,
+            intentReference: null,
+            snapshot: readySnapshot,
+          });
         }
         throw new Error(`Unexpected ${url}`);
       }),

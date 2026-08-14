@@ -33,7 +33,7 @@ begin
       where schemaname = 'storage'
         and tablename = 'objects'
         and policyname = policy_name
-        and roles = array['authenticated']
+        and roles = array['authenticated']::name[]
     ) then
       raise exception 'missing storage policy: %', policy_name;
     end if;

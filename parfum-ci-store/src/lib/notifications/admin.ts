@@ -10,7 +10,13 @@ import { processNotifications } from "@/lib/notifications/processor";
 export const NOTIFICATION_DEFAULT_PAGE_SIZE = 20;
 export const NOTIFICATION_MAX_PAGE_SIZE = 100;
 
-export const notificationStatuses = ["PENDING", "PROCESSING", "SENT", "FAILED", "CANCELLED"] as const;
+export const notificationStatuses = [
+  "PENDING",
+  "PROCESSING",
+  "SENT",
+  "FAILED",
+  "CANCELLED",
+] as const;
 export const notificationChannels = ["EMAIL", "IN_APP"] as const;
 
 export type NotificationStatus = (typeof notificationStatuses)[number];
@@ -75,8 +81,7 @@ export type PaginatedNotifications = {
 };
 
 export type NotificationActionResult =
-  | { ok: true; message: string }
-  | { ok: false; code: string; message: string };
+  { ok: true; message: string } | { ok: false; code: string; message: string };
 
 function optional(value: unknown) {
   if (typeof value !== "string") return undefined;
@@ -84,18 +89,32 @@ function optional(value: unknown) {
   return trimmed || undefined;
 }
 
-export function normalizeNotificationFilters(input: Record<string, unknown> = {}): NotificationFilters {
+export function normalizeNotificationFilters(
+  input: Record<string, unknown> = {},
+): NotificationFilters {
   const status = optional(input.status);
   const channel = optional(input.channel);
   const sort = optional(input.sort);
   return {
     q: optional(input.q)?.slice(0, 120),
-    status: (notificationStatuses as readonly string[]).includes(status ?? "") ? status as NotificationStatus : "ALL",
-    channel: (notificationChannels as readonly string[]).includes(channel ?? "") ? channel as NotificationChannel : "ALL",
-    template: optional(input.template)?.replace(/[^\w:-]/g, "").slice(0, 80),
-    provider: optional(input.provider)?.replace(/[^\w:-]/g, "").slice(0, 80),
-    dateFrom: optional(input.dateFrom)?.match(/^\d{4}-\d{2}-\d{2}$/) ? optional(input.dateFrom) : undefined,
-    dateTo: optional(input.dateTo)?.match(/^\d{4}-\d{2}-\d{2}$/) ? optional(input.dateTo) : undefined,
+    status: (notificationStatuses as readonly string[]).includes(status ?? "")
+      ? (status as NotificationStatus)
+      : "ALL",
+    channel: (notificationChannels as readonly string[]).includes(channel ?? "")
+      ? (channel as NotificationChannel)
+      : "ALL",
+    template: optional(input.template)
+      ?.replace(/[^\w:-]/g, "")
+      .slice(0, 80),
+    provider: optional(input.provider)
+      ?.replace(/[^\w:-]/g, "")
+      .slice(0, 80),
+    dateFrom: optional(input.dateFrom)?.match(/^\d{4}-\d{2}-\d{2}$/)
+      ? optional(input.dateFrom)
+      : undefined,
+    dateTo: optional(input.dateTo)?.match(/^\d{4}-\d{2}-\d{2}$/)
+      ? optional(input.dateTo)
+      : undefined,
     sort: sort === "created_asc" || sort === "next_attempt_asc" ? sort : "created_desc",
     page: Math.max(Number.parseInt(optional(input.page) ?? "1", 10) || 1, 1),
     pageSize: NOTIFICATION_DEFAULT_PAGE_SIZE,
@@ -131,13 +150,16 @@ export function maskRecipient(value: string) {
 }
 
 function payloadSummary(payload: unknown): Record<string, unknown> {
-  const parsed = z.object({
+  const parsed = z
+    .object({
     order_id: z.string().optional(),
     order_number: z.string().optional(),
     status: z.string().optional(),
     payment_status: z.string().optional(),
     variant_id: z.string().optional(),
-  }).passthrough().safeParse(payload);
+    })
+    .passthrough()
+    .safeParse(payload);
   if (!parsed.success) return {};
   return {
     orderNumber: parsed.data.order_number,
@@ -181,7 +203,9 @@ function applyFilters(query: unknown, filters: NotificationFilters) {
   };
   if (filters.q) {
     const escaped = filters.q.replace(/[%,()]/g, " ");
-    next = next.or(`recipient.ilike.%${escaped}%,subject.ilike.%${escaped}%,template_key.ilike.%${escaped}%`);
+    next = next.or(
+      `recipient.ilike.%${escaped}%,subject.ilike.%${escaped}%,template_key.ilike.%${escaped}%`,
+    );
   }
   if (filters.status !== "ALL") next = next.eq("status", filters.status);
   if (filters.channel !== "ALL") next = next.eq("channel", filters.channel);
@@ -192,25 +216,40 @@ function applyFilters(query: unknown, filters: NotificationFilters) {
   return next;
 }
 
-export async function listNotifications(params: Record<string, unknown> = {}): Promise<PaginatedNotifications> {
+export async function listNotifications(
+  params: Record<string, unknown> = {},
+): Promise<PaginatedNotifications> {
   const filters = normalizeNotificationFilters(params);
   const from = (filters.page - 1) * filters.pageSize;
   const to = filters.page * filters.pageSize - 1;
-  let query = (createSupabaseAdminClient() as never as {
+  let query = (
+    createSupabaseAdminClient() as never as {
     from(table: string): {
       select(columns: string, options?: { count?: "exact" }): unknown;
     };
-  })
+    }
+  )
     .from("notifications")
-    .select("id, channel, status, recipient, subject, template_key, payload, provider, provider_message_id, attempt_count, max_attempts, next_attempt_at, processed_at, last_error_code, last_error_message, retryable, created_at, updated_at", { count: "exact" });
+    .select(
+      "id, channel, status, recipient, subject, template_key, payload, provider, provider_message_id, attempt_count, max_attempts, next_attempt_at, processed_at, last_error_code, last_error_message, retryable, created_at, updated_at",
+      { count: "exact" },
+    );
 
   query = applyFilters(query, filters);
   const orderedQuery = query as {
     order(column: string, options?: { ascending?: boolean }): typeof orderedQuery;
-    range(from: number, to: number): Promise<{ data: Array<Record<string, unknown>> | null; error: { message?: string } | null; count: number | null }>;
+    range(
+      from: number,
+      to: number,
+    ): Promise<{
+      data: Array<Record<string, unknown>> | null;
+      error: { message?: string } | null;
+      count: number | null;
+    }>;
   };
   if (filters.sort === "created_asc") query = orderedQuery.order("created_at", { ascending: true });
-  else if (filters.sort === "next_attempt_asc") query = orderedQuery.order("next_attempt_at", { ascending: true });
+  else if (filters.sort === "next_attempt_asc")
+    query = orderedQuery.order("next_attempt_at", { ascending: true });
   else query = orderedQuery.order("created_at", { ascending: false });
   const { data, error, count } = await (query as typeof orderedQuery).range(from, to);
   if (error) throw new Error("NOTIFICATIONS_QUERY_FAILED");
@@ -228,23 +267,36 @@ export async function getNotificationDetail(id: string): Promise<NotificationDet
   const supabase = createSupabaseAdminClient() as never as {
     from(table: string): {
       select(columns: string): {
-        eq(column: string, value: unknown): {
-          single(): Promise<{ data: Record<string, unknown> | null; error: { message?: string } | null }>;
-          order(column: string, options?: { ascending?: boolean }): Promise<{ data: Array<Record<string, unknown>> | null }>;
+        eq(
+          column: string,
+          value: unknown,
+        ): {
+          single(): Promise<{
+            data: Record<string, unknown> | null;
+            error: { message?: string } | null;
+          }>;
+          order(
+            column: string,
+            options?: { ascending?: boolean },
+          ): Promise<{ data: Array<Record<string, unknown>> | null }>;
         };
       };
     };
   };
   const { data, error } = await supabase
     .from("notifications")
-    .select("id, channel, status, recipient, subject, template_key, payload, provider, provider_message_id, attempt_count, max_attempts, next_attempt_at, processed_at, last_error_code, last_error_message, retryable, created_at, updated_at")
+    .select(
+      "id, channel, status, recipient, subject, template_key, payload, provider, provider_message_id, attempt_count, max_attempts, next_attempt_at, processed_at, last_error_code, last_error_message, retryable, created_at, updated_at",
+    )
     .eq("id", id)
     .single();
   if (error || !data) return null;
 
   const { data: attempts } = await supabase
     .from("notification_attempts")
-    .select("id, attempt_number, provider, status, provider_message_id, error_code, error_message, retryable, created_at")
+    .select(
+      "id, attempt_number, provider, status, provider_message_id, error_code, error_message, retryable, created_at",
+    )
     .eq("notification_id", id)
     .order("created_at", { ascending: false });
 
@@ -265,51 +317,71 @@ export async function getNotificationDetail(id: string): Promise<NotificationDet
   };
 }
 
-export async function cancelNotification(id: string, actor: StaffProfile, reason: string): Promise<NotificationActionResult> {
-  if (!canManageNotifications(actor)) return { ok: false, code: "NOTIFICATION_UNAUTHORIZED", message: "Action non autorisée." };
-  if (!z.uuid().safeParse(id).success || !reason.trim()) return { ok: false, code: "NOTIFICATION_INVALID_REQUEST", message: "Motif requis." };
-  const { error } = await (createSupabaseAdminClient() as never as {
-    rpc(fn: string, args: Record<string, unknown>): Promise<{ error: { message?: string } | null }>;
-  }).rpc("cancel_notification_server", { notification_id: id, actor_id: actor.id, reason: reason.trim() });
-  if (error) return { ok: false, code: "NOTIFICATION_CANCEL_FAILED", message: "La notification n'a pas pu être annulée." };
+export async function cancelNotification(
+  id: string,
+  actor: StaffProfile,
+  reason: string,
+): Promise<NotificationActionResult> {
+  if (!canManageNotifications(actor))
+    return { ok: false, code: "NOTIFICATION_UNAUTHORIZED", message: "Action non autorisée." };
+  if (!z.uuid().safeParse(id).success || !reason.trim())
+    return { ok: false, code: "NOTIFICATION_INVALID_REQUEST", message: "Motif requis." };
+  const { error } = await (
+    createSupabaseAdminClient() as never as {
+      rpc(
+        fn: string,
+        args: Record<string, unknown>,
+      ): Promise<{ error: { message?: string } | null }>;
+    }
+  ).rpc("cancel_notification_server", {
+    notification_id: id,
+    actor_id: actor.id,
+    reason: reason.trim(),
+  });
+  if (error)
+    return {
+      ok: false,
+      code: "NOTIFICATION_CANCEL_FAILED",
+      message: "La notification n'a pas pu être annulée.",
+    };
   return { ok: true, message: "Notification annulée." };
 }
 
-export async function retryNotification(id: string, actor: StaffProfile): Promise<NotificationActionResult> {
-  if (!canManageNotifications(actor)) return { ok: false, code: "NOTIFICATION_UNAUTHORIZED", message: "Action non autorisée." };
-  if (!z.uuid().safeParse(id).success) return { ok: false, code: "NOTIFICATION_INVALID_REQUEST", message: "Notification invalide." };
+export async function retryNotification(
+  id: string,
+  actor: StaffProfile,
+): Promise<NotificationActionResult> {
+  if (!canManageNotifications(actor))
+    return { ok: false, code: "NOTIFICATION_UNAUTHORIZED", message: "Action non autorisée." };
+  if (!z.uuid().safeParse(id).success)
+    return { ok: false, code: "NOTIFICATION_INVALID_REQUEST", message: "Notification invalide." };
 
-  const { data, error } = await (createSupabaseAdminClient() as never as {
-    from(table: string): {
-      select(columns: string): {
-        eq(column: string, value: unknown): {
-          single(): Promise<{ data: { id: string; status: string; retryable: boolean | null } | null; error: { message?: string } | null }>;
-        };
-      };
+  const { error } = await (
+    createSupabaseAdminClient() as never as {
+      rpc(
+        fn: string,
+        args: Record<string, unknown>,
+      ): Promise<{ error: { message?: string } | null }>;
+  }
+  ).rpc("retry_notification_server", { notification_id: id, actor_id: actor.id });
+
+  if (error) {
+    const code = error.message?.match(/NOTIFICATION_[A-Z_]+/)?.[0];
+    if (code === "NOTIFICATION_NOT_FOUND") {
+      return { ok: false, code, message: "Notification introuvable." };
+    }
+    if (code === "NOTIFICATION_NOT_RETRYABLE") {
+      return { ok: false, code, message: "Seule une notification en échec peut être relancée." };
+    }
+    return {
+      ok: false,
+      code: "NOTIFICATION_RETRY_FAILED",
+      message: "La notification n'a pas pu être relancée.",
     };
-  })
-    .from("notifications")
-    .select("id, status, retryable")
-    .eq("id", id)
-    .single();
-  if (error || !data) return { ok: false, code: "NOTIFICATION_NOT_FOUND", message: "Notification introuvable." };
-  if (data.status === "SENT" || data.status === "CANCELLED") {
-    return { ok: false, code: "NOTIFICATION_NOT_RETRYABLE", message: "Cette notification ne peut pas être relancée." };
   }
 
-  await (createSupabaseAdminClient() as never as {
-    from(table: string): {
-      update(values: Record<string, unknown>): {
-        eq(column: string, value: unknown): Promise<{ error: { message?: string } | null }>;
-      };
-    };
-  })
-    .from("notifications")
-    .update({ status: "PENDING", next_attempt_at: new Date().toISOString(), retryable: true, claim_token: null, claimed_at: null })
-    .eq("id", id);
-
-  await processNotifications(1).catch((error) => {
-    console.error("NOTIFICATION_MANUAL_RETRY_PROCESS_FAILED", { notificationId: id, error: error instanceof Error ? error.message : "unknown" });
+  await processNotifications(1).catch(() => {
+    console.error("NOTIFICATION_MANUAL_RETRY_PROCESS_FAILED");
   });
   return { ok: true, message: "Relance demandée." };
 }

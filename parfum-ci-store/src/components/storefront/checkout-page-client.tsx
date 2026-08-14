@@ -36,7 +36,12 @@ import {
   type PaymentInstructionSettings,
 } from "@/lib/orders/display";
 import { normalizeCoteDIvoirePhoneResult } from "@/lib/orders/phone";
-import { CART_RECONCILIATION_STALE_MS, clearCart, readCart, type CartState } from "@/lib/storefront/cart";
+import {
+  CART_RECONCILIATION_STALE_MS,
+  clearCart,
+  readCart,
+  type CartState,
+} from "@/lib/storefront/cart";
 import { reconcileCartClient } from "@/lib/storefront/cart-reconcile-client";
 import type { ReconciledCart, ReconciledCartLine } from "@/lib/storefront/cart-reconciliation-core";
 import { readAttribution } from "@/lib/storefront/attribution";
@@ -48,12 +53,21 @@ type CheckoutPageClientProps = {
     acceptingOrders?: boolean;
     orderUnavailableMessage?: string | null;
     authoritativeDeliveryFees?: boolean;
-    deliveryMethodConfigs?: Partial<Record<DeliveryMethod, { label: string; publicLabel?: string }>>;
+    deliveryMethodConfigs?: Partial<
+      Record<DeliveryMethod, { label: string; publicLabel?: string }>
+    >;
   };
 };
 
 type CheckoutDeliveryQuote =
-  | { status: "AVAILABLE"; feeXof: number; matchedZoneName?: string; estimatedMinDays?: number; estimatedMaxDays?: number; freeDeliveryApplied: boolean }
+  | {
+      status: "AVAILABLE";
+      feeXof: number;
+      matchedZoneName?: string;
+      estimatedMinDays?: number;
+      estimatedMaxDays?: number;
+      freeDeliveryApplied: boolean;
+    }
   | { status: "UNAVAILABLE"; reason: string };
 
 type FieldErrors = Partial<Record<keyof CheckoutFormState | "form", string>>;
@@ -143,7 +157,9 @@ const checkoutFormSchema = z
       "BANK_TRANSFER",
       "PAY_IN_STORE",
     ]),
-    termsAccepted: z.boolean().refine((value) => value, "Vous devez accepter les conditions de livraison et de retour."),
+    termsAccepted: z
+      .boolean()
+      .refine((value) => value, "Vous devez accepter les conditions de livraison et de retour."),
     website: z.literal(""),
   })
   .strict();
@@ -180,14 +196,21 @@ function orderErrorMessage(code: OrderErrorCode | string) {
     ORDER_ITEM_UNAVAILABLE: "Un article de votre panier n'est plus disponible.",
     ORDER_INSUFFICIENT_STOCK: "La quantité disponible d'un article a changé.",
     ORDER_INVENTORY_NOT_CONFIGURED: "Un article ne peut pas être commandé pour le moment.",
-    ORDER_IDEMPOTENCY_CONFLICT: "Le contenu de la commande a changé. Veuillez vérifier votre panier avant de réessayer.",
-    ORDER_CUSTOMER_CONFLICT: "Ce numéro ne peut pas être utilisé pour le moment. Vérifiez-le ou contactez l’équipe.",
+    ORDER_IDEMPOTENCY_CONFLICT:
+      "Le contenu de la commande a changé. Veuillez vérifier votre panier avant de réessayer.",
+    ORDER_CUSTOMER_CONFLICT:
+      "Ce numéro ne peut pas être utilisé pour le moment. Vérifiez-le ou contactez l’équipe.",
     ORDER_RATE_LIMITED: "Trop de tentatives ont été effectuées. Réessayez dans quelques instants.",
-    ORDER_CREATION_FAILED: "La commande n'a pas pu être créée. Aucun paiement ni réservation supplémentaire n'a été effectué.",
-    ORDER_SERVER_MISCONFIGURED: "La commande en ligne est temporairement indisponible. Contactez l’équipe ou réessayez plus tard.",
-    ORDER_STORE_SETTINGS_UNAVAILABLE: "La boutique ne peut pas recevoir de commande pour le moment. Réessayez plus tard ou contactez l’équipe.",
-    ORDER_TOTAL_INVALID: "Le total de la commande est invalide. Vérifiez votre panier avant de réessayer.",
-    ORDER_NUMBER_GENERATION_FAILED: "La commande n'a pas pu être créée. Aucun paiement ni réservation supplémentaire n'a été effectué.",
+    ORDER_CREATION_FAILED:
+      "La commande n'a pas pu être créée. Aucun paiement ni réservation supplémentaire n'a été effectué.",
+    ORDER_SERVER_MISCONFIGURED:
+      "La commande en ligne est temporairement indisponible. Contactez l’équipe ou réessayez plus tard.",
+    ORDER_STORE_SETTINGS_UNAVAILABLE:
+      "La boutique ne peut pas recevoir de commande pour le moment. Réessayez plus tard ou contactez l’équipe.",
+    ORDER_TOTAL_INVALID:
+      "Le total de la commande est invalide. Vérifiez votre panier avant de réessayer.",
+    ORDER_NUMBER_GENERATION_FAILED:
+      "La commande n'a pas pu être créée. Aucun paiement ni réservation supplémentaire n'a été effectué.",
     ORDER_PAYMENT_METHOD_DISABLED: "Ce mode de paiement n'est plus disponible.",
     ORDER_DELIVERY_METHOD_DISABLED: "Ce mode de livraison n'est plus disponible.",
     ORDER_PAYMENT_METHOD_UNAVAILABLE: "Ce mode de paiement n'est plus disponible.",
@@ -231,7 +254,9 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
   const [hydrated, setHydrated] = useState(false);
   const [cart, setCart] = useState<CartState | null>(null);
   const [snapshot, setSnapshot] = useState<ReconciledCart | null>(null);
-  const [status, setStatus] = useState<"idle" | "validating" | "ready" | "error" | "submitting" | "review" | "success">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "validating" | "ready" | "error" | "submitting" | "review" | "success"
+  >("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [form, setForm] = useState<CheckoutFormState>(() => initialForm(settings));
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -240,7 +265,9 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
   const [successfulOrder, setSuccessfulOrder] = useState<CheckoutOrderSuccess | null>(null);
   const [deliveryQuote, setDeliveryQuote] = useState<CheckoutDeliveryQuote | null>(null);
   const [deliveryQuotePending, setDeliveryQuotePending] = useState(false);
-  const firstInvalidRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(null);
+  const firstInvalidRef = useRef<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null>(
+    null,
+  );
   const submissionMessageRef = useRef<HTMLDivElement | null>(null);
   const lastCartSignatureRef = useRef<string>("empty");
   const snapshotRef = useRef<ReconciledCart | null>(null);
@@ -253,7 +280,8 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     setSnapshot(nextSnapshot);
   }, []);
 
-  const validateCart = useCallback(async (force = false) => {
+  const validateCart = useCallback(
+    async (force = false) => {
     const currentCart = readCart();
     setCart(currentCart);
     setHydrated(true);
@@ -305,7 +333,9 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
       setMessage("Le panier n'a pas pu être vérifié pour le moment.");
       return null;
     }
-  }, [applySnapshot]);
+    },
+    [applySnapshot],
+  );
 
   useEffect(() => {
     const initialRefresh = window.setTimeout(() => void validateCart(true), 0);
@@ -325,7 +355,13 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
   }, [validateCart]);
 
   useEffect(() => {
-    if (!settings.authoritativeDeliveryFees || !snapshot || snapshot.readiness !== "READY" || !form.city.trim() || !form.commune.trim()) {
+    if (
+      !settings.authoritativeDeliveryFees ||
+      !snapshot ||
+      snapshot.readiness !== "READY" ||
+      !form.city.trim() ||
+      !form.commune.trim()
+    ) {
       queueMicrotask(() => setDeliveryQuote(null));
       return;
     }
@@ -334,20 +370,34 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
       setDeliveryQuotePending(true);
       try {
         const response = await fetch("/api/storefront/delivery-quote", {
-          method: "POST", headers: { "Content-Type": "application/json" }, cache: "no-store", signal: controller.signal,
-          body: JSON.stringify({ deliveryMethod: form.deliveryMethod, city: form.city, commune: form.commune, subtotalXof: snapshot.subtotalXof }),
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          signal: controller.signal,
+          body: JSON.stringify({
+            deliveryMethod: form.deliveryMethod,
+            city: form.city,
+            commune: form.commune,
+            subtotalXof: snapshot.subtotalXof,
+          }),
         });
-        const value = await response.json() as CheckoutDeliveryQuote;
+        const value = (await response.json()) as CheckoutDeliveryQuote;
         if (!controller.signal.aborted) setDeliveryQuote(value);
-      } catch { if (!controller.signal.aborted) setDeliveryQuote({ status: "UNAVAILABLE", reason: "QUOTE_FAILED" }); }
-      finally { if (!controller.signal.aborted) setDeliveryQuotePending(false); }
+      } catch {
+        if (!controller.signal.aborted)
+          setDeliveryQuote({ status: "UNAVAILABLE", reason: "QUOTE_FAILED" });
+      } finally {
+        if (!controller.signal.aborted) setDeliveryQuotePending(false);
+      }
     }, 350);
-    return () => { window.clearTimeout(timer); controller.abort(); };
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [form.city, form.commune, form.deliveryMethod, settings.authoritativeDeliveryFees, snapshot]);
 
   const readiness = snapshot?.readiness ?? "VALIDATING";
   const hasConfiguredPaymentMethod = settings.enabledPaymentMethods.length > 0;
-  const formValid = useMemo(() => checkoutFormSchema.safeParse(form).success, [form]);
   const checkoutBlocked =
     settings.acceptingOrders === false ||
     !snapshot ||
@@ -355,13 +405,14 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     status === "submitting" ||
     status === "success" ||
     readiness !== "READY" ||
-    (settings.authoritativeDeliveryFees === true && (deliveryQuotePending || deliveryQuote?.status !== "AVAILABLE")) ||
-    !hasConfiguredPaymentMethod ||
-    !formValid;
+    (settings.authoritativeDeliveryFees === true &&
+      (deliveryQuotePending || deliveryQuote?.status !== "AVAILABLE")) ||
+    !hasConfiguredPaymentMethod;
   const orderableLines = snapshot?.lines ?? [];
   const checkoutDisabledReason =
     settings.acceptingOrders === false
-      ? settings.orderUnavailableMessage || "La boutique n'accepte pas de nouvelle commande pour le moment."
+      ? settings.orderUnavailableMessage ||
+        "La boutique n'accepte pas de nouvelle commande pour le moment."
       : status === "success"
       ? "Commande enregistrée. Ouverture de la confirmation..."
       : status === "validating"
@@ -374,8 +425,6 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
               ? "La livraison n'est pas disponible pour ces informations."
           : !hasConfiguredPaymentMethod
             ? "Aucun mode de paiement n'est configuré pour le moment."
-            : !formValid
-              ? "Complétez les champs requis et acceptez les conditions."
               : "La commande est en cours d'envoi.";
 
   function updateField<K extends keyof CheckoutFormState>(key: K, value: CheckoutFormState[K]) {
@@ -387,7 +436,9 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     setErrors((current) => ({ ...current, [key]: undefined, form: undefined }));
   }
 
-  function registerInvalidRef(element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null) {
+  function registerInvalidRef(
+    element: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null,
+  ) {
     if (element && element.getAttribute("aria-invalid") === "true" && !firstInvalidRef.current) {
       firstInvalidRef.current = element;
     }
@@ -404,6 +455,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
         if (key) fieldErrors[key] = issue.message;
       }
       setErrors(fieldErrors);
+      setMessage(null);
       window.setTimeout(() => firstInvalidRef.current?.focus(), 0);
       return;
     }
@@ -516,7 +568,10 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
     setMessage("Commande enregistrée. Ouverture de la confirmation...");
     clearCart();
     setIdempotencyKey(createCheckoutIdempotencyKey());
-    if (readSafeConfirmation(safeConfirmation.orderNumber)?.orderNumber !== safeConfirmation.orderNumber) {
+    if (
+      readSafeConfirmation(safeConfirmation.orderNumber)?.orderNumber !==
+      safeConfirmation.orderNumber
+    ) {
       setMessage("Votre commande a bien été enregistrée.");
       window.setTimeout(() => submissionMessageRef.current?.focus(), 0);
       return;
@@ -557,11 +612,20 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
         <div>
           <h1 className="font-heading text-5xl">Finaliser ma commande</h1>
           <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-            La disponibilité finale, les frais de livraison et les modalités de paiement seront confirmés avant validation de la commande.
+            La disponibilité finale, les frais de livraison et les modalités de paiement seront
+            confirmés avant validation de la commande.
           </p>
         </div>
 
-        {settings.acceptingOrders === false ? <Alert><AlertTitle>Commandes en pause</AlertTitle><AlertDescription>{settings.orderUnavailableMessage || "La boutique reste consultable, mais les nouvelles commandes en ligne sont temporairement désactivées."}</AlertDescription></Alert> : null}
+        {settings.acceptingOrders === false ? (
+          <Alert>
+            <AlertTitle>Commandes en pause</AlertTitle>
+            <AlertDescription>
+              {settings.orderUnavailableMessage ||
+                "La boutique reste consultable, mais les nouvelles commandes en ligne sont temporairement désactivées."}
+            </AlertDescription>
+          </Alert>
+        ) : null}
 
         {message && !successfulOrder ? (
           <Alert
@@ -574,12 +638,21 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
           </Alert>
         ) : null}
 
+        {Object.values(errors).some(Boolean) ? (
+          <Alert variant="destructive">
+            <AlertTitle>Formulaire à corriger</AlertTitle>
+            <AlertDescription>
+              Vérifiez les champs signalés ci-dessous. Le premier champ invalide reçoit le focus.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {successfulOrder ? (
           <Alert ref={submissionMessageRef} tabIndex={-1}>
             <AlertTitle>Votre commande a bien été enregistrée.</AlertTitle>
             <AlertDescription>
-              Commande {successfulOrder.orderNumber}. Si la confirmation ne s&apos;ouvre pas automatiquement, utilisez
-              le bouton ci-dessous.
+              Commande {successfulOrder.orderNumber}. Si la confirmation ne s&apos;ouvre pas
+              automatiquement, utilisez le bouton ci-dessous.
             </AlertDescription>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <Link
@@ -616,6 +689,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
                 value={form.fullName}
                 onChange={(event) => updateField("fullName", event.currentTarget.value)}
                 autoComplete="name"
+                required
                 aria-invalid={Boolean(errors.fullName)}
               />
             </Field>
@@ -626,6 +700,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
                 onChange={(event) => updateField("phone", event.currentTarget.value)}
                 inputMode="tel"
                 autoComplete="tel"
+                required
                 aria-invalid={Boolean(errors.phone)}
               />
             </Field>
@@ -661,6 +736,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
                 value={form.city}
                 onChange={(event) => updateField("city", event.currentTarget.value)}
                 autoComplete="address-level2"
+                required
                 aria-invalid={Boolean(errors.city)}
               />
             </Field>
@@ -670,6 +746,7 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
                 value={form.commune}
                 onChange={(event) => updateField("commune", event.currentTarget.value)}
                 autoComplete="address-level3"
+                required
                 aria-invalid={Boolean(errors.commune)}
               />
             </Field>
@@ -695,9 +772,12 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
             <select
               ref={registerInvalidRef}
               value={form.deliveryMethod}
-              onChange={(event) => updateField("deliveryMethod", event.currentTarget.value as DeliveryMethod)}
+              onChange={(event) =>
+                updateField("deliveryMethod", event.currentTarget.value as DeliveryMethod)
+              }
               className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
               aria-invalid={Boolean(errors.deliveryMethod)}
+              required
             >
               {settings.enabledDeliveryMethods.map((method) => (
                 <option key={method} value={method}>
@@ -722,9 +802,12 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
             <select
               ref={registerInvalidRef}
               value={form.paymentMethod}
-              onChange={(event) => updateField("paymentMethod", event.currentTarget.value as PaymentMethod)}
+              onChange={(event) =>
+                updateField("paymentMethod", event.currentTarget.value as PaymentMethod)
+              }
               className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
               aria-invalid={Boolean(errors.paymentMethod)}
+              required
               disabled={!hasConfiguredPaymentMethod}
             >
               {settings.enabledPaymentMethods.map((method) => (
@@ -736,7 +819,8 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
           </Field>
           {!hasConfiguredPaymentMethod ? (
             <p className="text-sm text-muted-foreground">
-              Aucun mode de paiement n&apos;est configuré pour la commande en ligne. Contactez l&apos;équipe via WhatsApp.
+              Aucun mode de paiement n&apos;est configuré pour la commande en ligne. Contactez
+              l&apos;équipe via WhatsApp.
             </p>
           ) : null}
           <PaymentInstructions settings={settings} method={form.paymentMethod} />
@@ -767,20 +851,31 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
               checked={form.termsAccepted}
               onChange={(event) => updateField("termsAccepted", event.currentTarget.checked)}
               aria-invalid={Boolean(errors.termsAccepted)}
+              aria-describedby={errors.termsAccepted ? "conditions-error" : undefined}
+              required
               className="mt-1 size-4"
             />
             <span>
               J&apos;accepte les conditions de livraison et de retour.
               <span className="block text-muted-foreground">
-                Les frais de livraison, la disponibilité finale et les modalités de paiement seront confirmés par l&apos;équipe.
+                Les frais de livraison, la disponibilité finale et les modalités de paiement seront
+                confirmés par l&apos;équipe.
               </span>
-              {errors.termsAccepted ? <span className="block text-destructive">{errors.termsAccepted}</span> : null}
+              {errors.termsAccepted ? (
+                <span id="conditions-error" className="block text-destructive">
+                  {errors.termsAccepted}
+              </span>
+              ) : null}
             </span>
           </label>
         </fieldset>
 
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button type="submit" disabled={checkoutBlocked} aria-describedby="checkout-disabled-help">
+          <Button
+            type="submit"
+            disabled={checkoutBlocked}
+            aria-describedby="checkout-disabled-help"
+          >
             {status === "success"
               ? "Commande enregistrée"
               : status === "submitting"
@@ -817,13 +912,27 @@ export function CheckoutPageClient({ settings }: CheckoutPageClientProps) {
           </div>
           <div className="flex justify-between">
             <span>Frais de livraison</span>
-            <span>{settings.authoritativeDeliveryFees ? (deliveryQuotePending ? "Calcul..." : deliveryQuote?.status === "AVAILABLE" ? formatXof(deliveryQuote.feeXof) : "Indisponible") : "À confirmer"}</span>
+            <span>
+              {settings.authoritativeDeliveryFees
+                ? deliveryQuotePending
+                  ? "Calcul..."
+                  : deliveryQuote?.status === "AVAILABLE"
+                    ? formatXof(deliveryQuote.feeXof)
+                    : "Indisponible"
+                : "À confirmer"}
+            </span>
           </div>
           <div className="flex justify-between font-medium">
             <span>Total</span>
-            <span>{deliveryQuote?.status === "AVAILABLE" ? formatXof((snapshot?.subtotalXof ?? 0) + deliveryQuote.feeXof) : "À confirmer"}</span>
+            <span>
+              {deliveryQuote?.status === "AVAILABLE"
+                ? formatXof((snapshot?.subtotalXof ?? 0) + deliveryQuote.feeXof)
+                : "À confirmer"}
+            </span>
           </div>
-          {deliveryQuote?.status === "AVAILABLE" && deliveryQuote.freeDeliveryApplied ? <p className="text-xs text-muted-foreground">Livraison offerte: seuil atteint.</p> : null}
+          {deliveryQuote?.status === "AVAILABLE" && deliveryQuote.freeDeliveryApplied ? (
+            <p className="text-xs text-muted-foreground">Livraison offerte: seuil atteint.</p>
+          ) : null}
         </div>
       </aside>
     </div>
@@ -869,7 +978,8 @@ function PaymentInstructions({
   if (paymentMethodIsMobileMoney(method) && !merchantNumber) {
     return (
       <p className="text-sm text-muted-foreground">
-        Les instructions {configuredPaymentMethodLabel(method, settings)} seront confirmées par l&apos;équipe.
+        Les instructions {configuredPaymentMethodLabel(method, settings)} seront confirmées par
+        l&apos;équipe.
       </p>
     );
   }
@@ -887,13 +997,26 @@ function SummaryLine({ line }: { line: ReconciledCartLine }) {
   return (
     <article className="grid grid-cols-[4rem_1fr] gap-3">
       <div className="relative aspect-square overflow-hidden rounded-md bg-surface-muted">
-        {line.imageUrl ? <Image src={line.imageUrl} alt={line.imageAlt} fill sizes="64px" className="object-cover" /> : null}
+        {line.imageUrl ? (
+          <Image
+            src={line.imageUrl}
+            alt={line.imageAlt}
+            fill
+            sizes="64px"
+            className="object-cover"
+          />
+        ) : null}
       </div>
       <div className="min-w-0 text-sm">
         <p className="font-medium">{line.productName}</p>
         <p className="text-muted-foreground">{line.variantLabel}</p>
-        <p>{line.unitPriceXof ? formatXof(line.unitPriceXof) : "Prix indisponible"} x {line.adjustedQuantity}</p>
-        <p className={line.orderable ? "text-muted-foreground" : "text-destructive"}>{availabilityLabel(line)}</p>
+        <p>
+          {line.unitPriceXof ? formatXof(line.unitPriceXof) : "Prix indisponible"} x{" "}
+          {line.adjustedQuantity}
+        </p>
+        <p className={line.orderable ? "text-muted-foreground" : "text-destructive"}>
+          {availabilityLabel(line)}
+        </p>
         {line.orderable && line.unitPriceXof ? (
           <p className="font-medium">{formatXof(line.unitPriceXof * line.adjustedQuantity)}</p>
         ) : null}

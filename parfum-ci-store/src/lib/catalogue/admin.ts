@@ -205,7 +205,10 @@ function getImagePublicUrl(bucketId: string, objectPath: string | null) {
   return createSupabaseAdminClient().storage.from(bucketId).getPublicUrl(objectPath).data.publicUrl;
 }
 
-function mapVariant(row: ProductRow["product_variants"][number], includeCost: boolean): AdminVariant {
+function mapVariant(
+  row: ProductRow["product_variants"][number],
+  includeCost: boolean,
+): AdminVariant {
   const inventoryInitializedAt = row.inventory_initialized_at ?? null;
   const inventoryInitialized = Boolean(inventoryInitializedAt);
 
@@ -283,9 +286,14 @@ function mapProduct(row: ProductRow, includeCost: boolean): AdminProduct {
 }
 
 function getPagination(input: { page?: number; pageSize?: number }, defaultPageSize: number) {
-  const page = Math.max(Number.isFinite(input.page ?? 1) ? input.page ?? 1 : 1, 1);
+  const page = Math.max(Number.isFinite(input.page ?? 1) ? (input.page ?? 1) : 1, 1);
   const pageSize = Math.min(
-    Math.max(Number.isFinite(input.pageSize ?? defaultPageSize) ? input.pageSize ?? defaultPageSize : defaultPageSize, 1),
+    Math.max(
+      Number.isFinite(input.pageSize ?? defaultPageSize)
+        ? (input.pageSize ?? defaultPageSize)
+        : defaultPageSize,
+      1,
+    ),
     ADMIN_MAX_PAGE_SIZE,
   );
   const from = (page - 1) * pageSize;
@@ -308,7 +316,9 @@ function applyEntitySort<T extends { order(column: string, options?: { ascending
   }
 }
 
-export async function listAdminBrands(filters: AdminEntityListFilters = {}): Promise<PaginatedResult<AdminBrand>> {
+export async function listAdminBrands(
+  filters: AdminEntityListFilters = {},
+): Promise<PaginatedResult<AdminBrand>> {
   const normalized = normalizeAdminEntityListFilters(filters);
   const { page, pageSize, from, to } = getPagination(normalized, ADMIN_ENTITY_DEFAULT_PAGE_SIZE);
   let query = createSupabaseAdminClient()
@@ -363,9 +373,12 @@ export async function listAdminCategories(
   const { page, pageSize, from, to } = getPagination(normalized, ADMIN_ENTITY_DEFAULT_PAGE_SIZE);
   let query = createSupabaseAdminClient()
     .from("categories")
-    .select("id, parent_id, name, slug, description, active, sort_order, created_at, products(id)", {
+    .select(
+      "id, parent_id, name, slug, description, active, sort_order, created_at, products(id)",
+      {
       count: "exact",
-    })
+      },
+    )
     .range(from, to);
 
   if (normalized.q) {
@@ -537,10 +550,8 @@ export async function listAdminProducts(
   if (normalizedSearch) {
     try {
       searchProductIds = await findAdminProductIdsForSearch(supabase, normalizedSearch);
-    } catch (error) {
-      console.error("CATALOGUE_SEARCH_FAILED", {
-        message: error instanceof Error ? error.message : "unknown",
-      });
+    } catch {
+      console.error("CATALOGUE_SEARCH_FAILED");
       return emptyAdminProductsResult(page, pageSize, {
         code: "CATALOGUE_SEARCH_FAILED",
         message: "La recherche est temporairement indisponible.",
@@ -592,10 +603,7 @@ export async function listAdminProducts(
   const { data, error, count } = await query;
 
   if (error) {
-    console.error("CATALOGUE_SEARCH_FAILED", {
-      message: error.message,
-      code: error.code,
-    });
+    console.error("CATALOGUE_SEARCH_FAILED", { dbCode: error.code ?? "unknown" });
     return emptyAdminProductsResult(page, pageSize, {
       code: "CATALOGUE_SEARCH_FAILED",
       message: "La recherche est temporairement indisponible.",
@@ -622,7 +630,10 @@ export async function listAdminProducts(
   };
 }
 
-async function findAdminProductIdsForSearch(supabase: ReturnType<typeof createSupabaseAdminClient>, search: string) {
+async function findAdminProductIdsForSearch(
+  supabase: ReturnType<typeof createSupabaseAdminClient>,
+  search: string,
+) {
   const pattern = `%${search.replace(/[%_]/g, "\\$&")}%`;
   const [productNames, productSlugs, productDescriptions, brands, variants] = await Promise.all([
     supabase.from("products").select("id").ilike("name", pattern).limit(200),

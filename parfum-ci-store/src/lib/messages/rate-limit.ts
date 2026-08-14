@@ -2,6 +2,7 @@ import "server-only";
 
 import type { RateLimitResult } from "@/lib/auth/rate-limit";
 import { InMemoryCheckoutRateLimiter } from "@/lib/orders/rate-limit";
+import { getRequestIp, hashRateLimitKey } from "@/lib/security/rate-limit-key";
 
 export const contactMessageRateLimiter = new InMemoryCheckoutRateLimiter({
   maxAttempts: 5,
@@ -10,10 +11,7 @@ export const contactMessageRateLimiter = new InMemoryCheckoutRateLimiter({
 });
 
 export function contactMessageRateLimitKey(request: Request, contactKey: string) {
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const realIp = request.headers.get("x-real-ip")?.trim();
-  const ip = forwardedFor || realIp || "unknown";
-  return `contact:${ip}:${contactKey || "anonymous"}`.slice(0, 240);
+  return hashRateLimitKey("contact", `${getRequestIp(request)}:${contactKey || "anonymous"}`);
 }
 
 export type ContactMessageRateLimitResult = RateLimitResult;

@@ -17,7 +17,10 @@ function loadTestEnv() {
     let value = trimmed.slice(separatorIndex + 1).trim();
     if (!key || process.env[key] !== undefined) continue;
 
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
       value = value.slice(1, -1);
     }
 
@@ -51,6 +54,11 @@ export default defineConfig({
       name: "chromium",
       testIgnore: /.*\.setup\.ts/,
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "mobile-chromium",
+      testMatch: /phase16-hardening\.spec\.ts/,
+      use: { ...devices["Pixel 7"] },
     },
   ],
   webServer: {

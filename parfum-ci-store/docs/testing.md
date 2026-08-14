@@ -303,3 +303,13 @@ Never report a command as passing unless it ran and exited successfully.
 - Use fixed timestamps around the lower bound and business midnight. Never rely on the test host timezone.
 - Playwright requires Phase 15 migration, staff credentials for all five roles and disposable order/payment/inventory/message/notification fixtures. Check 7/30/90-day URLs, every deep link, operational refresh and widths 1440, 1024, 820, 640 and 390 pixels.
 - Tiny seed data is not performance proof. Review `EXPLAIN (ANALYZE, BUFFERS)` against representative staging volume before claiming query-performance approval.
+
+## Phase 16 Hardening Verification
+
+- `tests/unit/phase16-hardening.test.ts` covers bounded streaming JSON, media-type rejection, security-header policies, strict catalogue UUID input and the migration least-privilege contract.
+- `tests/unit/phase16-accessibility.test.tsx` covers contact-form labels, validation summary, first-error focus and inert customer markup. `tests/unit/phase16-cron.test.ts` covers missing/invalid/valid cron authorization and sanitized processor failure.
+- `tests/e2e/phase16-hardening.spec.ts` runs on desktop Chromium and Pixel 7. It checks representative public/admin pages for one `h1`, serious/critical axe violations, defensive response headers, horizontal overflow, contact error focus and cart-drawer focus/scroll cleanup.
+- `tests/e2e/phase11-order-management.spec.ts` includes real simultaneous final-unit order creation, notification claiming, conflicting transitions, cancellation versus delivery and inventory-versus-delivery races. Sequential requests are not accepted as race proof.
+- After applying Phase 16 to a disposable database, run `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f supabase/tests/phase16_security_hardening.sql`. It verifies grants, unauthorized retry, atomic state/audit changes and duplicate retry rejection.
+- Run `supabase/tests/phase16_query_plans.sql` only with representative data when deciding on indexes. Sequential scans on tiny fixture tables are not performance defects by themselves.
+- External Resend inbox delivery, production WAF/distributed rate limiting, password-leak protection and production-volume query plans require deployment-environment verification and remain `NOT VERIFIED` locally.

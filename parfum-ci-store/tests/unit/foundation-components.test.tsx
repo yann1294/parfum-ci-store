@@ -20,6 +20,11 @@ describe("foundation components", () => {
     expect(screen.getByText("Catalogue")).toBeDefined();
   });
 
+  it("supports subordinate section headings without creating another page h1", () => {
+    render(<SectionHeading as="h2" title="Section secondaire" />);
+    expect(screen.getByRole("heading", { level: 2, name: "Section secondaire" })).toBeDefined();
+  });
+
   it("renders an accessible empty state", () => {
     render(
       <EmptyState title="Aucun produit" description="Le catalogue sera connecté plus tard." />,

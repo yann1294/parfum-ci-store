@@ -19,12 +19,12 @@ type CookieToSet = {
   options: CookieOptions;
 };
 
-function getRedirectOrigin(request: NextRequest) {
-  return new URL(request.url).origin;
+function getRedirectOrigin() {
+  return new URL(getPublicEnv().NEXT_PUBLIC_SITE_URL).origin;
 }
 
-function redirectTo(request: NextRequest, path: string, cookiesToSet: CookieToSet[] = []) {
-  const response = NextResponse.redirect(new URL(path, getRedirectOrigin(request)));
+function redirectTo(path: string, cookiesToSet: CookieToSet[] = []) {
+  const response = NextResponse.redirect(new URL(path, getRedirectOrigin()));
 
   cookiesToSet.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, options);
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     authDiagnostic("GOOGLE_CALLBACK_CODE_MISSING", { requestId, route: "/auth/callback" });
-    return redirectTo(request, "/connexion?erreur=oauth");
+    return redirectTo("/connexion?erreur=oauth");
   }
 
   const env = getPublicEnv();
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
       action: "ADMIN_GOOGLE_LOGIN_DENIED",
       reason: "exchange_failed",
     });
-    return redirectTo(request, "/connexion?erreur=oauth", cookiesToSet);
+    return redirectTo("/connexion?erreur=oauth", cookiesToSet);
   }
 
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       action: "ADMIN_GOOGLE_LOGIN_DENIED",
       reason: "identity_verification_failed",
     });
-    return redirectTo(request, "/acces-refuse", cookiesToSet);
+    return redirectTo("/acces-refuse", cookiesToSet);
   }
 
   authDiagnostic("GOOGLE_SESSION_ESTABLISHED", { requestId, route: "/auth/callback" });
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       action: "ADMIN_GOOGLE_LOGIN_DENIED",
       reason: "profile_lookup_failed",
     });
-    return redirectTo(request, "/connexion?erreur=oauth", cookiesToSet);
+    return redirectTo("/connexion?erreur=oauth", cookiesToSet);
   }
 
   if (!profile || !profile.active) {
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
       action: "ADMIN_GOOGLE_LOGIN_DENIED",
       reason: profile?.active === false ? "inactive_profile" : "missing_profile",
     });
-    return redirectTo(request, "/acces-refuse", cookiesToSet);
+    return redirectTo("/acces-refuse", cookiesToSet);
   }
 
   authDiagnostic("GOOGLE_PROFILE_AUTHORIZED", { requestId, route: "/auth/callback" });
@@ -129,5 +129,5 @@ export async function GET(request: NextRequest) {
     action: "ADMIN_GOOGLE_LOGIN_SUCCEEDED",
   });
 
-  return redirectTo(request, returnPath, cookiesToSet);
+  return redirectTo(returnPath, cookiesToSet);
 }

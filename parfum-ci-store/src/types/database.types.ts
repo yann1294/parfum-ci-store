@@ -2091,6 +2091,10 @@ export type Database = {
         Returns: Json
       }
       record_order_payment_server: { Args: { request: Json }; Returns: Json }
+      retry_notification_server: {
+        Args: { actor_id: string; notification_id: string }
+        Returns: Json
+      }
       transition_contact_message_server: {
         Args: {
           actor_id: string
