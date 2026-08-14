@@ -1,4 +1,5 @@
 import type { Database } from "../src/types/database.types.ts";
+import { assertDestructiveE2eAllowed } from "./e2e-safety.ts";
 
 export const PHASE5_E2E_PREFIX = "E2E-20260716-A";
 export const PHASE5_E2E_SLUG_PREFIX = "e2e-20260716-a";
@@ -30,9 +31,7 @@ export type Phase5VariantSeed = {
 };
 
 export function assertCanRunPhase5E2eScript(env: NodeJS.ProcessEnv) {
-  if (env.NODE_ENV === "production" || env.VERCEL_ENV === "production") {
-    throw new Error("Phase 5 E2E seed scripts refuse to run in production.");
-  }
+  assertDestructiveE2eAllowed(env);
 
   if (env.ALLOW_E2E_SEED !== "true") {
     throw new Error("Set ALLOW_E2E_SEED=true to run Phase 5 E2E seed scripts.");

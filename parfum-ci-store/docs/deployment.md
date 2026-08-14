@@ -1,14 +1,20 @@
 # Deployment
 
-## Platform
+## Current Platform Gate
 
-Deploy to Vercel.
+Vercel Hobby is used only for private/non-commercial deployment verification. Do not accept commercial orders on this plan. Upgrade to Vercel Pro or another commercial-compatible host before public sales.
+
+The existing Supabase Free project (`wzwoebydytqxgrwlcjiy`) is the temporary production candidate. It is no longer disposable: never reset, truncate, reseed or run destructive E2E against it. Supabase Free's quota, pausing and backup limitations must be accepted explicitly or removed by upgrading before launch.
+
+The authoritative free-tier contract is `docs/phase-17-free-tier-deployment-plan.md`; future plan/project changes are covered by `docs/production-upgrade-roadmap.md`.
 
 ## Required Services
 
 - Supabase project with PostgreSQL, Auth, Storage, and RLS policies.
 - Resend account and verified sending domain.
 - Vercel project connected to the repository.
+
+For a commercial launch, the Vercel project must use Pro or another compatible hosting plan. Supabase may temporarily remain Free, but manual backup/Storage export and capacity monitoring are required.
 
 ## Environment Variables
 
@@ -42,6 +48,14 @@ Legacy Phase 6 environment inputs (Phase 14 contact/social consumers do not use 
 - `NEXT_PUBLIC_TIKTOK_URL`
 - `NEXT_PUBLIC_CONTACT_EMAIL`
 
+Destructive test controls are never production values:
+
+- `ALLOW_DESTRUCTIVE_E2E` must remain false/unset in Vercel;
+- `E2E_TARGET_KIND` must remain unset in Vercel Production;
+- `E2E_ALLOWED_SUPABASE_PROJECT_REF` may name only a future isolated staging project.
+
+Preview deployments that share the live Supabase project are read-only verification surfaces. Do not sign in to mutate settings, create fixture orders or seed them.
+
 Set `NEXT_PUBLIC_SITE_URL` to the canonical production origin. Do not rely on localhost fallbacks in production metadata, sitemap, robots, or WhatsApp product links.
 
 ## Google OAuth
@@ -54,7 +68,11 @@ Configure Google OAuth manually before production approval:
 
 The application callback is `/auth/callback`; it never receives or stores Google passwords and never assigns staff roles.
 
-## Release Checks
+## CI And Release Checks
+
+GitHub Actions uses Node `22.14.0`, pnpm `10.15.0`, a frozen lockfile, read-only repository permission, inert environment values and a bounded job. It runs format visibility, typecheck, lint, unit tests and a production build. Format is temporarily non-blocking because the repository-wide check currently reports 124 legacy files; all new Phase 17 files are still formatted.
+
+CI never receives live Supabase/Resend/cron/staff credentials and does not run lifecycle E2E. `pnpm test:e2e` is the safe browser subset; `pnpm test:e2e:destructive` requires isolated local/staging gates.
 
 Before deployment:
 
@@ -66,6 +84,14 @@ pnpm test
 pnpm build
 ```
 
+Before any release also run:
+
+```bash
+pnpm db:migrations
+pnpm db:push:dry
+pnpm audit:production:readiness
+```
+
 ## Database Changes
 
 - Migrations must be reviewed before production.
@@ -74,6 +100,7 @@ pnpm build
 - Seed data must not contain real customer information.
 - Run `pnpm exec supabase db reset` only against a local Supabase instance when migrations change.
 - Never reset the linked remote database as part of deployment verification.
+- No Phase 17 database migration is required.
 - Run `psql "$DATABASE_URL" -f supabase/tests/schema_smoke.sql` after applying migrations.
 - Apply Phase 4 with `pnpm exec supabase db push`, then regenerate types with `pnpm exec supabase gen types typescript --linked > src/types/database.types.ts`.
 - Run `psql "$DATABASE_URL" -f supabase/tests/phase4_catalogue_storage.sql` after applying the Phase 4 migration.
@@ -136,7 +163,7 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 - `/admin/inventaire` must be accessible only to authorized staff. Manual inventory operations must call the transactional adjustment function, preserve reserved-stock invariants, create immutable ledger rows and audit rows, and refresh public availability.
 - `/admin/commandes` must be accessible only to authorized order staff. Status transitions must call the transactional transition function, cancellation must release reservations exactly once, delivery must convert reservations into `SOLD` exactly once, and returns must not automatically restock inventory.
 - Phase 12 notification delivery requires `EMAIL_FROM`, `CRON_SECRET`, `NOTIFICATION_PROVIDER`, `NOTIFICATION_BATCH_SIZE`, and `NOTIFICATION_MAX_ATTEMPTS`. Production must set `NOTIFICATION_PROVIDER=resend` and `RESEND_API_KEY`; local/test may use `NOTIFICATION_PROVIDER=development`. Phase 14 moves the admin notification recipient to `store_settings.notification_email`; `ADMIN_NOTIFICATION_EMAIL` is no longer an application source.
-- Configure Vercel Cron or an equivalent scheduler to POST `/api/cron/notifications` with `Authorization: Bearer <CRON_SECRET>`. The route returns counts only and is safe for overlapping invocations because rows are claimed transactionally.
+- The Phase 12 route accepts authenticated POST, while Vercel Cron invokes GET. Do not add an incompatible `vercel.json` entry or put `CRON_SECRET` in a URL. On Vercel Pro, add the shared authenticated GET adapter described in `docs/production-upgrade-roadmap.md`, or use an external scheduler that can send the existing POST bearer request. Hobby's once-daily, imprecise schedule is not appropriate for prompt operational notifications.
 - Phase 13 adds `20260804133000_phase13_customer_messages.sql`. Apply it manually, regenerate database types, then run `psql "$DATABASE_URL" -f supabase/tests/phase13_messages.sql` against a non-production database before enabling the public contact form in production.
 - Phase 14 adds `20260813090000_phase14_store_settings_delivery.sql`. Review it, then manually run `pnpm exec supabase db push` and regenerate `src/types/database.types.ts`; do not hand-edit generated types. Before enabling checkout, configure a default delivery fee or enabled zones, run `supabase/tests/phase14_settings.sql`, rerun the Phase 8 SQL regression, and verify a real order's stored fee/total/snapshot.
 - Phase 14 business configuration lives in the database. Environment-only values remain provider/Supabase/cron secrets. `NEXT_PUBLIC_*` contact/social values are legacy fallbacks and should not be treated as the operational source after rollout.
@@ -145,9 +172,9 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 - Phase 16 adds `20260814160000_phase16_security_hardening.sql`. Review and apply it manually, regenerate Supabase types, and run `supabase/tests/phase16_security_hardening.sql` before deployment. Confirm browser roles cannot truncate or mutate sensitive tables and that manual notification retry is service-role-only and atomic.
 - Configure the production canonical `NEXT_PUBLIC_SITE_URL` and add the matching `/auth/callback` URL to the Supabase Auth allow list. OAuth redirects intentionally ignore request `Host` headers.
 - Confirm production responses contain CSP, `nosniff`, clickjacking denial, strict referrer policy, permissions policy and HSTS. Exercise Supabase authentication, Storage images, checkout, admin and charts under the deployed CSP.
-- Enable Supabase leaked-password protection and rerun `pnpm exec supabase db lint --linked` plus `pnpm exec supabase db advisors --linked` after the final migration.
+- Supabase leaked-password protection is Pro-only. On Free, require strong unique staff passwords and retain the advisor warning; enable the feature immediately after upgrading. Rerun `pnpm exec supabase db lint --linked` plus `pnpm exec supabase db advisors --linked` after the final migration.
 - The built-in application limiter is process-local even though its keys are privacy-hashed. Configure a shared rate limiter or platform WAF rules for order creation, tracking, contact and WhatsApp intent before multi-instance launch.
-- Run `pnpm test:e2e` with disposable credentials/data. Desktop covers the complete suite; Pixel 7 runs the representative Phase 16 responsive/accessibility checks. Do not use production customer records as fixtures.
+- Run `pnpm test:e2e` for read-only public checks. Run `pnpm test:e2e:destructive` only against local Supabase or a future allowlisted staging project. Do not use production customer records or the linked stateful project as fixtures.
 - Perform production post-deploy smoke checks for public browsing, COD checkout, manual Mobile Money instructions/payment verification, cancellation, inventory, support messages, notification processing, settings authority, dashboard roles, tracking privacy and admin/auth access during maintenance.
 - Do not deploy real email delivery until SPF/DKIM/domain setup and a Resend sandbox acceptance test are verified with non-customer data.
 - Test a controlled `/api/orders` HTTP 400 before launch. It must leave the cart intact and must not redirect to a confirmation route.
@@ -155,3 +182,54 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 - Checkout creates orders without exposing secrets.
 - Resend sends transactional messages.
 - Supabase Storage images render from approved buckets.
+
+## Free-Tier Backup And Recovery
+
+Supabase Free does not provide downloadable managed backups. Before release or high-risk maintenance, create an encrypted logical database backup using an approved Supabase/PostgreSQL process, record its timestamp/checksum/custodian and test restoration into an isolated environment. Never commit it; `backups/`, `production-backups/`, `*.dump` and `*.dump.gz` are ignored.
+
+Database backups do not contain the actual `product-images` objects. Export and verify the bucket separately. Preserve staff/audit references and immutable transactional histories; use order cancellation and compensating inventory workflows instead of table cleanup.
+
+## Vercel Project Setup
+
+- Framework preset: Next.js; standard build/output behavior.
+- Install: `pnpm install --frozen-lockfile`.
+- Build: `pnpm build`.
+- Node: `22.14.0`; package manager: `pnpm@10.15.0`.
+- Production branch: protected `main` with CI required where repository settings allow.
+- Production `NEXT_PUBLIC_SITE_URL`: the exact HTTPS canonical origin, never localhost.
+- Preview: read-only when it shares the live Supabase project.
+- Automatic database migration/seed: disabled. Migrations remain a reviewed manual step.
+
+Do not configure the deployment as commercial traffic while it remains on Hobby.
+
+## Health And Observability
+
+`GET` or `HEAD /api/health` proves application liveness only and returns no dependency/configuration details. Monitor Vercel build/function/cron logs for sanitized route failure codes, `/api/orders` 5xx responses, notification processor failures, Supabase connectivity errors and unexpected authorization denials. Do not add customer details to logs.
+
+## Production Data Review
+
+Run `pnpm audit:production:readiness`. The script is read-only and outputs counts, completeness flags, bucket policy and fixture-candidate counts without identities or PII. Then manually classify records:
+
+- intended catalogue/settings: `KEEP` after review;
+- active synthetic staff: disable, then review Auth deletion separately;
+- recognizable fixture catalogue: archive/unpublish or remove only when referentially safe;
+- orders/payments/inventory/notifications: `ARCHIVE` or keep; never casually delete;
+- audit/ledger history: `KEEP`.
+
+The audit output is not a cleanup command.
+
+## Deployment And Rollback Sequence
+
+1. Upgrade to a commercial-compatible host before real traffic.
+2. Set `accepting_orders=false`; enable maintenance if needed.
+3. Create/record database and Storage backups.
+4. Verify migrations and dry-run pending changes.
+5. Review data, staff, catalogue, inventory and Phase 14 settings.
+6. Configure Vercel variables, Supabase Auth URLs, custom SMTP/Resend and canonical domain.
+7. Deploy the application; apply reviewed database migrations separately if any.
+8. Check `/api/health`, public/admin routes, CSP/assets/metadata and role boundaries.
+9. Run controlled cancellation and SOLD smoke orders only with designated stock.
+10. Verify tracking privacy, notification acceptance and dashboard changes.
+11. Restore intended maintenance/order-acceptance settings.
+
+Application rollback uses Vercel deployment rollback/redeploy. Database rollback uses a reviewed forward fix; never delete an applied migration. For destructive incidents, stop writes and follow the recorded backup restore procedure.

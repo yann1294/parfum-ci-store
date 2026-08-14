@@ -1,13 +1,32 @@
 name: CI
 
+permissions:
+  contents: read
+
 on:
   pull_request:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_SITE_URL: https://ci.example.invalid
+      NEXT_PUBLIC_SITE_NAME: Parfum CI
+      NEXT_PUBLIC_SUPABASE_URL: https://abcdefghijklmnopqrst.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-public-placeholder
+      SUPABASE_SECRET_KEY: ci-server-placeholder
+      SUPABASE_STORAGE_BUCKET: product-images
+      NOTIFICATION_PROVIDER: resend
+      RESEND_API_KEY: re_ci_placeholder
+      EMAIL_FROM: Parfum CI CI <ci@example.invalid>
+      CRON_SECRET: ci-only-placeholder-not-a-production-secret
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,11 +37,15 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.14.0
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Format check (legacy debt, temporarily non-blocking)
+        continue-on-error: true
+        run: pnpm format:check
 
       - name: Typecheck
         run: pnpm typecheck

@@ -1,5 +1,6 @@
 import { aboutContentSchema, contactContentSchema, deliveryContentSchema, socialContentSchema } from "../../src/lib/storefront/content-schemas";
 import type { Database, Json } from "../../src/types/database.types";
+import { assertDestructiveE2eAllowed } from "../e2e-safety";
 
 export const PHASE65_MANUAL_PREFIX = "MANUAL-65-20260716";
 export const PHASE65_MANUAL_SLUG_SUFFIX = "manual-65-20260716";
@@ -780,18 +781,14 @@ export function getPhase65CleanupScope() {
 }
 
 export function assertCanRunPhase65ManualSeed(env: NodeJS.ProcessEnv) {
-  if (env.NODE_ENV === "production" || env.VERCEL_ENV === "production") {
-    throw new Error("Phase 6.5 manual seed refuses to run in production.");
-  }
+  assertDestructiveE2eAllowed(env);
   if (env.ALLOW_PHASE65_MANUAL_SEED !== "true") {
     throw new Error("Set ALLOW_PHASE65_MANUAL_SEED=true to run the Phase 6.5 manual seed.");
   }
 }
 
 export function assertCanRunPhase65ManualCleanup(env: NodeJS.ProcessEnv) {
-  if (env.NODE_ENV === "production" || env.VERCEL_ENV === "production") {
-    throw new Error("Phase 6.5 manual cleanup refuses to run in production.");
-  }
+  assertDestructiveE2eAllowed(env);
   if (env.ALLOW_PHASE65_MANUAL_CLEANUP !== "true") {
     throw new Error("Set ALLOW_PHASE65_MANUAL_CLEANUP=true to run the Phase 6.5 manual cleanup.");
   }

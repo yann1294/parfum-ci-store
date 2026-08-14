@@ -4,6 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 const ownerEmail = process.env.PLAYWRIGHT_OWNER_EMAIL ?? process.env.PLAYWRIGHT_ADMIN_EMAIL;
 const ownerPassword =
   process.env.PLAYWRIGHT_OWNER_PASSWORD ?? process.env.PLAYWRIGHT_ADMIN_PASSWORD;
+const safeMode = (process.env.PLAYWRIGHT_MODE ?? "safe") === "safe";
 
 async function expectNoSeriousAxeViolations(page: Page) {
   const result = await new AxeBuilder({ page })
@@ -69,7 +70,10 @@ test("cart drawer releases focus and scroll lock on Escape", async ({ page }) =>
 });
 
 test("representative admin routes have no serious axe violations", async ({ page }) => {
-  test.skip(!ownerEmail || !ownerPassword, "Owner Playwright credentials are not configured.");
+  test.skip(
+    safeMode || !ownerEmail || !ownerPassword,
+    "Admin accessibility checks require an approved destructive/staging E2E target.",
+  );
   await signInOwner(page);
 
   for (const route of [

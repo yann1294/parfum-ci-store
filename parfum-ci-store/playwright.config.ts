@@ -2,6 +2,14 @@ import { defineConfig, devices } from "@playwright/test";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { assertDestructiveE2eAllowed } from "./scripts/e2e-safety";
+
+const playwrightMode = process.env.PLAYWRIGHT_MODE ?? "safe";
+
+if (playwrightMode !== "safe" && playwrightMode !== "destructive") {
+  throw new Error("PLAYWRIGHT_MODE must be safe or destructive.");
+}
+
 function loadTestEnv() {
   const envPath = resolve(process.cwd(), "env.test.local");
   if (!existsSync(envPath)) return;
@@ -28,7 +36,40 @@ function loadTestEnv() {
   }
 }
 
-loadTestEnv();
+if (playwrightMode === "destructive") {
+  loadTestEnv();
+  assertDestructiveE2eAllowed(process.env);
+}
+
+const safeProjects = [
+  {
+    name: "chromium",
+    testMatch: /(?:smoke|phase16-hardening|phase17-deployment)\.spec\.ts/,
+    use: { ...devices["Desktop Chrome"] },
+  },
+  {
+    name: "mobile-chromium",
+    testMatch: /(?:phase16-hardening|phase17-deployment)\.spec\.ts/,
+    use: { ...devices["Pixel 7"] },
+  },
+];
+
+const destructiveProjects = [
+  {
+    name: "setup",
+    testMatch: /.*\.setup\.ts/,
+  },
+  {
+    name: "chromium",
+    testIgnore: /.*\.setup\.ts/,
+    use: { ...devices["Desktop Chrome"] },
+  },
+  {
+    name: "mobile-chromium",
+    testMatch: /phase16-hardening\.spec\.ts/,
+    use: { ...devices["Pixel 7"] },
+  },
+];
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -45,22 +86,7 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:3000",
     trace: "on-first-retry",
   },
-  projects: [
-    {
-      name: "setup",
-      testMatch: /.*\.setup\.ts/,
-    },
-    {
-      name: "chromium",
-      testIgnore: /.*\.setup\.ts/,
-      use: { ...devices["Desktop Chrome"] },
-    },
-    {
-      name: "mobile-chromium",
-      testMatch: /phase16-hardening\.spec\.ts/,
-      use: { ...devices["Pixel 7"] },
-    },
-  ],
+  projects: playwrightMode === "destructive" ? destructiveProjects : safeProjects,
   webServer: {
     command: "pnpm dev",
     url: "http://127.0.0.1:3000",

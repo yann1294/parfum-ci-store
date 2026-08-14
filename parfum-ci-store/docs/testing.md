@@ -5,7 +5,8 @@
 - TypeScript: `pnpm typecheck`
 - ESLint: `pnpm lint`
 - Vitest: `pnpm test`
-- Playwright: `pnpm test:e2e`
+- Safe Playwright browser checks: `pnpm test:e2e`
+- Destructive lifecycle Playwright (isolated local/staging only): `pnpm test:e2e:destructive`
 - Production build: `pnpm build`
 
 ## Unit Tests
@@ -40,6 +41,21 @@ Admin authentication setup reads credentials only from ignored environment varia
 ```bash
 PLAYWRIGHT_OWNER_EMAIL=owner@example.com PLAYWRIGHT_OWNER_PASSWORD='...' pnpm test:e2e
 ```
+
+`pnpm test:e2e` is intentionally read-only by default and does not load `env.test.local`. It runs public smoke, liveness and representative accessibility checks only.
+
+Database lifecycle E2E must be invoked explicitly:
+
+```bash
+PLAYWRIGHT_MODE=destructive \
+ALLOW_DESTRUCTIVE_E2E=true \
+E2E_TARGET_KIND=local \
+pnpm test:e2e:destructive
+```
+
+For hosted staging, use `E2E_TARGET_KIND=staging` and set `E2E_ALLOWED_SUPABASE_PROJECT_REF` to that isolated project's exact reference. The currently linked production candidate is hard-denied and must never be allowlisted. The same guard applies to Phase 5/6.5 seed and cleanup helpers.
+
+GitHub Actions does not run database lifecycle E2E until an isolated CI Supabase target exists. Phase 16's pre-launch lifecycle evidence is retained in its verification document; it is not repeatedly recreated against the stateful Free project.
 
 The setup project writes authenticated browser state to `playwright/.auth/admin.json`, which is ignored by Git. Do not commit storage state, traces, videos, screenshots, or reports that contain authenticated cookies or session data.
 
@@ -110,17 +126,19 @@ Image upload tests should treat temporary pending cards and persisted image card
 Development/test catalogue pagination and role checks can use the guarded seed scripts:
 
 ```bash
-ALLOW_E2E_SEED=true pnpm seed:phase5
-ALLOW_E2E_SEED=true pnpm cleanup:phase5
+ALLOW_DESTRUCTIVE_E2E=true E2E_TARGET_KIND=local ALLOW_E2E_SEED=true pnpm seed:phase5
+ALLOW_DESTRUCTIVE_E2E=true E2E_TARGET_KIND=local ALLOW_E2E_SEED=true pnpm cleanup:phase5
 ```
 
 Required environment-variable names:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `SUPABASE_SECRET_KEY`
+- `ALLOW_DESTRUCTIVE_E2E=true`
+- `E2E_TARGET_KIND=local` for local Supabase, or the exact staging allowlist described above
 - `ALLOW_E2E_SEED=true`
 
-The scripts refuse to run when `NODE_ENV=production` or `VERCEL_ENV=production`, never print secret values, and operate only on records containing the exact prefix `E2E-20260716-A`.
+The scripts refuse to run when `NODE_ENV=production` or `VERCEL_ENV=production`, hard-deny the linked production candidate, never print secret values, and operate only on records containing the exact prefix `E2E-20260716-A`.
 
 Seeded records:
 

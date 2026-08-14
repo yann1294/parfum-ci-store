@@ -12,14 +12,17 @@ Naming convention:
 - Special availability products include `MANUAL-65-20260716` in their names.
 - Store content rows include the prefix in SEO/test metadata so cleanup can identify fixture content.
 
-The seed is development/test only. It refuses production and requires an explicit flag. It does not upload images, insert `product_images`, write to `storage.objects`, or activate products automatically. Public pagination is `NOT VERIFIED` until at least 13 products are genuinely `ACTIVE` with finalized valid images.
+The seed is development/test only. It refuses production, hard-denies the Phase 17 linked production candidate and requires the shared destructive-E2E gate plus its explicit phase flag. It does not upload images, insert `product_images`, write to `storage.objects`, or activate products automatically. Public pagination is `NOT VERIFIED` until at least 13 products are genuinely `ACTIVE` with finalized valid images.
 
 ## Commands
 
 Seed:
 
 ```bash
-ALLOW_PHASE65_MANUAL_SEED=true pnpm seed:phase65:manual
+ALLOW_DESTRUCTIVE_E2E=true \
+E2E_TARGET_KIND=local \
+ALLOW_PHASE65_MANUAL_SEED=true \
+pnpm seed:phase65:manual
 ```
 
 Run locally after seeding:
@@ -32,6 +35,8 @@ pnpm dev
 Cleanup dry run:
 
 ```bash
+ALLOW_DESTRUCTIVE_E2E=true \
+E2E_TARGET_KIND=local \
 ALLOW_PHASE65_MANUAL_CLEANUP=true \
 pnpm cleanup:phase65:manual:dry
 ```
@@ -39,6 +44,8 @@ pnpm cleanup:phase65:manual:dry
 Cleanup:
 
 ```bash
+ALLOW_DESTRUCTIVE_E2E=true \
+E2E_TARGET_KIND=local \
 ALLOW_PHASE65_MANUAL_CLEANUP=true \
 pnpm cleanup:phase65:manual
 ```

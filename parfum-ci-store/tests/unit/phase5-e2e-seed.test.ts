@@ -12,31 +12,38 @@ import {
 } from "../../scripts/phase5-e2e-data";
 
 describe("Phase 5 E2E seed safety", () => {
+  const safeLocalEnv = {
+    ALLOW_DESTRUCTIVE_E2E: "true",
+    E2E_TARGET_KIND: "local",
+    NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+    NODE_ENV: "test",
+  } as NodeJS.ProcessEnv;
+
   it("refuses production environments", () => {
     expect(() =>
       assertCanRunPhase5E2eScript({
+        ...safeLocalEnv,
         ALLOW_E2E_SEED: "true",
         NODE_ENV: "production",
       } as NodeJS.ProcessEnv),
-    ).toThrow("refuse to run in production");
+    ).toThrow("forbidden in production");
 
     expect(() =>
       assertCanRunPhase5E2eScript({
+        ...safeLocalEnv,
         ALLOW_E2E_SEED: "true",
         VERCEL_ENV: "production",
       } as unknown as NodeJS.ProcessEnv),
-    ).toThrow("refuse to run in production");
+    ).toThrow("forbidden in production");
   });
 
   it("requires the explicit seed flag", () => {
-    expect(() => assertCanRunPhase5E2eScript({ NODE_ENV: "test" } as NodeJS.ProcessEnv)).toThrow(
-      "ALLOW_E2E_SEED=true",
-    );
+    expect(() => assertCanRunPhase5E2eScript(safeLocalEnv)).toThrow("ALLOW_E2E_SEED=true");
 
     expect(() =>
       assertCanRunPhase5E2eScript({
+        ...safeLocalEnv,
         ALLOW_E2E_SEED: "true",
-        NODE_ENV: "test",
       } as NodeJS.ProcessEnv),
     ).not.toThrow();
   });

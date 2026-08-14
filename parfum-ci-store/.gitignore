@@ -22,6 +22,10 @@
 
 # production
 /build
+/backups
+/production-backups
+*.dump
+*.dump.gz
 
 # misc
 .DS_Store

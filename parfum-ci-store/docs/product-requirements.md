@@ -91,6 +91,17 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - The representative public and admin surfaces provide one meaningful heading, keyboard-visible validation/focus behavior, responsive layouts, and serious/critical automated accessibility checks on desktop and mobile.
 - Rate-limit identifiers are one-way hashed before process-local storage. A distributed production limiter remains an explicit deployment requirement for multi-instance enforcement.
 
+## Phase 17 Free-Tier Deployment Readiness
+
+- Phase 17 adds deployment safety and operations only; it does not add or redesign business features.
+- Vercel Hobby is limited to private/non-commercial verification for this project. A commercial-compatible hosting plan is required before accepting real orders.
+- The currently linked Supabase Free project is the temporary live backend and is treated as stateful, non-disposable infrastructure. Database resets, destructive fixtures and lifecycle E2E are prohibited against it.
+- Safe public browser E2E is the default. Database-mutating E2E requires an explicit local/staging target and can never target the protected live project reference.
+- Supabase Free capacity, project pausing and lack of downloadable managed backups are accepted temporary risks. Manual encrypted PostgreSQL backup plus separate Storage export are required before launch/high-risk changes.
+- `/api/health` is liveness only and exposes no dependency, configuration or data details.
+- CI uses inert configuration and never receives live database, provider, cron or staff credentials.
+- Vercel/Supabase upgrades and future environment separation are documented in `docs/production-upgrade-roadmap.md`.
+
 ## Non-Goals for MVP
 
 - Stripe or online card processing

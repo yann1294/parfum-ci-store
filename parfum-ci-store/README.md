@@ -13,7 +13,15 @@ The MVP is French-first, uses XOF pricing, supports guest checkout, and accepts 
 - Resend transactional email
 - Vitest unit tests
 - Playwright browser tests
-- Vercel deployment
+- Vercel deployment (Hobby for private/non-commercial verification; Pro or another commercial-compatible host before live sales)
+
+## Current Deployment Gate
+
+The linked Supabase Free project is the intended temporary MVP backend and is no longer disposable. Never reset, truncate, broadly clean, seed or run database-mutating E2E against it.
+
+Vercel Hobby is used only for private/non-commercial deployment verification. It is not approved here for a commercial storefront. Before accepting real orders, upgrade to Vercel Pro or another host whose plan permits the intended use and complete the external checks in `docs/phase-17-deployment-verification.md`.
+
+See `docs/phase-17-free-tier-deployment-plan.md` for the tightened Phase 17 contract and `docs/production-upgrade-roadmap.md` for the future Vercel/Supabase separation and upgrade path.
 
 ## Prerequisites
 
@@ -43,7 +51,7 @@ Copy `.env.example` and replace placeholders locally. Never commit real values.
 
 - Required browser-safe values: `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 - Required server values: `SUPABASE_SECRET_KEY`, `CRON_SECRET`, notification provider settings, and the configured mail sender.
-- Production-only provider setup: `RESEND_API_KEY` when `NOTIFICATION_PROVIDER=resend`, verified Resend sender/domain, Vercel Cron, Supabase Auth redirect URLs, and production staff accounts.
+- Live-only provider setup: `RESEND_API_KEY` when `NOTIFICATION_PROVIDER=resend`, verified Resend sender/domain and Auth custom SMTP, a scheduler compatible with the POST processor, Supabase Auth redirect URLs, and production staff accounts.
 - Optional local/E2E values: the `PLAYWRIGHT_*` role credentials and guarded fixture flags documented in `docs/testing.md`.
 
 Business contact, payment, delivery, SEO, notification-recipient, and availability settings live in the Phase 14 database singleton. Provider credentials remain environment-only.
@@ -60,12 +68,14 @@ pnpm exec supabase gen types typescript --linked > src/types/database.types.ts
 
 Do not hand-edit generated database types. Create staff users in Supabase Auth, then create matching active `profiles` rows with one of the established roles: `OWNER`, `ADMIN`, `ORDER_MANAGER`, `INVENTORY_MANAGER`, or `CUSTOMER_SUPPORT`. Never seed a fabricated production owner UUID.
 
-Guarded catalogue fixtures are available for non-production environments:
+Guarded catalogue fixtures are available only for local Supabase or a future explicitly allowlisted staging project:
 
 ```bash
-ALLOW_E2E_SEED=true pnpm seed:phase5
-ALLOW_E2E_SEED=true pnpm cleanup:phase5
+ALLOW_DESTRUCTIVE_E2E=true E2E_TARGET_KIND=local ALLOW_E2E_SEED=true pnpm seed:phase5
+ALLOW_DESTRUCTIVE_E2E=true E2E_TARGET_KIND=local ALLOW_E2E_SEED=true pnpm cleanup:phase5
 ```
+
+The known live Supabase project is hard-denied even if flags are supplied. Use `pnpm audit:production:readiness` for a read-only, sanitized pre-launch inventory; it never deletes or prints identities/customer records.
 
 ## Verification
 
@@ -76,8 +86,17 @@ pnpm format:check
 pnpm typecheck
 pnpm lint
 pnpm test
-pnpm test:e2e
+pnpm test:e2e # safe public browser checks only
 pnpm build
+```
+
+Destructive lifecycle E2E is separate and must target local Supabase or an explicitly allowlisted staging project:
+
+```bash
+PLAYWRIGHT_MODE=destructive \
+ALLOW_DESTRUCTIVE_E2E=true \
+E2E_TARGET_KIND=local \
+pnpm test:e2e:destructive
 ```
 
 Run SQL tests only against a disposable local or staging database after its migrations are current:
@@ -111,9 +130,14 @@ pnpm typecheck
 pnpm test
 pnpm test:watch
 pnpm test:e2e
+pnpm test:e2e:destructive
 pnpm test:e2e:ui
 pnpm format
 pnpm format:check
+pnpm audit:production:readiness
+pnpm db:migrations
+pnpm db:push:dry
+pnpm db:types:linked
 ```
 
 ## Documentation
@@ -126,6 +150,8 @@ pnpm format:check
 - Security: `docs/security.md`
 - Testing: `docs/testing.md`
 - Deployment: `docs/deployment.md`
+- Phase 17 free-tier deployment contract: `docs/phase-17-free-tier-deployment-plan.md`
+- Future production upgrade: `docs/production-upgrade-roadmap.md`
 - Manual acceptance test: `docs/manual-acceptance-test.md`
 
 Read the relevant document before changing behavior. Read the matching Next.js guide in `node_modules/next/dist/docs/` before changing framework behavior.

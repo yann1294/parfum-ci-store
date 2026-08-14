@@ -28,26 +28,35 @@ import {
 } from "../../scripts/fixtures/phase65-catalogue-data";
 
 describe("Phase 6.5 manual seed safety", () => {
+  const safeLocalEnv = {
+    ALLOW_DESTRUCTIVE_E2E: "true",
+    E2E_TARGET_KIND: "local",
+    NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
+    NODE_ENV: "test",
+  } as NodeJS.ProcessEnv;
+
   it("refuses production environments and requires explicit flags", () => {
     expect(() =>
       assertCanRunPhase65ManualSeed({
+        ...safeLocalEnv,
         ALLOW_PHASE65_MANUAL_SEED: "true",
         NODE_ENV: "production",
       } as NodeJS.ProcessEnv),
-    ).toThrow("refuses to run in production");
+    ).toThrow("forbidden in production");
 
-    expect(() => assertCanRunPhase65ManualSeed({ NODE_ENV: "test" } as NodeJS.ProcessEnv)).toThrow(
+    expect(() => assertCanRunPhase65ManualSeed(safeLocalEnv)).toThrow(
       "ALLOW_PHASE65_MANUAL_SEED=true",
     );
 
     expect(() =>
       assertCanRunPhase65ManualCleanup({
+        ...safeLocalEnv,
         ALLOW_PHASE65_MANUAL_CLEANUP: "true",
         VERCEL_ENV: "production",
       } as unknown as NodeJS.ProcessEnv),
-    ).toThrow("refuses to run in production");
+    ).toThrow("forbidden in production");
 
-    expect(() => assertCanRunPhase65ManualCleanup({ NODE_ENV: "test" } as NodeJS.ProcessEnv)).toThrow(
+    expect(() => assertCanRunPhase65ManualCleanup(safeLocalEnv)).toThrow(
       "ALLOW_PHASE65_MANUAL_CLEANUP=true",
     );
   });

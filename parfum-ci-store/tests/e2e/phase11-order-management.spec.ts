@@ -2,6 +2,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createHash, randomUUID } from "node:crypto";
 
+import { assertDestructiveE2eAllowed } from "../../scripts/e2e-safety";
+
 type RoleName = "OWNER" | "ADMIN" | "ORDER_MANAGER" | "CUSTOMER_SUPPORT" | "INVENTORY_MANAGER";
 
 type StaffActor = {
@@ -60,27 +62,22 @@ function requiredEnv(name: string) {
   return value;
 }
 
-function assertNonProductionEnv() {
-  const url = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
+function assertSafeE2eEnv() {
+  assertDestructiveE2eAllowed(process.env);
+  requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
   requiredEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
   requiredEnv("SUPABASE_SECRET_KEY");
-  if (url.includes("example.supabase.co")) {
-    throw new Error("Phase 11 E2E refused to run against example.supabase.co.");
-  }
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
-    throw new Error("Phase 11 E2E refused to run in production.");
-  }
 }
 
 function adminClient() {
-  assertNonProductionEnv();
+  assertSafeE2eEnv();
   return createClient(requiredEnv("NEXT_PUBLIC_SUPABASE_URL"), requiredEnv("SUPABASE_SECRET_KEY"), {
     auth: { autoRefreshToken: false, persistSession: false },
   }) as SupabaseClient;
 }
 
 function publicClient() {
-  assertNonProductionEnv();
+  assertSafeE2eEnv();
   return createClient(
     requiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
     requiredEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),

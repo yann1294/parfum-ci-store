@@ -55,6 +55,7 @@
 
 - Never expose secret keys to the browser.
 - Never commit secrets.
+- GitHub Actions uses inert build placeholders and has no production Supabase, Resend, cron or staff secrets.
 - Only `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` may be used by browser code.
 - Server secrets are validated separately in `src/lib/env/server.ts`.
 - Never store card details, Mobile Money PINs, OTPs, or CVVs.
@@ -65,6 +66,7 @@
 - Development-only auth diagnostics emit event codes and optional route/reason metadata only. They must not include cookie values, OAuth URLs, authorization codes, tokens, raw profiles, raw users, email addresses, or secrets.
 - Product-image signed upload URLs and tokens are secret for their short lifetime. Do not log them, audit them, or store them outside the upload flow.
 - Product images are stored in a public bucket and are not confidential if the URL is known.
+- Production database dumps and Storage exports are sensitive operational artifacts. They are ignored by Git, must be encrypted at rest, and must never be uploaded to a public bucket or CI artifact without an explicit secure retention policy.
 - Storefront content editing is restricted to active OWNER and ADMIN staff through `/admin/contenu` and the `store_content` RLS policies. Public reads are limited to rows explicitly marked `public_readable`.
 - Storefront content schemas accept structured text fields and repeatable items only. They do not render arbitrary HTML and must never store scripts, secrets, tokens, signed URLs, customer data, or private settings.
 - Inventory initialization is a server-side staff operation. `OWNER`, `ADMIN`, and `INVENTORY_MANAGER` may call the `initialize_variant_inventory` RPC; other roles are denied server-side. Product and variant forms must not directly update `stock_on_hand` or `reserved_quantity`.
@@ -97,6 +99,16 @@ Sensitive operations must be server-side and audited:
 - Order status transitions
 - Payment verification
 - Settings changes
+
+## Production And Test Isolation
+
+- The protected Supabase project reference is checked by `scripts/e2e-safety.ts`; destructive E2E, seed and cleanup helpers fail before creating a privileged client when that project is targeted.
+- Destructive tests additionally require an explicit opt-in and either a localhost Supabase URL or an exact staging-project allowlist match.
+- `NODE_ENV=production` and `VERCEL_ENV=production` always deny destructive E2E.
+- The current linked project must never be reset, truncated, reseeded or used for broad fixture cleanup after Phase 17.
+- Staff test accounts should be disabled before Auth deletion so audit references remain intelligible. Orders, payment transactions, inventory ledgers, notifications and audit logs are preserved or corrected through established workflows rather than rewritten.
+- `/api/health` is intentionally liveness-only. It is uncached and reveals neither dependency status nor data/configuration details.
+- Vercel Hobby is not an approved commercial launch target. This is a terms/authorization gate in addition to the application's technical security controls.
 
 ## Validation
 
@@ -221,7 +233,7 @@ For local Supabase CLI provider testing, `SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_S
 
 ### Production security gates
 
-- Enable Supabase leaked-password protection before launch; the linked advisor currently reports it disabled.
+- Supabase leaked-password protection is Pro-only and therefore unavailable on the current Free project. Require strong unique staff passwords now and treat upgrading/enabling leaked-password protection as a production security improvement. The advisor warning is accepted only for the constrained Free-tier verification stage.
 - Apply and verify `20260814160000_phase16_security_hardening.sql` before deployment.
 - Run linked Supabase lint/advisors after migration and classify intentional security-definer public projections separately from real privilege findings.
 - Configure a distributed rate-limit/WAF layer for public order, tracking, contact and WhatsApp-intent endpoints.
