@@ -135,6 +135,7 @@ Phase 6 generates:
 - product metadata from public product queries only;
 - Product JSON-LD for active products;
 - `/sitemap.xml` with public static routes and active product URLs;
+- public `/mentions-legales`, `/politique-de-confidentialite` and `/conditions-generales-de-vente` routes with canonical metadata and footer links;
 - `/robots.txt` that blocks admin/auth/cart paths and blocks all crawling on non-production deployments.
 
 ## Admin Catalogue
@@ -176,6 +177,8 @@ Before enabling catalogue operations in production, confirm the Phase 4 migratio
 - The built-in application limiter is process-local even though its keys are privacy-hashed. Configure a shared rate limiter or platform WAF rules for order creation, tracking, contact and WhatsApp intent before multi-instance launch.
 - Run `pnpm test:e2e` for read-only public checks. Run `pnpm test:e2e:destructive` only against local Supabase or a future allowlisted staging project. Do not use production customer records or the linked stateful project as fixtures.
 - Perform production post-deploy smoke checks for public browsing, COD checkout, manual Mobile Money instructions/payment verification, cancellation, inventory, support messages, notification processing, settings authority, dashboard roles, tracking privacy and admin/auth access during maintenance.
+- Before commercial opening, complete the legal owner checklist in `docs/legal-and-licensing.md`. Verify publisher identity, registration/tax details, privacy contact, return/refund rules, data-retention schedule, international-processing formalities and rights to catalogue assets. Repository policy text is a technical draft, not legal sign-off.
+- Verify the legal routes remain reachable while maintenance mode is on, and verify checkout/contact links open the deployed canonical documents. Do not remove incomplete-information warnings until the missing facts and approval are recorded.
 - Do not deploy real email delivery until SPF/DKIM/domain setup and a Resend sandbox acceptance test are verified with non-customer data.
 - Test a controlled `/api/orders` HTTP 400 before launch. It must leave the cart intact and must not redirect to a confirmation route.
 - Admin routes require authentication.

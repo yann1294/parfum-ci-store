@@ -204,18 +204,20 @@ See:
 
 ## Documentation
 
-| Document                                                                 | Purpose                                                    |
-| ------------------------------------------------------------------------ | ---------------------------------------------------------- |
-| [Product requirements](parfum-ci-store/docs/product-requirements.md)     | MVP scope and completed modules                            |
-| [Architecture](parfum-ci-store/docs/architecture.md)                     | Application boundaries and authoritative data flow         |
-| [Database schema](parfum-ci-store/docs/database-schema.md)               | Tables, functions, RLS and snapshots                       |
-| [Business rules](parfum-ci-store/docs/business-rules.md)                 | Catalogue, ordering, stock, payment and lifecycle rules    |
-| [Security](parfum-ci-store/docs/security.md)                             | Auth, roles, secrets, validation and production controls   |
-| [Design system](parfum-ci-store/docs/design-system.md)                   | Brand tokens, components and responsive conventions        |
-| [Testing](parfum-ci-store/docs/testing.md)                               | Unit, SQL, Playwright and destructive-test policy          |
-| [Deployment](parfum-ci-store/docs/deployment.md)                         | Environment, Supabase, Vercel, backup and smoke procedures |
-| [Manual acceptance test](parfum-ci-store/docs/manual-acceptance-test.md) | Operational acceptance checklist                           |
-| [Phase 18 analysis](parfum-ci-store/docs/phase-18-readiness-analysis.md) | Catalogue onboarding decision and launch gates             |
+| Document                                                                       | Purpose                                                     |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| [Developer handoff](parfum-ci-store/docs/mvp-developer-handoff-and-roadmap.md) | Durable MVP state, reasoning and future roadmap             |
+| [Product requirements](parfum-ci-store/docs/product-requirements.md)           | MVP scope and completed modules                             |
+| [Architecture](parfum-ci-store/docs/architecture.md)                           | Application boundaries and authoritative data flow          |
+| [Database schema](parfum-ci-store/docs/database-schema.md)                     | Tables, functions, RLS and snapshots                        |
+| [Business rules](parfum-ci-store/docs/business-rules.md)                       | Catalogue, ordering, stock, payment and lifecycle rules     |
+| [Security](parfum-ci-store/docs/security.md)                                   | Auth, roles, secrets, validation and production controls    |
+| [Design system](parfum-ci-store/docs/design-system.md)                         | Brand tokens, components and responsive conventions         |
+| [Testing](parfum-ci-store/docs/testing.md)                                     | Unit, SQL, Playwright and destructive-test policy           |
+| [Deployment](parfum-ci-store/docs/deployment.md)                               | Environment, Supabase, Vercel, backup and smoke procedures  |
+| [Manual acceptance test](parfum-ci-store/docs/manual-acceptance-test.md)       | Operational acceptance checklist                            |
+| [Phase 18 analysis](parfum-ci-store/docs/phase-18-readiness-analysis.md)       | Catalogue onboarding decision and launch gates              |
+| [Legal and licensing](parfum-ci-store/docs/legal-and-licensing.md)             | License decision, public policies and owner completion work |
 
 ## Project status
 
@@ -225,4 +227,4 @@ Future work is intentionally separated from the MVP, including a dedicated stagi
 
 ## License
 
-No open-source license has been declared. Unless a license is added, the source remains subject to the repository owner's rights.
+This project is proprietary and all rights are reserved. It is not open-source and the application package is marked `UNLICENSED`. See the [project license](LICENSE) and [legal/licensing handoff](parfum-ci-store/docs/legal-and-licensing.md). Third-party dependencies and assets remain subject to their own terms.

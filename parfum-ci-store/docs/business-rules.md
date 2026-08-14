@@ -146,6 +146,9 @@
 - Low-stock alerts are based on available quantity (`stock_on_hand - reserved_quantity`) and are deduplicated by threshold crossing. A variant can alert again only after recovering above the threshold and crossing below it later.
 - Contact-message notification delivery depends on a persisted contact-message flow. Phase 13 provides that flow and writes notification intents; external provider delivery remains asynchronous through Phase 12.
 - Phase 13 contact submissions require a name, subject, message, explicit contact-response consent for website submissions, and either a valid Côte d’Ivoire phone/WhatsApp number or a valid email. Message creation is idempotent and atomic with admin notification intents; notification delivery failure cannot delete or roll back the message. Manual social/phone/email messages are staff-entered records only and do not imply platform integration.
+- Public legal notices, privacy information and sales terms are version-controlled and must remain reachable during maintenance. They may display only public Phase 14 identity/contact settings; missing statutory identity fields must never be invented or silently hidden.
+- Checkout acceptance currently proves only that the validated request carried `termsAccepted = true`; no policy version is snapshotted on the order. A later audit-grade consent change must extend the authoritative Phase 8 transaction through a forward-only migration.
+- Returns, exchange, refund timing and privacy-retention periods must come from an approved owner/legal decision. Application code must not invent them from lifecycle enums or technical retention behavior.
 - Resend webhooks are excluded until official signature verification, replay protection and sanitized event storage are implemented.
 
 ## Phase 16 Hardening Rules

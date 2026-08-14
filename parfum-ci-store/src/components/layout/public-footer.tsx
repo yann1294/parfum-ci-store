@@ -20,6 +20,26 @@ export async function PublicFooter() {
           <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
             Plateforme e-commerce et opérations pour une parfumerie premium en Côte d&apos;Ivoire.
           </p>
+          <nav
+            className="mt-5 flex max-w-3xl flex-wrap gap-x-5 gap-y-3 text-sm"
+            aria-label="Informations légales"
+          >
+            <Link href="/mentions-legales" className="text-muted-foreground hover:text-foreground">
+              Mentions légales
+            </Link>
+            <Link
+              href="/conditions-generales-de-vente"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Conditions générales de vente
+            </Link>
+            <Link
+              href="/politique-de-confidentialite"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Confidentialité
+            </Link>
+          </nav>
         </div>
         <div className="flex items-center gap-2">
           {socialLinks.map((link) => {

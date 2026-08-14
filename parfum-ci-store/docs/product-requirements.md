@@ -23,6 +23,7 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - Settings
 - Basic analytics
 - Audit logs
+- Public legal notices, privacy information, and sales terms
 
 ## Customer Requirements
 
@@ -35,6 +36,15 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - Choose manual Mobile Money payment or cash on delivery.
 - Receive order confirmation and status notifications.
 - Track an order by reference and verification token without customer account auth.
+- Access versioned legal notices, privacy information and sales terms from the public footer, including while storefront maintenance mode is active.
+
+## Legal And Policy Boundary
+
+- Public legal documents are version-controlled JSX and render configured Phase 14 public identity/contact values; they are not unrestricted CMS HTML.
+- Checkout links to the current sales terms and privacy policy, and contact consent links to the privacy policy.
+- The repository uses a proprietary all-rights-reserved license and is not an open-source package.
+- Missing registration/tax/publisher details, the final returns policy, retention schedule, processor/transfer review and legal approval remain owner-controlled launch gates documented in `docs/legal-and-licensing.md`.
+- Checkout records acceptance for request validation but does not yet snapshot a policy version. Do not represent it as audit-grade consent until a reviewed forward migration and transactional snapshot are implemented.
 
 ## Admin Requirements
 

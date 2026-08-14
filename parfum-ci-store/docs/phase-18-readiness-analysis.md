@@ -96,9 +96,9 @@ A catalogue CSV export is useful for operational portability. It does not replac
 
 Launch acceptance must test **every enabled production payment method**, not require Orange Money, MTN MoMo, Wave and Moov Money when they are intentionally disabled. It must still verify that enabled manual methods use Phase 14 instructions and never request PIN/OTP/card credentials.
 
-### 9. Legal/privacy pages are not currently present
+### 9. Legal/privacy routes exist, but approval remains outstanding
 
-The repository has public about, delivery and contact routes, but no dedicated privacy-policy, terms or legal-notice route. Phase 18 must not invent legal text. The owner/legal reviewer must supply approved content and decide whether adding routes/content is a separate pre-launch requirement. Checkout currently records UI acceptance but does not snapshot a policy version/timestamp, so it must not be represented as audit-grade legal consent.
+The repository now includes `/mentions-legales`, `/politique-de-confidentialite` and `/conditions-generales-de-vente`, linked from the footer and relevant forms. They reflect the implemented MVP and expose missing owner-controlled facts instead of inventing them. `docs/legal-and-licensing.md` is the authoritative completion checklist. Checkout still records UI acceptance without a policy version/timestamp snapshot, so it must not be represented as audit-grade legal consent.
 
 ### 10. Launch acceptance cannot precede Phase 17 gates
 
@@ -178,7 +178,7 @@ Required inputs:
 - approved names, descriptions, prices, SKUs and classifications;
 - confirmation whether cost price should be imported;
 - owned/licensed image files and alt text;
-- decision on legal/privacy content;
+- final owner/legal approval of identity, return/refund and privacy content;
 - decision to use manual entry or bulk import.
 
 Status: **NOT VERIFIED**.
