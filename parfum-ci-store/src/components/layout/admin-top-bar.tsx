@@ -48,6 +48,7 @@ export function AdminTopBar({ staff }: { staff: StaffProfile }) {
                 <form action={logoutAction}>
                   <DropdownMenuItem
                     nativeButton
+                    closeOnClick={false}
                     render={<button type="submit" className="w-full" />}
                   >
                     Déconnexion

@@ -16,13 +16,13 @@ function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
-
 function integer(formData: FormData, key: string) {
   const value = text(formData, key);
   return value ? Number.parseInt(value, 10) : undefined;
 }
 
 function revalidateInventory(variantId: string) {
+  revalidatePath("/admin");
   revalidatePath("/admin/inventaire");
   revalidatePath("/admin/inventaire/stock-faible");
   revalidatePath(`/admin/inventaire/${variantId}`);

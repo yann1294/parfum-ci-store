@@ -53,7 +53,6 @@ src/app/
     paiements/page.tsx
     messages/page.tsx
     notifications/page.tsx
-    analytics/page.tsx
     parametres/page.tsx
     audit/page.tsx
   api/
@@ -131,3 +130,11 @@ The logo field currently accepts only a bounded HTTPS URL because the establishe
 `delivery_zones` stores queryable city/commune rules. `quote_delivery_server` and the `orders_apply_operational_settings` insert trigger share `app_private.quote_delivery`, so admin preview, checkout display and stored order economics use one rule implementation. The trigger rejects disabled ordering/maintenance and snapshots the fee, method, zone and estimate without replacing the applied Phase 8 function.
 
 Maintenance is rendered in the `(store)` layout rather than Proxy. This deliberately preserves `/admin`, `/connexion`, auth callbacks, cron and API routes.
+
+## Phase 15 Dashboard Architecture
+
+`src/lib/analytics/date-range.ts` is the single business-calendar helper. It maps validated `7d`, `30d` and `90d` URL values to UTC timestamps for `Africa/Abidjan` local midnights. `src/lib/analytics/service.ts` loads the structured timezone, calls one service-role-only aggregate RPC and applies a defense-in-depth role projection.
+
+The Server Component at `/admin` opts into request-time rendering with `connection()`. It passes one typed, already-aggregated DTO to presentational dashboard components; no browser component has database credentials or aggregates raw rows. The existing admin layout performs its navigation message-count query independently, while all dashboard sections are produced in one database round trip.
+
+The MVP uses direct indexed SQL aggregates. It adds no Redis, materialized view, warehouse, cron rollup or real-time subscription. Existing order/payment/inventory/message/notification actions revalidate `/admin`; request-time rendering also ensures a return or reload reads current operational state.

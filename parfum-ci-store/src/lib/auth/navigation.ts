@@ -22,7 +22,6 @@ export type AdminNavigationItem = {
     | "payments"
     | "notifications"
     | "messages"
-    | "analytics"
     | "design-system"
     | "content"
     | "settings";
@@ -39,7 +38,6 @@ const adminNavigation: AdminNavigationItem[] = [
   { label: "Paiements", href: "/admin/paiements", module: "payments" },
   { label: "Notifications", href: "/admin/notifications", module: "notifications" },
   { label: "Messages", href: "/admin/messages", module: "messages" },
-  { label: "Analytics", href: "/admin/analytics", module: "analytics" },
   { label: "Contenu public", href: "/admin/contenu", module: "content" },
   { label: "Design system", href: "/admin/design-system", module: "design-system" },
   { label: "Paramètres", href: "/admin/parametres", module: "settings" },
@@ -48,7 +46,6 @@ const adminNavigation: AdminNavigationItem[] = [
 function canAccessAdminModule(staff: StaffProfile, module: AdminNavigationItem["module"]) {
   switch (module) {
     case "dashboard":
-    case "analytics":
     case "design-system":
       return staff.active;
     case "products":

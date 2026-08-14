@@ -18,6 +18,13 @@ type VariantState = {
   availableQuantity: number;
 };
 
+type StoreSettingsSnapshot = {
+  enabledDeliveryMethods: string[];
+  enabledPaymentMethods: string[];
+  paymentMethodConfigs: Record<string, unknown>;
+  defaultDeliveryFeeXof: number | null;
+};
+
 type OrderFixture = {
   orderId: string;
   orderNumber: string;
@@ -73,17 +80,23 @@ function adminClient() {
 
 function publicClient() {
   assertNonProductionEnv();
-  return createClient(requiredEnv("NEXT_PUBLIC_SUPABASE_URL"), requiredEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"), {
-    auth: { autoRefreshToken: false, persistSession: false },
-  }) as SupabaseClient;
+  return createClient(
+    requiredEnv("NEXT_PUBLIC_SUPABASE_URL"),
+    requiredEnv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
+    {
+      auth: { autoRefreshToken: false, persistSession: false },
+    },
+  ) as SupabaseClient;
 }
 
 async function actorFromEnv(role: RoleName): Promise<StaffActor> {
   const email =
     process.env[`PLAYWRIGHT_${role}_EMAIL`] ??
+    (role === "CUSTOMER_SUPPORT" ? process.env.PLAYWRIGHT_SUPPORT_EMAIL : undefined) ??
     (role === "OWNER" ? process.env.PLAYWRIGHT_ADMIN_EMAIL : undefined);
   const password =
     process.env[`PLAYWRIGHT_${role}_PASSWORD`] ??
+    (role === "CUSTOMER_SUPPORT" ? process.env.PLAYWRIGHT_SUPPORT_PASSWORD : undefined) ??
     (role === "OWNER" ? process.env.PLAYWRIGHT_ADMIN_PASSWORD : undefined);
   if (!email || !password) throw new Error(`${role} Playwright credentials are required.`);
 
@@ -94,12 +107,17 @@ async function actorFromEnv(role: RoleName): Promise<StaffActor> {
 }
 
 function hasActorEnv(role: RoleName) {
-  return Boolean(
-    process.env[`PLAYWRIGHT_${role}_EMAIL`] ??
+  return (
+    Boolean(
+      process.env[`PLAYWRIGHT_${role}_EMAIL`] ??
+      (role === "CUSTOMER_SUPPORT" ? process.env.PLAYWRIGHT_SUPPORT_EMAIL : undefined) ??
       (role === "OWNER" ? process.env.PLAYWRIGHT_ADMIN_EMAIL : undefined),
-  ) && Boolean(
-    process.env[`PLAYWRIGHT_${role}_PASSWORD`] ??
+    ) &&
+    Boolean(
+      process.env[`PLAYWRIGHT_${role}_PASSWORD`] ??
+      (role === "CUSTOMER_SUPPORT" ? process.env.PLAYWRIGHT_SUPPORT_PASSWORD : undefined) ??
       (role === "OWNER" ? process.env.PLAYWRIGHT_ADMIN_PASSWORD : undefined),
+    )
   );
 }
 
@@ -198,18 +216,23 @@ function inventoryFingerprint(input: {
 }
 
 async function ensurePhase11Migration(supabase: SupabaseClient) {
-  const { error: transitionError } = await supabase.rpc("transition_order_server" as never, {
-    request: {
-      orderId: randomUUID(),
-      targetStatus: "CONFIRMED",
-      actorId: randomUUID(),
-      idempotencyKey: `phase11-probe-${randomUUID()}-${randomUUID()}`,
-      requestFingerprint: "0".repeat(64),
-    },
-  } as never);
+  const { error: transitionError } = await supabase.rpc(
+    "transition_order_server" as never,
+    {
+      request: {
+        orderId: randomUUID(),
+        targetStatus: "CONFIRMED",
+        actorId: randomUUID(),
+        idempotencyKey: `phase11-probe-${randomUUID()}-${randomUUID()}`,
+        requestFingerprint: "0".repeat(64),
+      },
+    } as never,
+  );
 
   if (transitionError?.code === "PGRST202" || transitionError?.code === "42883") {
-    throw new Error("Phase 11 migration is not applied: transition_order_server(jsonb) is unavailable.");
+    throw new Error(
+      "Phase 11 migration is not applied: transition_order_server(jsonb) is unavailable.",
+    );
   }
 }
 
@@ -217,14 +240,22 @@ async function createCatalogueFixture(supabase: SupabaseClient, stockOnHand: num
   const suffix = randomUUID().slice(0, 8);
   const { data: brand, error: brandError } = await supabase
     .from("brands")
-    .insert({ name: `${prefix} Brand ${suffix}`, slug: `${prefix.toLowerCase()}-brand-${suffix}`, active: true })
+    .insert({
+      name: `${prefix} Brand ${suffix}`,
+      slug: `${prefix.toLowerCase()}-brand-${suffix}`,
+      active: true,
+    })
     .select("id")
     .single();
   if (brandError || !brand) throw new Error("Failed to create Phase 11 brand fixture.");
 
   const { data: category, error: categoryError } = await supabase
     .from("categories")
-    .insert({ name: `${prefix} Catégorie ${suffix}`, slug: `${prefix.toLowerCase()}-categorie-${suffix}`, active: true })
+    .insert({
+      name: `${prefix} Catégorie ${suffix}`,
+      slug: `${prefix.toLowerCase()}-categorie-${suffix}`,
+      active: true,
+    })
     .select("id")
     .single();
   if (categoryError || !category) throw new Error("Failed to create Phase 11 category fixture.");
@@ -280,7 +311,10 @@ async function createCatalogueFixture(supabase: SupabaseClient, stockOnHand: num
   });
   if (imageError) throw new Error("Failed to create Phase 11 product image fixture.");
 
-  const { error: activeError } = await supabase.from("products").update({ status: "ACTIVE" }).eq("id", product.id);
+  const { error: activeError } = await supabase
+    .from("products")
+    .update({ status: "ACTIVE" })
+    .eq("id", product.id);
   if (activeError) throw new Error("Failed to activate Phase 11 product fixture.");
 
   return {
@@ -328,8 +362,15 @@ async function createOrderFixture(
     lines: [{ productId: catalogue.productId, variantId: catalogue.variantId, quantity }],
   };
   const request = { ...payload, requestFingerprint: orderFingerprint(payload) };
-  const { data, error } = await supabase.rpc("create_guest_order_server" as never, { request } as never);
-  if (error || !data) throw new Error(`Failed to create Phase 11 order fixture: ${error?.code ?? "unknown"}`);
+  const { data, error } = await supabase.rpc(
+    "create_guest_order_server" as never,
+    { request } as never,
+  );
+  if (error || !data) {
+    throw new Error(
+      `Failed to create Phase 11 order fixture: ${error?.code ?? "unknown"} ${error?.message ?? ""}`.trim(),
+    );
+  }
   const confirmation = data as unknown as { orderId: string; orderNumber: string };
   createdOrderIds.push(confirmation.orderId);
   return {
@@ -363,7 +404,10 @@ async function transitionOrder(
     actorId: actor.id,
   };
   const request = { ...payload, requestFingerprint: transitionFingerprint(payload) };
-  const { data, error } = await supabase.rpc("transition_order_server" as never, { request } as never);
+  const { data, error } = await supabase.rpc(
+    "transition_order_server" as never,
+    { request } as never,
+  );
   return { data: data as TransitionResult | null, error };
 }
 
@@ -376,9 +420,19 @@ async function transitionWithKey(
   reason?: string,
   expectedStatus?: string,
 ) {
-  const payload = { orderId, expectedStatus, targetStatus, reason, idempotencyKey, actorId: actor.id };
+  const payload = {
+    orderId,
+    expectedStatus,
+    targetStatus,
+    reason,
+    idempotencyKey,
+    actorId: actor.id,
+  };
   const request = { ...payload, requestFingerprint: transitionFingerprint(payload) };
-  const { data, error } = await supabase.rpc("transition_order_server" as never, { request } as never);
+  const { data, error } = await supabase.rpc(
+    "transition_order_server" as never,
+    { request } as never,
+  );
   return { data: data as TransitionResult | null, error };
 }
 
@@ -397,11 +451,19 @@ async function updatePaymentWithKey(
     actorId: actor.id,
   };
   const request = { ...payload, requestFingerprint: paymentFingerprint(payload) };
-  const { data, error } = await supabase.rpc("record_order_payment_server" as never, { request } as never);
+  const { data, error } = await supabase.rpc(
+    "record_order_payment_server" as never,
+    { request } as never,
+  );
   return { data, error };
 }
 
-async function adjustInventoryDecrease(supabase: SupabaseClient, actor: StaffActor, variantId: string, quantity: number) {
+async function adjustInventoryDecrease(
+  supabase: SupabaseClient,
+  actor: StaffActor,
+  variantId: string,
+  quantity: number,
+) {
   const payload = {
     variantId,
     operationType: "ADJUSTMENT",
@@ -430,7 +492,11 @@ async function variantState(supabase: SupabaseClient, variantId: string): Promis
   };
 }
 
-async function ledgerCount(supabase: SupabaseClient, orderId: string, type: "RESERVED" | "RELEASED" | "SOLD" | "RETURNED") {
+async function ledgerCount(
+  supabase: SupabaseClient,
+  orderId: string,
+  type: "RESERVED" | "RELEASED" | "SOLD" | "RETURNED",
+) {
   const { count, error } = await supabase
     .from("inventory_transactions")
     .select("id", { count: "exact", head: true })
@@ -471,13 +537,20 @@ async function login(page: Page, actor: StaffActor) {
 
 async function cleanup(supabase: SupabaseClient) {
   if (createdOrderIds.length > 0) {
-    await supabase.from("order_internal_notes" as never).delete().in("order_id", createdOrderIds as never);
+    await supabase
+      .from("order_internal_notes" as never)
+      .delete()
+      .in("order_id", createdOrderIds as never);
     await supabase.from("payment_transactions").delete().in("order_id", createdOrderIds);
     await supabase.from("order_status_history").delete().in("order_id", createdOrderIds);
     for (const orderId of createdOrderIds) {
       await supabase.from("notifications").delete().eq("payload->>order_id", orderId);
     }
-    await supabase.from("audit_logs").delete().eq("resource_type", "order").in("resource_id", createdOrderIds);
+    await supabase
+      .from("audit_logs")
+      .delete()
+      .eq("resource_type", "order")
+      .in("resource_id", createdOrderIds);
     await supabase.from("inventory_transactions").delete().in("order_id", createdOrderIds);
     await supabase.from("orders").delete().in("id", createdOrderIds);
     await supabase.from("customers").delete().like("full_name", `${prefix}%`);
@@ -500,34 +573,79 @@ test.describe("Phase 11 order management real database verification", () => {
   let supabase: SupabaseClient;
   let owner: StaffActor;
   let orderManager: StaffActor;
+  let originalStoreSettings: StoreSettingsSnapshot | null = null;
 
   test.beforeAll(async () => {
     supabase = adminClient();
     await ensurePhase11Migration(supabase);
     owner = await actorFromEnv("OWNER");
     orderManager = await actorFromEnv("ORDER_MANAGER");
-    await supabase.from("store_settings").update({
-      enabled_delivery_methods: ["HOME_DELIVERY", "PICKUP"],
-      enabled_payment_methods: ["CASH_ON_DELIVERY", "ORANGE_MONEY"],
-      payment_method_configs: {
-        CASH_ON_DELIVERY: { enabled: true, label: "Paiement à la livraison", displayOrder: 1 },
-        ORANGE_MONEY: { enabled: true, label: "Orange Money", merchantNumber: "+2250700000000", instructions: "Instruction E2E", displayOrder: 2 },
-      },
-    }).eq("id", true);
+    const { data: settings, error: settingsError } = await supabase
+      .from("store_settings")
+      .select(
+        "enabled_delivery_methods, enabled_payment_methods, payment_method_configs, default_delivery_fee_xof",
+      )
+      .eq("id", true)
+      .single();
+    if (settingsError || !settings)
+      throw new Error("Failed to snapshot store settings for Phase 11 E2E.");
+    originalStoreSettings = {
+      enabledDeliveryMethods: settings.enabled_delivery_methods,
+      enabledPaymentMethods: settings.enabled_payment_methods,
+      paymentMethodConfigs: settings.payment_method_configs as Record<string, unknown>,
+      defaultDeliveryFeeXof: settings.default_delivery_fee_xof,
+    };
+    await supabase
+      .from("store_settings")
+      .update({
+        enabled_delivery_methods: ["HOME_DELIVERY", "PICKUP"],
+        enabled_payment_methods: ["CASH_ON_DELIVERY", "ORANGE_MONEY"],
+        default_delivery_fee_xof: 0,
+        payment_method_configs: {
+          CASH_ON_DELIVERY: { enabled: true, label: "Paiement à la livraison", displayOrder: 1 },
+          ORANGE_MONEY: {
+            enabled: true,
+            label: "Orange Money",
+            merchantNumber: "+2250700000000",
+            instructions: "Instruction E2E",
+            displayOrder: 2,
+          },
+        },
+      })
+      .eq("id", true);
   });
 
   test.afterAll(async () => {
-    if (supabase) await cleanup(supabase);
+    if (!supabase) return;
+    try {
+      await cleanup(supabase);
+    } finally {
+      if (originalStoreSettings) {
+        await supabase
+          .from("store_settings")
+          .update({
+            enabled_delivery_methods: originalStoreSettings.enabledDeliveryMethods,
+            enabled_payment_methods: originalStoreSettings.enabledPaymentMethods,
+            payment_method_configs: originalStoreSettings.paymentMethodConfigs,
+            default_delivery_fee_xof: originalStoreSettings.defaultDeliveryFeeXof,
+          })
+          .eq("id", true);
+      }
+    }
   });
 
   test("browser order list, filters, detail snapshots and responsive layouts", async ({ page }) => {
     const fixture = await createOrderFixture(supabase, { stockOnHand: 12, quantity: 1 });
     await login(page, owner);
 
-    await page.goto(`/admin/commandes?q=${encodeURIComponent(fixture.orderNumber)}&status=PENDING_CONFIRMATION`);
+    await page.goto(
+      `/admin/commandes?q=${encodeURIComponent(fixture.orderNumber)}&status=PENDING_CONFIRMATION`,
+    );
     await expect(page.getByRole("heading", { name: "Commandes" })).toBeVisible();
     await expect(page.getByText(fixture.orderNumber).first()).toBeVisible();
-    await expect(page.getByRole("cell", { name: "En attente de confirmation" }).first()).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "En attente de confirmation" }).first(),
+    ).toBeVisible();
 
     await page.getByRole("link", { name: "Ouvrir" }).first().click();
     await expect(page.getByRole("heading", { name: fixture.orderNumber })).toBeVisible();
@@ -544,8 +662,12 @@ test.describe("Phase 11 order management real database verification", () => {
     ]) {
       await page.setViewportSize(viewport);
       await expect(page.getByText(fixture.orderNumber).first()).toBeVisible();
-      const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
-      expect(overflow, `${viewport.width}x${viewport.height} should not create body overflow`).toBe(false);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      );
+      expect(overflow, `${viewport.width}x${viewport.height} should not create body overflow`).toBe(
+        false,
+      );
     }
   });
 
@@ -557,8 +679,24 @@ test.describe("Phase 11 order management real database verification", () => {
 
     const key = `phase11-cancel-${randomUUID()}-${randomUUID()}`;
     const [first, second] = await Promise.all([
-      transitionWithKey(supabase, orderManager, fixture.orderId, "CANCELLED", key, "Annulation E2E", "PENDING_CONFIRMATION"),
-      transitionWithKey(supabase, orderManager, fixture.orderId, "CANCELLED", key, "Annulation E2E", "PENDING_CONFIRMATION"),
+      transitionWithKey(
+        supabase,
+        orderManager,
+        fixture.orderId,
+        "CANCELLED",
+        key,
+        "Annulation E2E",
+        "PENDING_CONFIRMATION",
+      ),
+      transitionWithKey(
+        supabase,
+        orderManager,
+        fixture.orderId,
+        "CANCELLED",
+        key,
+        "Annulation E2E",
+        "PENDING_CONFIRMATION",
+      ),
     ]);
 
     expect(first.error).toBeNull();
@@ -580,8 +718,24 @@ test.describe("Phase 11 order management real database verification", () => {
     const key = `phase11-deliver-${randomUUID()}-${randomUUID()}`;
 
     const [first, second] = await Promise.all([
-      transitionWithKey(supabase, orderManager, fixture.orderId, "DELIVERED", key, undefined, "OUT_FOR_DELIVERY"),
-      transitionWithKey(supabase, orderManager, fixture.orderId, "DELIVERED", key, undefined, "OUT_FOR_DELIVERY"),
+      transitionWithKey(
+        supabase,
+        orderManager,
+        fixture.orderId,
+        "DELIVERED",
+        key,
+        undefined,
+        "OUT_FOR_DELIVERY",
+      ),
+      transitionWithKey(
+        supabase,
+        orderManager,
+        fixture.orderId,
+        "DELIVERED",
+        key,
+        undefined,
+        "OUT_FOR_DELIVERY",
+      ),
     ]);
 
     expect(first.error).toBeNull();
@@ -602,7 +756,13 @@ test.describe("Phase 11 order management real database verification", () => {
     await transitionOrder(supabase, orderManager, fixture.orderId, "DELIVERED");
     const before = await variantState(supabase, fixture.variantId);
 
-    const result = await transitionOrder(supabase, orderManager, fixture.orderId, "RETURNED", "Retour E2E");
+    const result = await transitionOrder(
+      supabase,
+      orderManager,
+      fixture.orderId,
+      "RETURNED",
+      "Retour E2E",
+    );
     expect(result.error).toBeNull();
 
     const after = await variantState(supabase, fixture.variantId);
@@ -613,7 +773,10 @@ test.describe("Phase 11 order management real database verification", () => {
   });
 
   test("payment confirmation creates immutable payment history once", async () => {
-    const fixture = await createOrderFixture(supabase, { paymentMethod: "ORANGE_MONEY", stockOnHand: 10 });
+    const fixture = await createOrderFixture(supabase, {
+      paymentMethod: "ORANGE_MONEY",
+      stockOnHand: 10,
+    });
     const key = `phase11-payment-${randomUUID()}-${randomUUID()}`;
     const [first, second] = await Promise.all([
       updatePaymentWithKey(supabase, orderManager, fixture.orderId, key),
@@ -642,8 +805,18 @@ test.describe("Phase 11 order management real database verification", () => {
     const inventory = await actorFromEnv("INVENTORY_MANAGER");
 
     const supportResult = await transitionOrder(supabase, support, fixture.orderId, "CONFIRMED");
-    const inventoryResult = await transitionOrder(supabase, inventory, fixture.orderId, "CONFIRMED");
-    const managerResult = await transitionOrder(supabase, orderManager, fixture.orderId, "CONFIRMED");
+    const inventoryResult = await transitionOrder(
+      supabase,
+      inventory,
+      fixture.orderId,
+      "CONFIRMED",
+    );
+    const managerResult = await transitionOrder(
+      supabase,
+      orderManager,
+      fixture.orderId,
+      "CONFIRMED",
+    );
 
     expect(supportResult.error?.message).toContain("ORDER_TRANSITION_UNAUTHORIZED");
     expect(inventoryResult.error?.message).toContain("ORDER_TRANSITION_UNAUTHORIZED");
@@ -656,29 +829,64 @@ test.describe("Phase 11 order management real database verification", () => {
 
     const [preparing, cancelled] = await Promise.all([
       transitionOrder(supabase, orderManager, fixture.orderId, "PREPARING", undefined, "CONFIRMED"),
-      transitionOrder(supabase, orderManager, fixture.orderId, "CANCELLED", "Conflit E2E", "CONFIRMED"),
+      transitionOrder(
+        supabase,
+        orderManager,
+        fixture.orderId,
+        "CANCELLED",
+        "Conflit E2E",
+        "CONFIRMED",
+      ),
     ]);
     const successes = [preparing, cancelled].filter((result) => !result.error);
     expect(successes).toHaveLength(1);
 
-    const { data: order } = await supabase.from("orders").select("status").eq("id", fixture.orderId).single();
+    const { data: order } = await supabase
+      .from("orders")
+      .select("status")
+      .eq("id", fixture.orderId)
+      .single();
     expect(["PREPARING", "CANCELLED"]).toContain(order?.status);
-    expect((await historyCount(supabase, fixture.orderId, "PREPARING")) + (await historyCount(supabase, fixture.orderId, "CANCELLED"))).toBe(1);
+    expect(
+      (await historyCount(supabase, fixture.orderId, "PREPARING")) +
+        (await historyCount(supabase, fixture.orderId, "CANCELLED")),
+    ).toBe(1);
   });
 
   test("cancellation versus delivery race cannot apply RELEASED and SOLD together", async () => {
-    const fixture = await createOrderFixture(supabase, { deliveryMethod: "PICKUP", stockOnHand: 10, quantity: 1 });
+    const fixture = await createOrderFixture(supabase, {
+      deliveryMethod: "PICKUP",
+      stockOnHand: 10,
+      quantity: 1,
+    });
     await transitionOrder(supabase, orderManager, fixture.orderId, "CONFIRMED");
     await transitionOrder(supabase, orderManager, fixture.orderId, "PREPARING");
     await transitionOrder(supabase, orderManager, fixture.orderId, "READY_FOR_PICKUP");
 
     const [cancelled, delivered] = await Promise.all([
-      transitionOrder(supabase, orderManager, fixture.orderId, "CANCELLED", "Course annulation", "READY_FOR_PICKUP"),
-      transitionOrder(supabase, orderManager, fixture.orderId, "DELIVERED", undefined, "READY_FOR_PICKUP"),
+      transitionOrder(
+        supabase,
+        orderManager,
+        fixture.orderId,
+        "CANCELLED",
+        "Course annulation",
+        "READY_FOR_PICKUP",
+      ),
+      transitionOrder(
+        supabase,
+        orderManager,
+        fixture.orderId,
+        "DELIVERED",
+        undefined,
+        "READY_FOR_PICKUP",
+      ),
     ]);
     const successes = [cancelled, delivered].filter((result) => !result.error);
     expect(successes).toHaveLength(1);
-    expect((await ledgerCount(supabase, fixture.orderId, "RELEASED")) + (await ledgerCount(supabase, fixture.orderId, "SOLD"))).toBe(1);
+    expect(
+      (await ledgerCount(supabase, fixture.orderId, "RELEASED")) +
+        (await ledgerCount(supabase, fixture.orderId, "SOLD")),
+    ).toBe(1);
     const after = await variantState(supabase, fixture.variantId);
     expect(after.reservedQuantity).toBeGreaterThanOrEqual(0);
     expect(after.reservedQuantity).toBeLessThanOrEqual(after.stockOnHand);
@@ -691,7 +899,14 @@ test.describe("Phase 11 order management real database verification", () => {
     await transitionOrder(supabase, orderManager, fixture.orderId, "OUT_FOR_DELIVERY");
 
     const [delivery, adjustment] = await Promise.all([
-      transitionOrder(supabase, orderManager, fixture.orderId, "DELIVERED", undefined, "OUT_FOR_DELIVERY"),
+      transitionOrder(
+        supabase,
+        orderManager,
+        fixture.orderId,
+        "DELIVERED",
+        undefined,
+        "OUT_FOR_DELIVERY",
+      ),
       adjustInventoryDecrease(supabase, owner, fixture.variantId, 1),
     ]);
     expect([delivery.error, adjustment.error].filter(Boolean).length).toBeLessThanOrEqual(1);

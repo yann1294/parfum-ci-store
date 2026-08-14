@@ -1,11 +1,17 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { AdminTopBar } from "@/components/layout/admin-top-bar";
 import { canAccessAdminPath, getAdminNavigation } from "@/lib/auth/navigation";
 import { requireActiveStaff } from "@/lib/auth/server";
 import { countNewMessages } from "@/lib/messages/admin";
+
+export const metadata: Metadata = {
+  title: "Administration",
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminLayout({
   children,

@@ -65,7 +65,6 @@ const filterSchema = z.object({
 export function normalizeMessageFilters(params: Record<string, string | undefined>): MessageFilters {
   return filterSchema.parse(params);
 }
-
 export async function requireMessageAccess() {
   const staff = await requireActiveStaff();
   if (!canManageMessages(staff)) redirect("/acces-refuse");
@@ -305,6 +304,7 @@ export async function transitionMessageStatus(input: { messageId: string; target
     reason: input.reason ?? "",
   });
   if (error) return { ok: false, code: "MESSAGE_STATUS_FAILED", message: contactErrorMessage(error.message?.match(/\bMESSAGE_[A-Z_]+\b/)?.[0] ?? "MESSAGE_FAILED") };
+  revalidatePath("/admin");
   revalidatePath("/admin/messages");
   revalidatePath(`/admin/messages/${input.messageId}`);
   return { ok: true, message: "Statut mis à jour." };
@@ -320,6 +320,7 @@ export async function assignMessage(input: { messageId: string; assignedTo: stri
     actor_id: staff.id,
   });
   if (error) return { ok: false, code: "MESSAGE_ASSIGN_FAILED", message: "L’assignation n’a pas pu être enregistrée." };
+  revalidatePath("/admin");
   revalidatePath("/admin/messages");
   revalidatePath(`/admin/messages/${input.messageId}`);
   return { ok: true, message: "Assignation mise à jour." };
@@ -345,6 +346,7 @@ export async function createManualMessage(input: unknown): Promise<ActionResult>
   if (!request.success) return { ok: false, code: "MESSAGE_INVALID_REQUEST", message: "Vérifiez les champs du message." };
   const result = await createContactMessage({ ...request.data, actorId: staff.id, consent: false });
   if (!result.ok) return { ok: false, code: result.code, message: result.message };
+  revalidatePath("/admin");
   revalidatePath("/admin/messages");
   void processNotifications(1).catch(() => undefined);
   return { ok: true, message: "Message manuel enregistré." };

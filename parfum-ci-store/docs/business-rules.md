@@ -83,6 +83,18 @@
 - Payment instructions at checkout, confirmation, tracking and customer notification rendering use the same typed settings projection. Instructions never request PIN, OTP, CVV or card credentials.
 - Notification recipients are snapshotted into each new outbox intent. Existing pending intents keep their original recipient when settings change.
 
+## Dashboard Metrics
+
+- Business days start at midnight in `Africa/Abidjan`; browser, host-server and UTC-calendar defaults are not analytics boundaries.
+- `Commandes créées aujourd’hui` is order volume across all current statuses, not a paid-sales count.
+- Revenue is gross paid revenue: sum the first authoritative `PAID` payment event per order whose `verified_at` falls in the selected period. Never sum current order totals or every PAID history row.
+- Refund statuses do not reduce Phase 15 revenue without an authoritative refunded amount. The UI must label the metric as gross.
+- Payments awaiting verification are current `PENDING` orders using manual Mobile Money or bank transfer; COD and pay-in-store are excluded.
+- Orders being prepared means `PREPARING` only. Failed notifications means all outbox rows currently in `FAILED`, including retryable and terminal failures, because both require operational attention.
+- Payment-method distribution is order count by the chosen method, regardless of payment completion, and is labelled accordingly.
+- Top products means units sold from `SOLD` ledger rows in the selected period, using order-item snapshots. Renaming or archiving a current product must not rewrite historical labels.
+- Every dashboard mutation remains in its established module. Dashboard cards are navigation links, not alternate business workflows.
+
 ## Inventory
 
 - No direct stock mutation from UI code.

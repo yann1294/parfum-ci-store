@@ -141,6 +141,9 @@ Do not scale font size directly with viewport width. Use responsive Tailwind bre
 - The admin content editor uses section navigation, restrained cards, visible labels, field help text, and save feedback consistent with other back-office forms. Editable public-content fields are controlled inputs: server data initializes draft state, successful saves reset from the validated saved response, failed saves preserve edits, and changing `defaultValue` after mount is not used.
 - `/admin/parametres` uses eight section cards/navigation entries, controlled fields, local previews, dirty state, explicit reset/save controls, stale-version messaging and bounded wrapping for URLs/instructions. Its delivery calculator is labelled as using saved authoritative rules.
 - Operational contact/social/payment/delivery controls belong in `/admin/parametres`; `/admin/contenu` shows editorial fields only.
+- `/admin` uses compact role-aware summary cards, a visible URL-backed 7/30/90-day range selector, responsive operational lists and section-level empty states. Cards navigate to existing filtered modules instead of embedding actions.
+- Dashboard charts use existing semantic chart tokens, restrained motion-free bars and readable labels. Each chart has an equivalent expandable data table; hover and color are never the only way to obtain a value.
+- Dashboard layout is one column on mobile, two columns where container width permits and up to four summary columns on wide screens. Wide chart/table content scrolls inside its card and must not create page-level overflow.
 - Use `ThemeToggle` only in app shells or settings surfaces.
 - Public header/footer social links must come from `src/config/site.ts` until database settings replace it.
 - Menus, sheets, dialogs, selects, tabs, and dropdowns must remain keyboard accessible.

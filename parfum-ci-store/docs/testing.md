@@ -295,3 +295,11 @@ Never report a command as passing unless it ran and exited successfully.
 - Rerun `supabase/tests/phase8_guest_order_transaction.sql`; it explicitly configures a zero default fee so its historical subtotal assertions remain deterministic under the Phase 14 trigger.
 - Browser acceptance must test two simultaneous settings sessions, stored order totals before/after a zone edit, direct order API rejection while order acceptance is off, and maintenance exemptions for admin/auth/cron/API.
 - A legitimate zero delivery fee is not a pending fee after Phase 14. Assertions must inspect stored `delivery_fee_xof`, `total_xof` and `delivery_rule_snapshot`.
+
+## Phase 15 Dashboard Verification
+
+- Unit tests cover range validation, fixed business-local boundaries, percentage zero handling, role DTO stripping, accessible range links, chart table equivalents, deep links and restricted-role rendering.
+- After applying `20260814090000_phase15_admin_dashboard.sql`, run `psql "$DATABASE_URL" -f supabase/tests/phase15_dashboard.sql` against a disposable database. The rollback-only test covers first-PAID-event revenue, duplicate PAID history, refund semantics, midnight inclusion, daily buckets, source grouping, SOLD snapshots, Phase 10 availability, database role projection, inactive staff and RPC grants.
+- Use fixed timestamps around the lower bound and business midnight. Never rely on the test host timezone.
+- Playwright requires Phase 15 migration, staff credentials for all five roles and disposable order/payment/inventory/message/notification fixtures. Check 7/30/90-day URLs, every deep link, operational refresh and widths 1440, 1024, 820, 640 and 390 pixels.
+- Tiny seed data is not performance proof. Review `EXPLAIN (ANALYZE, BUFFERS)` against representative staging volume before claiming query-performance approval.

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ComponentType } from "react";
 import {
-  BarChart3,
   Bell,
   Boxes,
   FolderTree,
@@ -31,13 +30,18 @@ const navIcons: Record<AdminNavigationItem["module"], ComponentType<{ className?
   payments: CreditCard,
   notifications: Bell,
   messages: MessageSquare,
-  analytics: BarChart3,
   "design-system": Palette,
   content: FileText,
   settings: Settings,
 };
 
-export function AdminSidebar({ items, counts = {} }: { items: AdminNavigationItem[]; counts?: Partial<Record<AdminNavigationItem["module"], number>> }) {
+export function AdminSidebar({
+  items,
+  counts = {},
+}: {
+  items: AdminNavigationItem[];
+  counts?: Partial<Record<AdminNavigationItem["module"], number>>;
+}) {
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:block">
       <div className="flex h-16 items-center border-b border-sidebar-border px-6">

@@ -8,8 +8,8 @@ function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
-
 function revalidateNotifications(id?: string) {
+  revalidatePath("/admin");
   revalidatePath("/admin/notifications");
   if (id) revalidatePath(`/admin/notifications/${id}`);
 }

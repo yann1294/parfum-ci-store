@@ -1635,6 +1635,7 @@ export type Database = {
         Row: {
           accepting_orders: boolean
           business_hours: Json
+          business_timezone: string
           canonical_site_url: string | null
           contact_email: string | null
           contact_phone: string | null
@@ -1681,6 +1682,7 @@ export type Database = {
         Insert: {
           accepting_orders?: boolean
           business_hours?: Json
+          business_timezone?: string
           canonical_site_url?: string | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -1727,6 +1729,7 @@ export type Database = {
         Update: {
           accepting_orders?: boolean
           business_hours?: Json
+          business_timezone?: string
           canonical_site_url?: string | null
           contact_email?: string | null
           contact_phone?: string | null
@@ -2056,6 +2059,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_admin_dashboard_server: { Args: { request: Json }; Returns: Json }
       get_public_delivery_zones: {
         Args: never
         Returns: {

@@ -318,6 +318,16 @@ Manual operations are `INITIALIZE`, `RECEIVED`, `DAMAGED`, `ADJUSTMENT`, and `RE
 
 Ledger rows remain immutable through the application. Corrections must be compensating `ADJUSTMENT` rows, not edits or deletes to historical transactions.
 
+## Phase 15 Dashboard Aggregates
+
+Migration `20260814090000_phase15_admin_dashboard.sql` adds `store_settings.business_timezone` with the fixed MVP value `Africa/Abidjan`, a partial first-paid-event index, an order-item join index and a service-role-only aggregate RPC.
+
+`public.get_admin_dashboard_server(jsonb)` delegates to a private, active-staff-authorized function. It accepts only validated UTC boundaries that map to business-local midnights and returns a role-specific JSON projection. Anonymous and authenticated browser roles cannot execute it. Financial arrays and keys are never returned for unauthorized roles.
+
+Revenue uses the earliest immutable `PAID` transaction per `order_id`, its `amount_xof`, and its `verified_at` time. This prevents payment-history replay rows from double counting. The metric is gross paid revenue; later refund-status rows are not subtracted because no authoritative refunded amount exists.
+
+Daily trend buckets use `timezone('Africa/Abidjan', paid_at)`. Order channel uses `orders.source`; UTM fields and `storefront_order_intents` are deliberately excluded. Top products use `SOLD` inventory transactions joined to immutable `order_items.product_name` snapshots. Low stock continues to be derived as initialized, active and `stock_on_hand - reserved_quantity <= low_stock_threshold`.
+
 ## Local Reset, Seed, and Verification
 
 For local development only, run:

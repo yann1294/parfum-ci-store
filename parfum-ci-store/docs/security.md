@@ -179,6 +179,14 @@ The development notification provider logs only notification ID, subject/templat
 
 Public contact submissions go through `POST /api/contact/messages`, which validates bounded JSON, honeypot, rate limit, explicit consent, and the telephone-or-email contact rule before calling the service-role-only message transaction. Anonymous users cannot directly read or insert `contact_messages`; normal authenticated non-staff users cannot read messages. Admin list DTOs mask contacts and use excerpts, while full message content and internal notes are restricted to active OWNER, ADMIN and CUSTOMER_SUPPORT staff. Customer/manual message content is rendered as text only and is never passed through `dangerouslySetInnerHTML`.
 
+## Phase 15 Dashboard
+
+`/admin` authenticates an active staff profile before loading analytics. The application calls `get_admin_dashboard_server(jsonb)` only through the server-only Supabase client, and the database independently checks the supplied actor against the active `profiles` row. The RPC is revoked from `PUBLIC`, `anon` and `authenticated` and granted only to `service_role`.
+
+Role authorization occurs before each SQL section and again in the typed application projection. Unauthorized keys and arrays are absent from the DTO rather than hidden with CSS. CUSTOMER_SUPPORT and INVENTORY_MANAGER never receive aggregate revenue, paid trend or payment-method data. Lists select only dashboard fields and omit addresses, contacts, internal notes, audit/notification payloads, provider responses and cost prices.
+
+Date boundaries are produced server-side, then validated by the database as exact business-local midnights and expected 7/30/90-day lengths. Client-provided arbitrary SQL, timezone or bucket expressions are never accepted. Admin metadata is `noindex, nofollow` and emits no public analytics metadata.
+
 ## Test Users
 
 Create staff test users manually in Supabase Auth and then insert or update their `profiles` rows with current roles and `active` values. Do not add fake owner UUIDs to seed data and do not commit test credentials.

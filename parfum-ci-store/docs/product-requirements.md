@@ -71,6 +71,16 @@ Parfum CI Store is a perfume storefront and operations back office for Côte d'I
 - Online checkout must obtain an authoritative delivery quote and Phase 8 order creation must recalculate and store the fee. Browser-submitted fees are never accepted.
 - Disabling online order acceptance leaves catalogue/cart/WhatsApp contact available. Maintenance replaces only public store routes; admin, auth and operational API routes remain available.
 
+## Phase 15 Operational Dashboard
+
+- `/admin` is the role-aware operational dashboard; there is no separate MVP analytics product or analytics event stream.
+- Supported shareable periods are `7d`, `30d` and `90d`, defaulting safely to `30d`. All boundaries and daily buckets use `Africa/Abidjan` business-local midnight.
+- Revenue means gross XOF successfully paid during the selected period, derived from the first immutable `PAID` transaction per order at `verified_at`. Refund events are not subtracted because the MVP has no authoritative refunded-amount field.
+- OWNER and ADMIN receive every dashboard section. ORDER_MANAGER receives order/payment operations and financial aggregates under the existing Phase 11 policy. CUSTOMER_SUPPORT receives order-support and message data without financial aggregates. INVENTORY_MANAGER receives inventory and units-sold data without orders, customers, messages or financial aggregates.
+- Source analytics count actual `orders.source` values only. WhatsApp intents and marketing attribution fields are not orders and are not merged into this metric.
+- Top products means units converted to `SOLD` in the immutable inventory ledger, grouped using order-item product snapshots.
+- Dashboard cards deep-link into existing admin workflows; the dashboard does not mutate orders, payments, stock, messages or notifications.
+
 ## Non-Goals for MVP
 
 - Stripe or online card processing

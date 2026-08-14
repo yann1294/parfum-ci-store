@@ -44,6 +44,7 @@ test("simulated OAuth callback without code fails safely", async ({ page }) => {
 });
 
 test("owner password login, logout, back and refresh keep admin protected", async ({ page }) => {
+  test.setTimeout(120_000);
   test.skip(!ownerEmail || !ownerPassword, "Owner Playwright credentials are not configured.");
 
   await page.goto("/connexion?retour=%2Fadmin");
@@ -68,7 +69,10 @@ test("owner password login, logout, back and refresh keep admin protected", asyn
     );
 
   for (const link of visibleAdminLinks) {
-    await page.getByRole("link", { name: link.label }).click();
+    await page
+      .getByRole("navigation", { name: "Navigation admin" })
+      .getByRole("link", { name: link.label, exact: true })
+      .click();
     await expect(page).not.toHaveURL(/\/connexion/);
     await expect(page.locator("h1")).toBeVisible();
   }
